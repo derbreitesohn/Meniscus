@@ -84,3 +84,11 @@ logRunSetup.txt
 # Visual Studio solution files
 *.slnx
 
+# Unity URP template leftovers (removed from project)
+/[Aa]ssets/[Tt]utorialInfo/
+/[Aa]ssets/[Tt]utorialInfo.meta
+/[Aa]ssets/[Rr]eadme.asset
+/[Aa]ssets/[Rr]eadme.asset.meta
+/[Aa]ssets/[Ss]ettings/[Ss]ampleSceneProfile.asset
+/[Aa]ssets/[Ss]ettings/[Ss]ampleSceneProfile.asset.meta
+
