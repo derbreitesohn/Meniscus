@@ -9,6 +9,33 @@
 							<ObjectRef Name="System" ID="{6149BD57-487D-4B84-941C-07C1C13CDBFB}" WorkUnitID="{C0E97119-9603-4C1B-83D4-4688DECD05F5}"/>
 						</Reference>
 					</ReferenceList>
+					<ChildrenList>
+						<Bus Name="sfx_bus" ID="{7DF6BF5C-F7AB-40CF-A26B-87E10AE93800}">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="18"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
+						</Bus>
+						<Bus Name="character_bus" ID="{A4C8932F-19FB-4003-B30A-8ADC4C82B2D7}">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="8"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
+						</Bus>
+						<Bus Name="ambience_bus" ID="{C468332A-3A32-490A-B696-7BD59A778FB6}">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="10"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
+						</Bus>
+						<Bus Name="ui_bus" ID="{A5689C06-1D54-426D-B18F-A479B0E8A918}">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="26"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
+						</Bus>
+						<AuxBus Name="saloon_reverb" ID="{7AA4AC98-A418-465C-BBC0-9FC25FFA15D0}"/>
+					</ChildrenList>
 				</Bus>
 			</ChildrenList>
 		</WorkUnit>

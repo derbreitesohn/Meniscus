@@ -1,6 +1,645 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WwiseDocument Type="WorkUnit" ID="{3E5ABF94-8B9A-4507-853B-33764D180567}" SchemaVersion="133">
 	<Containers>
-		<WorkUnit Name="Default Work Unit" ID="{3E5ABF94-8B9A-4507-853B-33764D180567}" PersistMode="Standalone"/>
+		<WorkUnit Name="Default Work Unit" ID="{3E5ABF94-8B9A-4507-853B-33764D180567}" PersistMode="Standalone">
+			<ChildrenList>
+				<BlendContainer Name="ambience" ID="{B1FC5261-6616-4B73-B10F-64CBD8BA5F24}" ShortID="463426835">
+					<PropertyList>
+						<Property Name="Color" Type="int16" Value="10"/>
+						<Property Name="OverrideColor" Type="bool" Value="True"/>
+					</PropertyList>
+					<ReferenceList>
+						<Reference Name="Conversion">
+							<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+						</Reference>
+						<Reference Name="OutputBus">
+							<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+						</Reference>
+					</ReferenceList>
+					<ChildrenList>
+						<Sound Name="bar_ambience01" ID="{4D003AD7-3956-4905-8ADF-42D3ED75C5F4}" ShortID="557847115">
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="bar_ambience01" ID="{FF062CDF-2242-4FCD-8D2E-ED85527A17E9}">
+									<Language>SFX</Language>
+									<AudioFile>bar_ambience01.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="91653063"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="bar_ambience01" ID="{FF062CDF-2242-4FCD-8D2E-ED85527A17E9}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+						<RandomSequenceContainer Name="wood_creak" ID="{154F2DF6-765A-4688-AD6E-F00AEB952DA3}" ShortID="348665155">
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<Sound Name="wood_creaking01" ID="{5748A583-C126-45D1-A80E-2DA50BE3726F}" ShortID="610303350">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="wood_creaking01" ID="{D008094F-05B7-473F-BDF9-B2BDEA9F77CE}">
+											<Language>SFX</Language>
+											<AudioFile>wood_creaking01.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="164693814"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="wood_creaking01" ID="{D008094F-05B7-473F-BDF9-B2BDEA9F77CE}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="wood_creaking02" ID="{706257DE-948C-49E4-98EC-60BF02604DA5}" ShortID="794858028">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="wood_creaking02" ID="{DF1EF55A-E16B-47A5-9C5B-F83B4A5F50B4}">
+											<Language>SFX</Language>
+											<AudioFile>wood_creaking02.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="420861687"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="wood_creaking02" ID="{DF1EF55A-E16B-47A5-9C5B-F83B4A5F50B4}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="wood_creaking03" ID="{C3AF63B7-267E-4614-8C0B-04190E8D50CE}" ShortID="455469870">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="wood_creaking03" ID="{B3D12F57-FA50-4680-8F89-5FE0A5858C96}">
+											<Language>SFX</Language>
+											<AudioFile>wood_creaking03.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="831129207"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="wood_creaking03" ID="{B3D12F57-FA50-4680-8F89-5FE0A5858C96}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="wood_creaking04" ID="{14E90759-CB55-41D0-B767-A51BA80DF713}" ShortID="104018587">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="wood_creaking04" ID="{7226C2F3-08CF-4BDB-B4BC-A59E5C3260BA}">
+											<Language>SFX</Language>
+											<AudioFile>wood_creaking04.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="1018617962"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="wood_creaking04" ID="{7226C2F3-08CF-4BDB-B4BC-A59E5C3260BA}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="wood_creaking05" ID="{CCF1CC8C-9D76-439B-A69B-78851FC08042}" ShortID="762635314">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="wood_creaking05" ID="{B19F6074-F241-492C-A7EB-C74B16BC0163}">
+											<Language>SFX</Language>
+											<AudioFile>wood_creaking05.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="573766699"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="wood_creaking05" ID="{B19F6074-F241-492C-A7EB-C74B16BC0163}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="wood_creaking06" ID="{C4FC5D8F-EAF8-4A4F-B4C3-B3E9D361692B}" ShortID="645833369">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="wood_creaking06" ID="{052511B0-BE81-4789-AAA3-590CDB636543}">
+											<Language>SFX</Language>
+											<AudioFile>wood_creaking06.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="495642180"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="wood_creaking06" ID="{052511B0-BE81-4789-AAA3-590CDB636543}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+							</ChildrenList>
+						</RandomSequenceContainer>
+					</ChildrenList>
+				</BlendContainer>
+				<Folder Name="sfx" ID="{DF9DFDA3-DC5D-4ABE-8065-7719FCDA5544}" ShortID="1056156732">
+					<PropertyList>
+						<Property Name="Color" Type="int16" Value="18"/>
+						<Property Name="OverrideColor" Type="bool" Value="True"/>
+					</PropertyList>
+					<ChildrenList>
+						<Folder Name="glass" ID="{693EAD9F-B64A-4C45-ACAF-12C04FD83539}" ShortID="251645189">
+							<ChildrenList>
+								<SwitchContainer Name="glass_down" ID="{E6FC773F-54D6-4AEB-92E9-7937AD3A02EA}" ShortID="949477552">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<RandomSequenceContainer Name="glass01" ID="{752E6F96-4D26-425F-9108-B3C1B0E804F9}" ShortID="450128936">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+												</Reference>
+											</ReferenceList>
+										</RandomSequenceContainer>
+										<RandomSequenceContainer Name="glass02" ID="{FE3E0E60-3F1A-44B2-B485-9F4E9B786FB9}" ShortID="747314482">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+												</Reference>
+											</ReferenceList>
+										</RandomSequenceContainer>
+									</ChildrenList>
+									<GroupingInfo>
+										<GroupingBehaviorList>
+											<GroupingBehavior>
+												<ItemRef Name="glass02" ID="{FE3E0E60-3F1A-44B2-B485-9F4E9B786FB9}"/>
+											</GroupingBehavior>
+											<GroupingBehavior>
+												<ItemRef Name="glass01" ID="{752E6F96-4D26-425F-9108-B3C1B0E804F9}"/>
+											</GroupingBehavior>
+										</GroupingBehaviorList>
+									</GroupingInfo>
+								</SwitchContainer>
+							</ChildrenList>
+						</Folder>
+						<Folder Name="water" ID="{AB459CDE-F56F-4D20-98C4-D394C8C227C6}" ShortID="136597860">
+							<ChildrenList>
+								<SwitchContainer Name="waterspill" ID="{60FAC8D7-89B7-45AE-A3E3-72B0B7A64C70}" ShortID="165783326">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<Sound Name="waterspill01" ID="{43752FCA-524B-4DED-9CB8-DD0691077240}" ShortID="207470823">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="waterspill01" ID="{BF6B08D6-3CC7-40C6-8C51-6A076F746E26}">
+													<Language>SFX</Language>
+													<AudioFile>waterspill01.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="745158164"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="waterspill01" ID="{BF6B08D6-3CC7-40C6-8C51-6A076F746E26}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="waterspill02" ID="{C10C8FA7-7090-4CFD-88A9-3B5CDFEB0A3D}" ShortID="1008343114">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="waterspill02" ID="{D6664C5C-F1FA-47BF-B593-6805FB6691F6}">
+													<Language>SFX</Language>
+													<AudioFile>waterspill02.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="99939701"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="waterspill02" ID="{D6664C5C-F1FA-47BF-B593-6805FB6691F6}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="waterspill03" ID="{FA3BFD22-4646-45E7-8197-8EE257E4BBB2}" ShortID="349819778">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="waterspill03" ID="{67C15A5F-53D7-41DD-B4BD-F85F4DBDF2B0}">
+													<Language>SFX</Language>
+													<AudioFile>waterspill03.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="635209950"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="waterspill03" ID="{67C15A5F-53D7-41DD-B4BD-F85F4DBDF2B0}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="waterspill04" ID="{16746167-7954-4560-8906-21EBCF85D2B1}" ShortID="763221643">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="waterspill04" ID="{AA24E4D6-8E07-46D5-991E-11C87B361980}">
+													<Language>SFX</Language>
+													<AudioFile>waterspill04.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="673909405"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="waterspill04" ID="{AA24E4D6-8E07-46D5-991E-11C87B361980}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+									</ChildrenList>
+									<GroupingInfo>
+										<GroupingBehaviorList>
+											<GroupingBehavior>
+												<ItemRef Name="waterspill03" ID="{FA3BFD22-4646-45E7-8197-8EE257E4BBB2}"/>
+											</GroupingBehavior>
+											<GroupingBehavior>
+												<ItemRef Name="waterspill04" ID="{16746167-7954-4560-8906-21EBCF85D2B1}"/>
+											</GroupingBehavior>
+											<GroupingBehavior>
+												<ItemRef Name="waterspill02" ID="{C10C8FA7-7090-4CFD-88A9-3B5CDFEB0A3D}"/>
+											</GroupingBehavior>
+											<GroupingBehavior>
+												<ItemRef Name="waterspill01" ID="{43752FCA-524B-4DED-9CB8-DD0691077240}"/>
+											</GroupingBehavior>
+										</GroupingBehaviorList>
+									</GroupingInfo>
+								</SwitchContainer>
+							</ChildrenList>
+						</Folder>
+						<SwitchContainer Name="coins" ID="{59950903-F3B2-4AED-8863-F1EC05C2C927}" ShortID="57390711">
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<RandomSequenceContainer Name="coinflip" ID="{6E7F11D8-E2BD-49EE-BE58-01154F582E65}" ShortID="351959859">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<Sound Name="coinflip01" ID="{96867C2F-F966-4912-9E3D-2DB43072EBBF}" ShortID="976321100">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="coinflip01" ID="{68695F23-88C2-43E0-8054-34AC71C96E34}">
+													<Language>SFX</Language>
+													<AudioFile>coinflip01.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="156821879"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="coinflip01" ID="{68695F23-88C2-43E0-8054-34AC71C96E34}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="coinflip02" ID="{80F63D6E-B33F-46BB-B5C4-FF3B1435A0CE}" ShortID="63444011">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="coinflip02" ID="{D6F734E7-0EB6-4989-9157-81C90D005627}">
+													<Language>SFX</Language>
+													<AudioFile>coinflip02.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="10235593"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="coinflip02" ID="{D6F734E7-0EB6-4989-9157-81C90D005627}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="coinflip03" ID="{8D35FC14-B7A5-4AA6-ABC8-4F9B0B0D2713}" ShortID="347041539">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="coinflip03" ID="{60645DB5-F2D8-40B3-967D-C79A407D7450}">
+													<Language>SFX</Language>
+													<AudioFile>coinflip03.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="529103067"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="coinflip03" ID="{60645DB5-F2D8-40B3-967D-C79A407D7450}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="coinflip04" ID="{237CD8A9-8576-4BF5-96E8-936AD106E099}" ShortID="588670752">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="coinflip04" ID="{6E74C2A8-9DAD-41CC-9DB7-77818BC8699A}">
+													<Language>SFX</Language>
+													<AudioFile>coinflip04.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="54365844"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="coinflip04" ID="{6E74C2A8-9DAD-41CC-9DB7-77818BC8699A}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="coinflip05" ID="{00E4EAA3-7C37-4ACD-AF89-C1E6AA9F9C87}" ShortID="217904878">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="coinflip05" ID="{6A961EAE-D65A-4A3A-9899-D171D7E94938}">
+													<Language>SFX</Language>
+													<AudioFile>coinflip05.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="532640387"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="coinflip05" ID="{6A961EAE-D65A-4A3A-9899-D171D7E94938}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="coinflip06" ID="{BD99DA4B-4FE4-4624-AE6A-478F7DD0549B}" ShortID="692253642">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="coinflip06" ID="{DE19661D-3C39-466F-B930-C180BBE99B27}">
+													<Language>SFX</Language>
+													<AudioFile>coinflip06.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="995319830"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="coinflip06" ID="{DE19661D-3C39-466F-B930-C180BBE99B27}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+										<Sound Name="coinflip07" ID="{A9324A6F-9749-49F5-A20A-DB19A0D65799}" ShortID="320113643">
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="coinflip07" ID="{BCD4EF72-DCCB-4D29-B79E-F9FAB2E4120C}">
+													<Language>SFX</Language>
+													<AudioFile>coinflip07.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="860808282"/>
+													</MediaIDList>
+												</AudioFileSource>
+												<AudioFileSource Name="coindrop01_into_water" ID="{922B71BF-7597-4F48-B159-0805CB79B9C5}">
+													<Language>SFX</Language>
+													<AudioFile>coindrop01_into_water.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="923308860"/>
+													</MediaIDList>
+												</AudioFileSource>
+												<AudioFileSource Name="coindrop02_into_water" ID="{D747BD54-22CA-4FE2-ABE8-18DE5960C670}">
+													<Language>SFX</Language>
+													<AudioFile>coindrop02_into_water.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="162134431"/>
+													</MediaIDList>
+												</AudioFileSource>
+												<AudioFileSource Name="coindrop03_into_water" ID="{2CC9A461-6872-4EB2-85E2-B1676E6B04C9}">
+													<Language>SFX</Language>
+													<AudioFile>coindrop03_into_water.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="993489435"/>
+													</MediaIDList>
+												</AudioFileSource>
+												<AudioFileSource Name="coindrop04_into_water" ID="{FFE7636C-4625-43CE-99E3-8D419492EED9}">
+													<Language>SFX</Language>
+													<AudioFile>coindrop04_into_water.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="457614656"/>
+													</MediaIDList>
+												</AudioFileSource>
+												<AudioFileSource Name="coindrop05_into_water" ID="{B69C91ED-C914-441D-B352-D116A3225D40}">
+													<Language>SFX</Language>
+													<AudioFile>coindrop05_into_water.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="1066686219"/>
+													</MediaIDList>
+												</AudioFileSource>
+												<AudioFileSource Name="coindrop06_into_water" ID="{4D9C7829-5E57-4067-8EEA-06808CBA9D06}">
+													<Language>SFX</Language>
+													<AudioFile>coindrop06_into_water.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="40056523"/>
+													</MediaIDList>
+												</AudioFileSource>
+												<AudioFileSource Name="coindrop07_into_water" ID="{7D7C7FBA-664F-492F-97DB-C291ED6DBC1D}">
+													<Language>SFX</Language>
+													<AudioFile>coindrop07_into_water.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="455159924"/>
+													</MediaIDList>
+												</AudioFileSource>
+												<AudioFileSource Name="coindrop08_into_water" ID="{C6F68AFC-08A0-458F-8518-C2273F077891}">
+													<Language>SFX</Language>
+													<AudioFile>coindrop08_into_water.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="1021347393"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="coindrop08_into_water" ID="{C6F68AFC-08A0-458F-8518-C2273F077891}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+									</ChildrenList>
+								</RandomSequenceContainer>
+								<SwitchContainer Name="coin_on_wood" ID="{BF817AC9-5A4D-43B0-AC88-875C1A505D36}" ShortID="330056998">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<GroupingInfo/>
+								</SwitchContainer>
+								<RandomSequenceContainer Name="coin_into_water" ID="{3ED3A0A9-F983-42F0-9A79-7E9DB8702388}" ShortID="225140312">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+								</RandomSequenceContainer>
+							</ChildrenList>
+							<GroupingInfo>
+								<GroupingBehaviorList>
+									<GroupingBehavior>
+										<ItemRef Name="coin_into_water" ID="{3ED3A0A9-F983-42F0-9A79-7E9DB8702388}"/>
+									</GroupingBehavior>
+									<GroupingBehavior>
+										<ItemRef Name="coin_on_wood" ID="{BF817AC9-5A4D-43B0-AC88-875C1A505D36}"/>
+									</GroupingBehavior>
+									<GroupingBehavior>
+										<ItemRef Name="coinflip" ID="{6E7F11D8-E2BD-49EE-BE58-01154F582E65}"/>
+									</GroupingBehavior>
+								</GroupingBehaviorList>
+							</GroupingInfo>
+						</SwitchContainer>
+					</ChildrenList>
+				</Folder>
+				<Folder Name="ui" ID="{647E2AD7-7F2E-48F2-9AB7-97B1C5096A2F}" ShortID="5833807">
+					<PropertyList>
+						<Property Name="Color" Type="int16" Value="14"/>
+						<Property Name="OverrideColor" Type="bool" Value="True"/>
+					</PropertyList>
+				</Folder>
+				<Folder Name="characters" ID="{233D0981-AC2A-454E-959C-FBE8CADD65FA}" ShortID="326887545">
+					<PropertyList>
+						<Property Name="Color" Type="int16" Value="8"/>
+						<Property Name="OverrideColor" Type="bool" Value="True"/>
+					</PropertyList>
+				</Folder>
+			</ChildrenList>
+		</WorkUnit>
 	</Containers>
 </WwiseDocument>

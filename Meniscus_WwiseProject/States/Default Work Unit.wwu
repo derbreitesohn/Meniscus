@@ -1,6 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WwiseDocument Type="WorkUnit" ID="{0F3CDAEA-CB48-4465-89EA-DEBCABAD91B3}" SchemaVersion="133">
 	<States>
-		<WorkUnit Name="Default Work Unit" ID="{0F3CDAEA-CB48-4465-89EA-DEBCABAD91B3}" PersistMode="Standalone"/>
+		<WorkUnit Name="Default Work Unit" ID="{0F3CDAEA-CB48-4465-89EA-DEBCABAD91B3}" PersistMode="Standalone">
+			<ChildrenList>
+				<StateGroup Name="GameState" ID="{500FCC6A-DD4C-4DBA-BFC5-584C55427E91}">
+					<ChildrenList>
+						<State Name="None" ID="{F0B1F5B5-5881-4A99-944B-D74660C6FD0D}"/>
+						<State Name="Menu" ID="{D805E278-6E4E-4DC5-9A61-985A3FB60FA5}"/>
+						<State Name="Playing" ID="{77C31010-1A42-4D89-80A0-A9927DC31612}"/>
+						<State Name="WIn" ID="{B60F8BE8-8B81-4C92-9015-AE57B5D3BAA4}"/>
+						<State Name="Lose" ID="{F824F28A-F26B-4887-B498-58FE5B397C1F}"/>
+					</ChildrenList>
+				</StateGroup>
+				<StateGroup Name="MusicState" ID="{A953B08C-76B6-4D13-9E95-874027D35B29}">
+					<ChildrenList>
+						<State Name="None" ID="{B80BFC4A-01BB-43CD-8AE1-7D1C322427DF}"/>
+						<State Name="Idle" ID="{BF046EDC-EC06-4BB4-8734-2C241B6FA7A2}"/>
+						<State Name="Tense" ID="{26510479-E127-49E9-9EF2-A57EE18E97F1}"/>
+						<State Name="Chritical" ID="{51A583EB-ADA0-4C2A-B622-576077F8911C}"/>
+					</ChildrenList>
+				</StateGroup>
+			</ChildrenList>
+		</WorkUnit>
 	</States>
 </WwiseDocument>

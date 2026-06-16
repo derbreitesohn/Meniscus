@@ -1,6 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WwiseDocument Type="WorkUnit" ID="{B9C8C56E-7203-456C-84EB-24025826B2C5}" SchemaVersion="133">
 	<Switches>
-		<WorkUnit Name="Default Work Unit" ID="{B9C8C56E-7203-456C-84EB-24025826B2C5}" PersistMode="Standalone"/>
+		<WorkUnit Name="Default Work Unit" ID="{B9C8C56E-7203-456C-84EB-24025826B2C5}" PersistMode="Standalone">
+			<ChildrenList>
+				<SwitchGroup Name="GlassType" ID="{627B3F8D-D78F-4D26-B921-B41F4718DD5D}">
+					<ChildrenList>
+						<Switch Name="Type01" ID="{2E12AFDA-A4E0-4C01-B9F3-1E9A03B02ACA}"/>
+						<Switch Name="Type02" ID="{F2EC18F9-7C2A-4436-8F42-BB624C2C3E2A}"/>
+						<Switch Name="Type03" ID="{FBB4AEE5-2849-4770-A697-8A4B53ABFCE4}"/>
+					</ChildrenList>
+				</SwitchGroup>
+				<SwitchGroup Name="CoinType" ID="{FB463862-71DA-4E2A-9E7B-612C4CB88C81}">
+					<ChildrenList>
+						<Switch Name="Type01" ID="{2D641B24-835C-47C6-A056-899E48913640}"/>
+						<Switch Name="Type02" ID="{59E651A7-DBF3-4A9C-9D72-98110424BC59}"/>
+						<Switch Name="Type03" ID="{A8A90021-E877-422C-B28F-1C29A8BED686}"/>
+					</ChildrenList>
+				</SwitchGroup>
+			</ChildrenList>
+		</WorkUnit>
 	</Switches>
 </WwiseDocument>
