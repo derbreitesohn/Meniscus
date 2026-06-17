@@ -9,9 +9,11 @@ namespace Meniscus.Core
     {
         [SerializeField] int playerTotalBankedCash;
         [SerializeField] int currentRoundEarnings;
+        [SerializeField, Min(1f)] float nextSafeDropPayoutMultiplier = 1f;
 
         public int PlayerTotalBankedCash => playerTotalBankedCash;
         public int CurrentRoundEarnings => currentRoundEarnings;
+        public float NextSafeDropPayoutMultiplier => nextSafeDropPayoutMultiplier;
 
         public void ResetRoundEarnings()
         {
@@ -60,6 +62,18 @@ namespace Meniscus.Core
         public int AwardSafeDrop(IReadOnlyList<Coin> coins, float currentRisk)
         {
             var payout = CalculateSafeDropPayout(coins, currentRisk);
+
+            if (nextSafeDropPayoutMultiplier > 1f)
+            {
+                var boostedPayout = Mathf.RoundToInt(payout * nextSafeDropPayoutMultiplier);
+                Debug.Log(
+                    $"[EconomyManager] Next safe-drop payout multiplier applied. " +
+                    $"basePayout={payout}, multiplier={nextSafeDropPayoutMultiplier:0.##}, " +
+                    $"boostedPayout={boostedPayout}.");
+                payout = boostedPayout;
+                nextSafeDropPayoutMultiplier = 1f;
+            }
+
             currentRoundEarnings += payout;
 
             Debug.Log(
@@ -67,6 +81,27 @@ namespace Meniscus.Core
                 $"Current round earnings={currentRoundEarnings}.");
 
             return payout;
+        }
+
+        public void QueueNextSafeDropPayoutMultiplier(float multiplier)
+        {
+            if (multiplier <= 1f)
+            {
+                Debug.LogWarning(
+                    $"[EconomyManager] Ignored non-boosting safe-drop multiplier={multiplier:0.##}.");
+                return;
+            }
+
+            nextSafeDropPayoutMultiplier = Mathf.Max(nextSafeDropPayoutMultiplier, multiplier);
+            Debug.Log(
+                $"[EconomyManager] Queued next safe-drop payout multiplier=" +
+                $"{nextSafeDropPayoutMultiplier:0.##}.");
+        }
+
+        public void ClearQueuedShopBonuses()
+        {
+            nextSafeDropPayoutMultiplier = 1f;
+            Debug.Log("[EconomyManager] Cleared queued shop economy bonuses.");
         }
 
         public void BankCurrentRoundEarnings()

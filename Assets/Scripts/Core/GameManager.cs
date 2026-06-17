@@ -22,6 +22,8 @@ namespace Meniscus.Core
         [SerializeField] CameraController cameraController;
         [SerializeField] ShopManager shopManager;
         [SerializeField] EndScreenManager endScreenManager;
+        [SerializeField] CoinDropPresentationController dropPresentationController;
+        [SerializeField] SaloonHudController saloonHudController;
 
         [Header("Optional Coin Sources")]
         [SerializeField] Coin coinPrefab;
@@ -43,8 +45,13 @@ namespace Meniscus.Core
         GameState currentState = GameState.StartRound;
         MatchOutcome lastMatchOutcome = MatchOutcome.None;
         int currentRound;
+        int queuedEnemyForcedCoinCount;
 
         public event Action<GameState> StateChanged;
+        public event Action<TurnActor, IReadOnlyList<Coin>> DropCommitted;
+        public event Action<GlassDropResult> DropResolved;
+        public event Action<int> RoundStarted;
+        public event Action<int, float> HandsRestocked;
 
         public GameState CurrentState => currentState;
         public int CurrentRound => currentRound;
@@ -74,6 +81,8 @@ namespace Meniscus.Core
             EnsureShopPhaseEnabledForCurrentLoop();
             currentRound = 0;
             lastMatchOutcome = MatchOutcome.None;
+            queuedEnemyForcedCoinCount = 0;
+            economyManager?.ClearQueuedShopBonuses();
             shopManager?.HideShop();
             endScreenManager?.Hide();
             Debug.Log("[GameManager] Starting new match.");
@@ -98,6 +107,7 @@ namespace Meniscus.Core
             glassManager?.ResetGlass();
             economyManager?.ResetRoundEarnings();
             GenerateRoundCoinPools();
+            RoundStarted?.Invoke(currentRound);
 
             BeginPlayerTurn();
         }
@@ -153,11 +163,13 @@ namespace Meniscus.Core
         {
             cameraController?.SwitchCamera(CameraState.GlassZoom);
             TransitionTo(GameState.Resolution);
+            DropCommitted?.Invoke(actor, coins);
 
             var result = glassManager != null
                 ? glassManager.DropCoins(coins, actor)
                 : new GlassDropResult(actor, 0f, 0f, 0f, 0f, false, coins.Count);
 
+            DropResolved?.Invoke(result);
             MarkCoinsSpent(actor, coins);
 
             if (result.Overflowed)
@@ -275,7 +287,25 @@ namespace Meniscus.Core
                 $"Glass risk maintained at {GetCurrentRiskForLog():0.##}%.");
 
             GenerateRoundCoinPools();
+            HandsRestocked?.Invoke(currentRound, GetCurrentRiskForLog());
             BeginPlayerTurn();
+        }
+
+        public void QueueEnemyForcedCoinCount(int coinCount)
+        {
+            queuedEnemyForcedCoinCount = Mathf.Clamp(coinCount, 0, GameConstants.MaxEnemyCoinsPerTurn);
+            Debug.Log($"[GameManager] Queued enemy forced coin count={queuedEnemyForcedCoinCount}.");
+        }
+
+        public int ConsumeQueuedEnemyForcedCoinCount()
+        {
+            var forcedCount = queuedEnemyForcedCoinCount;
+            queuedEnemyForcedCoinCount = 0;
+
+            if (forcedCount > 0)
+                Debug.Log($"[GameManager] Consumed queued enemy forced coin count={forcedCount}.");
+
+            return forcedCount;
         }
 
         void CompleteWonRound(string reason)
@@ -293,7 +323,7 @@ namespace Meniscus.Core
             }
 
             Debug.Log(
-                $"[GameManager] Round {currentRound} won. Shop disabled for prototype, " +
+                $"[GameManager] Round {currentRound} won. Shop disabled for this build, " +
                 "starting next round immediately.");
             StartRound();
         }
@@ -663,6 +693,26 @@ namespace Meniscus.Core
             if (endScreenManager == null)
                 endScreenManager = EndScreenManager.CreateRuntimeFallback();
 
+            if (dropPresentationController == null)
+                dropPresentationController = FindAnyObjectByType<CoinDropPresentationController>();
+
+            if (dropPresentationController == null)
+            {
+                dropPresentationController = gameObject.AddComponent<CoinDropPresentationController>();
+                dropPresentationController.Configure(this, FindGlassTransform());
+                Debug.Log("[GameManager] Created runtime CoinDropPresentationController fallback.");
+            }
+
+            if (saloonHudController == null)
+                saloonHudController = FindAnyObjectByType<SaloonHudController>();
+
+            if (saloonHudController == null)
+            {
+                saloonHudController = gameObject.AddComponent<SaloonHudController>();
+                saloonHudController.Configure(null, null, this, glassManager, economyManager);
+                Debug.Log("[GameManager] Created runtime SaloonHudController fallback.");
+            }
+
             if (glassManager == null)
                 Debug.LogWarning("[GameManager] GlassManager reference is missing.");
 
@@ -692,7 +742,7 @@ namespace Meniscus.Core
 
             Debug.Log(
                 "[GameManager] Normalized fallback coin layout to saloon table coordinates. " +
-                "This keeps runtime-generated restock coins visible in older prototype scenes.");
+                "This keeps runtime-spawned restock coins visible in legacy scene layouts.");
         }
 
         void TransitionTo(GameState newState)
@@ -712,6 +762,12 @@ namespace Meniscus.Core
 
         float GetCurrentRiskForLog() =>
             glassManager == null ? 0f : glassManager.CurrentOverflowProbability;
+
+        static Transform FindGlassTransform()
+        {
+            var glassObject = GameObject.FindGameObjectWithTag("Glass");
+            return glassObject == null ? null : glassObject.transform;
+        }
 
         static void EnsureInputSystemUiModules()
         {

@@ -5,6 +5,7 @@ namespace Meniscus.Gameplay
 {
     public class GameTestController : MonoBehaviour
     {
+        [SerializeField] bool showDebugOverlay;
         [SerializeField] GameManager gameManager;
         [SerializeField] GlassManager glassManager;
         [SerializeField] EconomyManager economyManager;
@@ -16,6 +17,9 @@ namespace Meniscus.Gameplay
 
         void OnGUI()
         {
+            if (!showDebugOverlay)
+                return;
+
             ResolveReferences();
 
             const int width = 340;

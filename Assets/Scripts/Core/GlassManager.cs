@@ -10,18 +10,45 @@ namespace Meniscus.Core
     {
         [SerializeField, Range(0f, GameConstants.MaxOverflowProbability)]
         float currentOverflowProbability;
+        [SerializeField, Min(0f)] float pendingNextRoundSafeZoneBonus;
+        [SerializeField, Min(0f)] float activeSafeZoneBonus;
 
         public event Action<float> ProbabilityChanged;
+        public event Action<GlassDropResult> DropResolved;
 
         public float CurrentOverflowProbability => currentOverflowProbability;
-        public float CurrentTrueSpillChance => CalculateTrueSpillChance(currentOverflowProbability);
+        public float CurrentSafeZoneThreshold => Mathf.Clamp(
+            GameConstants.SpillSafeZoneThreshold + activeSafeZoneBonus,
+            0f,
+            GameConstants.MaxOverflowProbability);
+        public float CurrentTrueSpillChance => CalculateCurrentTrueSpillChance(currentOverflowProbability);
 
         public void ResetGlass()
         {
+            activeSafeZoneBonus = pendingNextRoundSafeZoneBonus;
+            pendingNextRoundSafeZoneBonus = 0f;
             currentOverflowProbability = 0f;
-            Debug.Log("[GlassManager] Glass reset. Overflow probability is now 0%.");
+            Debug.Log(
+                $"[GlassManager] Glass reset. Overflow probability is now 0%. " +
+                $"Safe zone threshold={CurrentSafeZoneThreshold:0.##}%.");
             ProbabilityChanged?.Invoke(currentOverflowProbability);
         }
+
+        public void QueueNextRoundSafeZoneBonus(float bonus)
+        {
+            var clampedBonus = Mathf.Clamp(
+                bonus,
+                0f,
+                GameConstants.MaxOverflowProbability - GameConstants.SpillSafeZoneThreshold);
+            pendingNextRoundSafeZoneBonus = Mathf.Max(pendingNextRoundSafeZoneBonus, clampedBonus);
+
+            Debug.Log(
+                $"[GlassManager] Queued next-round safe-zone bonus={clampedBonus:0.##}%. " +
+                $"Pending bonus={pendingNextRoundSafeZoneBonus:0.##}%.");
+        }
+
+        public float CalculateCurrentTrueSpillChance(float totalRiskWeight) =>
+            CalculateTrueSpillChance(totalRiskWeight, CurrentSafeZoneThreshold);
 
         public GlassDropResult DropCoins(IReadOnlyList<Coin> coins, TurnActor actor)
         {
@@ -33,7 +60,7 @@ namespace Meniscus.Core
                 0f,
                 GameConstants.MaxOverflowProbability);
 
-            var trueSpillChance = CalculateTrueSpillChance(currentOverflowProbability);
+            var trueSpillChance = CalculateCurrentTrueSpillChance(currentOverflowProbability);
             var roll = UnityEngine.Random.Range(0f, GameConstants.MaxOverflowProbability);
             var overflowed = trueSpillChance > 0f && roll <= trueSpillChance;
 
@@ -50,21 +77,27 @@ namespace Meniscus.Core
             Debug.Log(
                 $"[GlassManager] {actor} dropped {coinCount} coin(s). Risk before={riskBeforeDrop:0.##}, " +
                 $"added={addedRisk:0.##}, Total Risk Weight={currentOverflowProbability:0.##}, " +
+                $"Safe Zone Threshold={CurrentSafeZoneThreshold:0.##}, " +
                 $"True Spill Chance={trueSpillChance:0.##}%, roll={roll:0.##}, overflow={overflowed}.");
 
+            DropResolved?.Invoke(result);
             ProbabilityChanged?.Invoke(currentOverflowProbability);
             return result;
         }
 
-        public static float CalculateTrueSpillChance(float totalRiskWeight)
+        public static float CalculateTrueSpillChance(float totalRiskWeight) =>
+            CalculateTrueSpillChance(totalRiskWeight, GameConstants.SpillSafeZoneThreshold);
+
+        public static float CalculateTrueSpillChance(float totalRiskWeight, float safeZoneThreshold)
         {
             var clampedRisk = Mathf.Clamp(totalRiskWeight, 0f, GameConstants.MaxOverflowProbability);
+            var clampedThreshold = Mathf.Clamp(safeZoneThreshold, 0f, GameConstants.MaxOverflowProbability);
 
-            if (clampedRisk <= GameConstants.SpillSafeZoneThreshold)
+            if (clampedRisk <= clampedThreshold)
                 return 0f;
 
-            var riskyRange = GameConstants.MaxOverflowProbability - GameConstants.SpillSafeZoneThreshold;
-            var normalizedRisk = (clampedRisk - GameConstants.SpillSafeZoneThreshold) / riskyRange;
+            var riskyRange = Mathf.Max(0.001f, GameConstants.MaxOverflowProbability - clampedThreshold);
+            var normalizedRisk = (clampedRisk - clampedThreshold) / riskyRange;
             return GameConstants.MaxOverflowProbability * Mathf.Pow(normalizedRisk, GameConstants.SpillCurveExponent);
         }
 

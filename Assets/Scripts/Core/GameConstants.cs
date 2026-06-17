@@ -20,9 +20,11 @@ namespace Meniscus.Core
         public const float GreedRiskDivisor = 50f;
         public const float ComboMultiplier = 1.5f;
         public const float MaxOverflowProbability = 100f;
-        public const float SpillSafeZoneThreshold = 40f;
-        public const float SpillCurveExponent = 1.285f;
+        public const float SpillSafeZoneThreshold = 45f;
+        public const float SpillCurveExponent = 1.8f;
         public const float EnemyTurnDelaySeconds = 2f;
+        public const float EnemyTellDelaySeconds = 0.35f;
+        public const float EnemyConservativeSpillChanceThreshold = 50f;
 
         public static readonly Vector3 CopperCoinVisualScale = new(0.27f, 0.045f, 0.27f);
         public static readonly Vector3 SilverCoinVisualScale = new(0.34f, 0.052f, 0.34f);

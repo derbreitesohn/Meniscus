@@ -66,13 +66,14 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void CalculateTrueSpillChance_UsesSafeZoneThenAggressiveCurve()
+        public void CalculateTrueSpillChance_UsesExtendedSafeZoneThenSofterCurve()
         {
             Assert.AreEqual(0f, GlassManager.CalculateTrueSpillChance(0f));
-            Assert.AreEqual(0f, GlassManager.CalculateTrueSpillChance(39.99f));
-            Assert.AreEqual(0f, GlassManager.CalculateTrueSpillChance(40f));
-            Assert.AreEqual(10f, GlassManager.CalculateTrueSpillChance(50f), 0.75f);
-            Assert.AreEqual(60f, GlassManager.CalculateTrueSpillChance(80f), 1.5f);
+            Assert.AreEqual(0f, GlassManager.CalculateTrueSpillChance(44.99f));
+            Assert.AreEqual(0f, GlassManager.CalculateTrueSpillChance(45f));
+            Assert.AreEqual(1.3f, GlassManager.CalculateTrueSpillChance(50f), 0.45f);
+            Assert.AreEqual(16.2f, GlassManager.CalculateTrueSpillChance(65f), 1.25f);
+            Assert.AreEqual(44.3f, GlassManager.CalculateTrueSpillChance(80f), 1.75f);
             Assert.AreEqual(100f, GlassManager.CalculateTrueSpillChance(100f));
         }
 
@@ -88,6 +89,21 @@ namespace Meniscus.Tests.EditMode
             Assert.IsFalse(result.Overflowed);
 
             Object.DestroyImmediate(coin.gameObject);
+        }
+
+        [Test]
+        public void QueueNextRoundSafeZoneBonus_AppliesForOneResetThenExpires()
+        {
+            glassManager.QueueNextRoundSafeZoneBonus(10f);
+
+            glassManager.ResetGlass();
+
+            Assert.AreEqual(55f, glassManager.CurrentSafeZoneThreshold);
+            Assert.AreEqual(0f, glassManager.CalculateCurrentTrueSpillChance(50f));
+
+            glassManager.ResetGlass();
+
+            Assert.AreEqual(GameConstants.SpillSafeZoneThreshold, glassManager.CurrentSafeZoneThreshold);
         }
 
         [Test]

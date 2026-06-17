@@ -10,6 +10,7 @@ namespace Meniscus.UI
         [SerializeField] Canvas shopCanvas;
         [SerializeField] EconomyManager economyManager;
         [SerializeField] GameManager gameManager;
+        [SerializeField] GlassManager glassManager;
 
         void Awake()
         {
@@ -17,11 +18,16 @@ namespace Meniscus.UI
             HideShop();
         }
 
-        public void Configure(Canvas canvas, EconomyManager economy, GameManager manager)
+        public void Configure(
+            Canvas canvas,
+            EconomyManager economy,
+            GameManager manager,
+            GlassManager glass = null)
         {
             shopCanvas = canvas;
             economyManager = economy;
             gameManager = manager;
+            glassManager = glass;
             HideShop();
         }
 
@@ -45,37 +51,49 @@ namespace Meniscus.UI
             Debug.Log("[ShopManager] Saloon Menu Card closed.");
         }
 
-        public bool BuyItemPlaceholder(int cost)
+        public void BuyMarkedCoin()
         {
             ResolveReferences();
 
-            if (economyManager == null)
-            {
-                Debug.LogWarning("[ShopManager] Cannot buy item: EconomyManager reference is missing.");
-                return false;
-            }
+            if (!TryBuy("Marked Coin", 35))
+                return;
 
-            if (!economyManager.TrySpendBankedCash(cost))
-            {
-                Debug.LogWarning(
-                    $"[ShopManager] Purchase failed. Cost={cost}, banked={economyManager.PlayerTotalBankedCash}.");
-                return false;
-            }
-
-            Debug.Log(
-                $"[ShopManager] Purchased placeholder item for {cost}. " +
-                $"Banked cash remaining={economyManager.PlayerTotalBankedCash}.");
-            return true;
+            economyManager.QueueNextSafeDropPayoutMultiplier(2f);
+            Debug.Log("[ShopManager] Marked Coin armed. Next safe player drop pays double.");
         }
 
-        public void BuyCheapItemPlaceholder()
+        public void BuySteadyHand()
         {
-            BuyItemPlaceholder(25);
+            ResolveReferences();
+
+            if (!TryBuy("Steady Hand", 50))
+                return;
+
+            if (glassManager == null)
+            {
+                Debug.LogWarning("[ShopManager] Bought Steady Hand, but GlassManager is missing.");
+                return;
+            }
+
+            glassManager.QueueNextRoundSafeZoneBonus(10f);
+            Debug.Log("[ShopManager] Steady Hand bought. Next round safe zone extends by 10%.");
         }
 
-        public void BuyPremiumItemPlaceholder()
+        public void BuyDealersDebt()
         {
-            BuyItemPlaceholder(75);
+            ResolveReferences();
+
+            if (!TryBuy("Dealer's Debt", 60))
+                return;
+
+            if (gameManager == null)
+            {
+                Debug.LogWarning("[ShopManager] Bought Dealer's Debt, but GameManager is missing.");
+                return;
+            }
+
+            gameManager.QueueEnemyForcedCoinCount(2);
+            Debug.Log("[ShopManager] Dealer's Debt bought. Dealer must drop 2 coins on next enemy turn.");
         }
 
         public void FinishOrdering()
@@ -97,6 +115,31 @@ namespace Meniscus.UI
 
             if (gameManager == null)
                 gameManager = FindAnyObjectByType<GameManager>();
+
+            if (glassManager == null)
+                glassManager = FindAnyObjectByType<GlassManager>();
+        }
+
+        bool TryBuy(string itemName, int cost)
+        {
+            if (economyManager == null)
+            {
+                Debug.LogWarning($"[ShopManager] Cannot buy {itemName}: EconomyManager reference is missing.");
+                return false;
+            }
+
+            if (!economyManager.TrySpendBankedCash(cost))
+            {
+                Debug.LogWarning(
+                    $"[ShopManager] Purchase failed for {itemName}. " +
+                    $"Cost={cost}, banked={economyManager.PlayerTotalBankedCash}.");
+                return false;
+            }
+
+            Debug.Log(
+                $"[ShopManager] Purchased {itemName} for {cost}. " +
+                $"Banked cash remaining={economyManager.PlayerTotalBankedCash}.");
+            return true;
         }
 
         void EnsureFallbackShopCanvas()
@@ -162,9 +205,10 @@ namespace Meniscus.UI
                 18,
                 TextAnchor.MiddleCenter);
 
-            CreateButton(card.transform, "Cheap Item Button", "BUY $25", new Vector2(-105f, -24f), BuyCheapItemPlaceholder);
-            CreateButton(card.transform, "Premium Item Button", "BUY $75", new Vector2(105f, -24f), BuyPremiumItemPlaceholder);
-            CreateButton(card.transform, "Finish Drink Button", "FINISH DRINK", new Vector2(0f, -124f), FinishOrdering);
+            CreateButton(card.transform, "Marked Coin Button", "MARKED $35", new Vector2(-112f, -12f), BuyMarkedCoin);
+            CreateButton(card.transform, "Steady Hand Button", "STEADY $50", new Vector2(112f, -12f), BuySteadyHand);
+            CreateButton(card.transform, "Dealer Debt Button", "DEBT $60", new Vector2(0f, -72f), BuyDealersDebt);
+            CreateButton(card.transform, "Finish Drink Button", "FINISH DRINK", new Vector2(0f, -132f), FinishOrdering);
 
             return canvas;
         }

@@ -64,6 +64,23 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
+        public void QueueNextSafeDropPayoutMultiplier_AppliesOnceToAwardedPlayerDrop()
+        {
+            var coin = CreateCoin("Marked Coin", 5f, 10, true);
+
+            economyManager.QueueNextSafeDropPayoutMultiplier(2f);
+
+            var boostedPayout = economyManager.AwardSafeDrop(new[] { coin }, 0f);
+            var normalPayout = economyManager.AwardSafeDrop(new[] { coin }, 0f);
+
+            Assert.AreEqual(20, boostedPayout);
+            Assert.AreEqual(10, normalPayout);
+            Assert.AreEqual(30, economyManager.CurrentRoundEarnings);
+
+            Object.DestroyImmediate(coin.gameObject);
+        }
+
+        [Test]
         public void WipeCurrentRoundEarnings_DoesNotClearBankedCash()
         {
             var bankedCoin = CreateCoin("Banked Coin", 5f, 30, true);

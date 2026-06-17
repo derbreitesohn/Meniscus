@@ -37,7 +37,11 @@ namespace Meniscus.Gameplay
                 yield break;
             }
 
-            var chosenCoins = ChooseCoins(gameManager.EnemyCoins);
+            var forcedCoinCount = gameManager.ConsumeQueuedEnemyForcedCoinCount();
+            var trueSpillChance = gameManager.GlassManager == null
+                ? 0f
+                : gameManager.GlassManager.CurrentTrueSpillChance;
+            var chosenCoins = ChooseCoins(gameManager.EnemyCoins, trueSpillChance, forcedCoinCount);
 
             if (chosenCoins.Count == 0)
             {
@@ -45,11 +49,21 @@ namespace Meniscus.Gameplay
                 yield break;
             }
 
-            Debug.Log($"[EnemyAI] Enemy chose {chosenCoins.Count} coin(s): {DescribeCoins(chosenCoins)}.");
+            for (var i = 0; i < chosenCoins.Count; i++)
+                chosenCoins[i].SetSelected(true);
+
+            Debug.Log(
+                $"[EnemyAI] Enemy chose {chosenCoins.Count} coin(s) at trueSpillChance=" +
+                $"{trueSpillChance:0.##}%: {DescribeCoins(chosenCoins)}.");
+            yield return new WaitForSeconds(GameConstants.EnemyTellDelaySeconds);
+
             gameManager.ExecuteEnemyDrop(chosenCoins);
         }
 
-        static List<Coin> ChooseCoins(IReadOnlyList<Coin> availableCoins)
+        static List<Coin> ChooseCoins(
+            IReadOnlyList<Coin> availableCoins,
+            float trueSpillChance,
+            int forcedCoinCount)
         {
             var candidates = new List<Coin>();
 
@@ -69,8 +83,10 @@ namespace Meniscus.Gameplay
             if (candidates.Count == 0)
                 return chosenCoins;
 
-            var maxCoins = Mathf.Min(GameConstants.MaxEnemyCoinsPerTurn, candidates.Count);
-            var targetCount = Random.Range(1, maxCoins + 1);
+            var maxCoins = GetMaximumCoinsForRisk(candidates.Count, trueSpillChance, forcedCoinCount);
+            var targetCount = forcedCoinCount > 0
+                ? maxCoins
+                : Random.Range(1, maxCoins + 1);
 
             for (var i = 0; i < targetCount; i++)
             {
@@ -80,6 +96,24 @@ namespace Meniscus.Gameplay
             }
 
             return chosenCoins;
+        }
+
+        public static int GetMaximumCoinsForRisk(
+            int availableCoinCount,
+            float trueSpillChance,
+            int forcedCoinCount)
+        {
+            if (availableCoinCount <= 0)
+                return 0;
+
+            var absoluteMax = Mathf.Min(GameConstants.MaxEnemyCoinsPerTurn, availableCoinCount);
+
+            if (forcedCoinCount > 0)
+                return Mathf.Clamp(forcedCoinCount, 1, absoluteMax);
+
+            return trueSpillChance >= GameConstants.EnemyConservativeSpillChanceThreshold
+                ? 1
+                : absoluteMax;
         }
 
         static string DescribeCoins(IReadOnlyList<Coin> coins)

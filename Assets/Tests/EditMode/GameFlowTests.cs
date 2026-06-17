@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 namespace Meniscus.Tests.EditMode
 {
-    public class GameFlowPrototypeTests
+    public class GameFlowTests
     {
         [Test]
         public void GetCoinCountForRound_GivesPlayerAtLeastEightCoinsAndScalesUp()
@@ -71,6 +71,34 @@ namespace Meniscus.Tests.EditMode
             Assert.AreEqual(GameConstants.GetCoinCountForRound(1), fixture.GameManager.PlayerCoins.Count);
             Assert.AreEqual(GameConstants.GetCoinCountForRound(1), fixture.GameManager.EnemyCoins.Count);
             Assert.AreEqual(MatchOutcome.None, fixture.GameManager.LastMatchOutcome);
+
+            fixture.Destroy();
+        }
+
+        [Test]
+        public void PlayerDrop_RaisesPresentationEventsForCommittedCoinsAndResolvedResult()
+        {
+            var fixture = CreateGameFixture();
+            TurnActor? committedActor = null;
+            int committedCoinCount = 0;
+            GlassDropResult? resolvedResult = null;
+
+            fixture.GameManager.DropCommitted += (actor, coins) =>
+            {
+                committedActor = actor;
+                committedCoinCount = coins.Count;
+            };
+            fixture.GameManager.DropResolved += result => resolvedResult = result;
+
+            fixture.GameManager.StartMatch();
+            ForceNextPlayerDropSafe(fixture);
+            fixture.GameManager.TryPlayerDropSelectedCoins(new[] { fixture.GameManager.PlayerCoins[0] });
+
+            Assert.AreEqual(TurnActor.Player, committedActor);
+            Assert.AreEqual(1, committedCoinCount);
+            Assert.IsTrue(resolvedResult.HasValue);
+            Assert.AreEqual(TurnActor.Player, resolvedResult.Value.Actor);
+            Assert.IsFalse(resolvedResult.Value.Overflowed);
 
             fixture.Destroy();
         }
