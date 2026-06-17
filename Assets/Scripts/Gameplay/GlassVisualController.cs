@@ -5,37 +5,40 @@ namespace Meniscus.Gameplay
 {
     public class GlassVisualController : MonoBehaviour
     {
-        [SerializeField] GameStateManager stateManager;
+        [SerializeField] GlassManager glassManager;
         [SerializeField] Transform waterTransform;
-        [SerializeField] Vector3 fullLocalScale = new(0.25f, 0.21f, 0.25f);
-        [SerializeField] float waterBottomLocalY = 0.99f;
-        [SerializeField, Range(0.7f, 0.98f)] float baseFillRatio = 0.88f;
-        [SerializeField] float jitterPerCoin = 0.35f;
-        [SerializeField] float riseSpeed = 0.55f;
+        [SerializeField] Vector3 waterSurfaceScale = new(0.82f, 0.025f, 0.82f);
+        [SerializeField, Range(0f, 1f)] float baseFillRatio = 0.45f;
+        [SerializeField] float lowSurfaceLocalY = -0.34f;
+        [SerializeField] float highSurfaceLocalY = 0.72f;
+        [SerializeField] float riseSpeed = 1.1f;
 
         Vector3 waterLocalPosition;
-        float currentScaleY;
-        float targetScaleY;
+        float currentSurfaceLocalY;
+        float targetSurfaceLocalY;
 
         void OnEnable()
         {
-            if (stateManager == null)
-                stateManager = FindAnyObjectByType<GameStateManager>();
+            ResolveReferences();
 
-            if (waterTransform != null)
-                waterLocalPosition = waterTransform.localPosition;
+            if (waterTransform == null)
+                waterTransform = transform;
 
-            if (stateManager != null)
+            waterLocalPosition = waterTransform.localPosition;
+            currentSurfaceLocalY = waterLocalPosition.y;
+            targetSurfaceLocalY = currentSurfaceLocalY;
+
+            if (glassManager != null)
             {
-                stateManager.StateChanged += OnStateChanged;
-                OnStateChanged(stateManager.State);
+                glassManager.ProbabilityChanged += OnProbabilityChanged;
+                OnProbabilityChanged(glassManager.CurrentOverflowProbability);
             }
         }
 
         void OnDisable()
         {
-            if (stateManager != null)
-                stateManager.StateChanged -= OnStateChanged;
+            if (glassManager != null)
+                glassManager.ProbabilityChanged -= OnProbabilityChanged;
         }
 
         void Update()
@@ -43,50 +46,46 @@ namespace Meniscus.Gameplay
             if (waterTransform == null)
                 return;
 
-            if (Mathf.Approximately(currentScaleY, targetScaleY))
+            if (Mathf.Approximately(currentSurfaceLocalY, targetSurfaceLocalY))
                 return;
 
-            currentScaleY = Mathf.MoveTowards(currentScaleY, targetScaleY, riseSpeed * Time.deltaTime);
-            ApplyWaterTransform(currentScaleY);
+            currentSurfaceLocalY = Mathf.MoveTowards(
+                currentSurfaceLocalY,
+                targetSurfaceLocalY,
+                riseSpeed * Time.deltaTime);
+            ApplyWaterTransform(currentSurfaceLocalY);
         }
 
-        void OnStateChanged(MatchState state)
+        void OnProbabilityChanged(float probability)
         {
-            if (waterTransform == null)
-                return;
+            var riskNormalized = Mathf.Clamp01(probability / GameConstants.MaxOverflowProbability);
+            var fillRatio = Mathf.Lerp(baseFillRatio, 1f, riskNormalized);
+            targetSurfaceLocalY = Mathf.Lerp(lowSurfaceLocalY, highSurfaceLocalY, fillRatio);
 
-            targetScaleY = GetTargetScaleY(state.Glass);
-
-            if (state.Glass.CoinsInGlass <= 0)
+            if (Mathf.Approximately(probability, 0f))
             {
-                currentScaleY = targetScaleY;
-                ApplyWaterTransform(currentScaleY);
-            }
-        }
-
-        float GetTargetScaleY(GlassState glass)
-        {
-            var coinRange = 1f - baseFillRatio;
-            var fill = baseFillRatio + glass.FillNormalized * coinRange;
-
-            if (glass.OverflowThreshold > 0 && glass.CoinsInGlass > 0)
-            {
-                var heightPerCoin = fullLocalScale.y * coinRange / glass.OverflowThreshold;
-                var jitter = (Mathf.PerlinNoise(glass.CoinsInGlass * 1.9f, glass.OverflowThreshold * 0.6f) - 0.5f)
-                    * heightPerCoin * jitterPerCoin;
-                fill = Mathf.Clamp01(fill + jitter / fullLocalScale.y);
+                currentSurfaceLocalY = targetSurfaceLocalY;
+                ApplyWaterTransform(currentSurfaceLocalY);
             }
 
-            return fullLocalScale.y * fill;
+            Debug.Log(
+                $"[GlassVisualController] Probability visual target updated. " +
+                $"probability={probability:0.##}%, targetSurfaceY={targetSurfaceLocalY:0.###}.");
         }
 
-        void ApplyWaterTransform(float scaleY)
+        void ApplyWaterTransform(float surfaceLocalY)
         {
-            waterTransform.localScale = new Vector3(fullLocalScale.x, scaleY, fullLocalScale.z);
+            waterTransform.localScale = waterSurfaceScale;
             waterTransform.localPosition = new Vector3(
                 waterLocalPosition.x,
-                waterBottomLocalY + scaleY,
+                surfaceLocalY,
                 waterLocalPosition.z);
+        }
+
+        void ResolveReferences()
+        {
+            if (glassManager == null)
+                glassManager = FindAnyObjectByType<GlassManager>();
         }
     }
 }
