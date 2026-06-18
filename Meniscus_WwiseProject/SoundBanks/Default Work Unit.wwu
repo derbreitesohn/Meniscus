@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WwiseDocument Type="WorkUnit" ID="{61BA7688-7523-470A-A0EC-15DBE6C7F437}" SchemaVersion="133">
 	<SoundBanks>
-		<WorkUnit Name="Default Work Unit" ID="{61BA7688-7523-470A-A0EC-15DBE6C7F437}" PersistMode="Standalone"/>
+		<WorkUnit Name="Default Work Unit" ID="{61BA7688-7523-470A-A0EC-15DBE6C7F437}" PersistMode="Standalone">
+			<ChildrenList>
+				<SoundBank Name="MeniscusSoundbank" ID="{E33B0DE8-8FA6-464D-B859-11D132EEE225}">
+					<ObjectInclusionList>
+						<ObjectRef Name="Play_bar_ambience01" ID="{74BB6CB6-24EF-40B7-87B1-7C164AA6EC77}" WorkUnitID="{0C00ECF5-4468-4582-8A7B-B80A4ABE510E}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_music" ID="{91153ACC-514E-4625-8889-4E93CB3C7AB4}" WorkUnitID="{0C00ECF5-4468-4582-8A7B-B80A4ABE510E}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_coindrop01_into_water" ID="{80279C72-325F-466A-83DB-6D21C95A5E51}" WorkUnitID="{0C00ECF5-4468-4582-8A7B-B80A4ABE510E}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Piano_Chords_State1_82BPM" ID="{26D1134E-FDA9-475F-BE51-343A1C00C75E}" WorkUnitID="{0C00ECF5-4468-4582-8A7B-B80A4ABE510E}" Origin="Manual" Filter="7"/>
+					</ObjectInclusionList>
+					<ObjectExclusionList/>
+					<GameSyncExclusionList/>
+				</SoundBank>
+			</ChildrenList>
+		</WorkUnit>
 	</SoundBanks>
 </WwiseDocument>

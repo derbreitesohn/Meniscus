@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WwiseDocument Type="WorkUnit" ID="{98EDEFE7-1CE4-4080-AB7E-C8D6791E5F29}" SchemaVersion="133">
 	<MixingSessions>
-		<WorkUnit Name="Default Work Unit" ID="{98EDEFE7-1CE4-4080-AB7E-C8D6791E5F29}" PersistMode="Standalone"/>
+		<WorkUnit Name="Default Work Unit" ID="{98EDEFE7-1CE4-4080-AB7E-C8D6791E5F29}" PersistMode="Standalone">
+			<ChildrenList>
+				<MixingSession Name="meniscus Mixing Session" ID="{A59158C1-E225-4D9D-925C-B18715E2B786}">
+					<ObjectList>
+						<ObjectRef Name="Piano_Chords_State1_82BPM" ID="{F31D6069-9FF7-481E-BC80-5416B997AD5E}" WorkUnitID="{3E5ABF94-8B9A-4507-853B-33764D180567}"/>
+						<ObjectRef Name="bar_ambience01" ID="{4D003AD7-3956-4905-8ADF-42D3ED75C5F4}" WorkUnitID="{3E5ABF94-8B9A-4507-853B-33764D180567}"/>
+					</ObjectList>
+				</MixingSession>
+			</ChildrenList>
+		</WorkUnit>
 	</MixingSessions>
 </WwiseDocument>

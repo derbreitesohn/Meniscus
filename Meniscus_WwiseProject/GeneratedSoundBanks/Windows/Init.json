@@ -1,0 +1,219 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "1355168291",
+    "Type": "User",
+    "GUID": "{701ECBBD-9C7B-4030-8CDB-749EE5D1C7B9}",
+    "Language": "SFX",
+    "Hash": "{ACF8660C-ADE7-384F-CD28-C5D25A6393E8}",
+    "ObjectPath": "Init",
+    "ShortName": "Init",
+    "Path": "Init.bnk",
+    "Plugins": {
+     "AudioDevices": [
+      {
+       "Id": "2317455096",
+       "Name": "No_Output",
+       "ObjectPath": "\\Devices\\Default Work Unit\\No_Output",
+       "GUID": "{69540684-8E1C-485E-969B-E6D95706EB56}",
+       "LibName": "No Output",
+       "LibId": "11862023"
+      },
+      {
+       "Id": "3859886410",
+       "Name": "System",
+       "ObjectPath": "\\Devices\\Default Work Unit\\System",
+       "GUID": "{6149BD57-487D-4B84-941C-07C1C13CDBFB}",
+       "LibName": "System",
+       "LibId": "11403271"
+      }
+     ]
+    },
+    "Busses": [
+     {
+      "Id": "174546974",
+      "Name": "ambience_bus",
+      "ObjectPath": "\\Busses\\Default Work Unit\\Main Audio Bus\\ambience_bus",
+      "GUID": "{C468332A-3A32-490A-B696-7BD59A778FB6}",
+      "Color": "10"
+     },
+     {
+      "Id": "213475909",
+      "Name": "sfx_bus",
+      "ObjectPath": "\\Busses\\Default Work Unit\\Main Audio Bus\\sfx_bus",
+      "GUID": "{7DF6BF5C-F7AB-40CF-A26B-87E10AE93800}",
+      "Color": "18"
+     },
+     {
+      "Id": "2246998526",
+      "Name": "Main Audio Bus",
+      "ObjectPath": "\\Busses\\Default Work Unit\\Main Audio Bus",
+      "GUID": "{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}"
+     },
+     {
+      "Id": "3247222208",
+      "Name": "ui_bus",
+      "ObjectPath": "\\Busses\\Default Work Unit\\Main Audio Bus\\ui_bus",
+      "GUID": "{A5689C06-1D54-426D-B18F-A479B0E8A918}",
+      "Color": "26"
+     },
+     {
+      "Id": "3392034617",
+      "Name": "character_bus",
+      "ObjectPath": "\\Busses\\Default Work Unit\\Main Audio Bus\\character_bus",
+      "GUID": "{A4C8932F-19FB-4003-B30A-8ADC4C82B2D7}",
+      "Color": "8"
+     }
+    ],
+    "AuxBusses": [
+     {
+      "Id": "588602472",
+      "Name": "saloon_reverb",
+      "ObjectPath": "\\Busses\\Default Work Unit\\Main Audio Bus\\saloon_reverb",
+      "GUID": "{7AA4AC98-A418-465C-BBC0-9FC25FFA15D0}"
+     }
+    ],
+    "GameParameters": [
+     {
+      "Id": "3813969472",
+      "Name": "GlassFill",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\GlassFill",
+      "GUID": "{947B0B65-75B9-4026-9DDA-4D00B3A102FD}"
+     }
+    ],
+    "StateGroups": [
+     {
+      "Id": "1021618141",
+      "Name": "MusicState",
+      "ObjectPath": "\\States\\Default Work Unit\\MusicState",
+      "GUID": "{A953B08C-76B6-4D13-9E95-874027D35B29}",
+      "States": [
+       {
+        "Id": "391998042",
+        "Name": "Tense",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\Tense",
+        "GUID": "{26510479-E127-49E9-9EF2-A57EE18E97F1}"
+       },
+       {
+        "Id": "748895195",
+        "Name": "None",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\None",
+        "GUID": "{B80BFC4A-01BB-43CD-8AE1-7D1C322427DF}"
+       },
+       {
+        "Id": "1874288895",
+        "Name": "Idle",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\Idle",
+        "GUID": "{BF046EDC-EC06-4BB4-8734-2C241B6FA7A2}"
+       },
+       {
+        "Id": "2135990474",
+        "Name": "Chritical",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\Chritical",
+        "GUID": "{51A583EB-ADA0-4C2A-B622-576077F8911C}"
+       }
+      ]
+     },
+     {
+      "Id": "4091656514",
+      "Name": "GameState",
+      "ObjectPath": "\\States\\Default Work Unit\\GameState",
+      "GUID": "{500FCC6A-DD4C-4DBA-BFC5-584C55427E91}",
+      "States": [
+       {
+        "Id": "221232726",
+        "Name": "Lose",
+        "ObjectPath": "\\States\\Default Work Unit\\GameState\\Lose",
+        "GUID": "{F824F28A-F26B-4887-B498-58FE5B397C1F}"
+       },
+       {
+        "Id": "748895195",
+        "Name": "None",
+        "ObjectPath": "\\States\\Default Work Unit\\GameState\\None",
+        "GUID": "{F0B1F5B5-5881-4A99-944B-D74660C6FD0D}"
+       },
+       {
+        "Id": "979765101",
+        "Name": "WIn",
+        "ObjectPath": "\\States\\Default Work Unit\\GameState\\WIn",
+        "GUID": "{B60F8BE8-8B81-4C92-9015-AE57B5D3BAA4}"
+       },
+       {
+        "Id": "1852808225",
+        "Name": "Playing",
+        "ObjectPath": "\\States\\Default Work Unit\\GameState\\Playing",
+        "GUID": "{77C31010-1A42-4D89-80A0-A9927DC31612}"
+       },
+       {
+        "Id": "2607556080",
+        "Name": "Menu",
+        "ObjectPath": "\\States\\Default Work Unit\\GameState\\Menu",
+        "GUID": "{D805E278-6E4E-4DC5-9A61-985A3FB60FA5}"
+       }
+      ]
+     }
+    ],
+    "SwitchGroups": [
+     {
+      "Id": "618922246",
+      "Name": "CoinType",
+      "ObjectPath": "\\Switches\\Default Work Unit\\CoinType",
+      "GUID": "{FB463862-71DA-4E2A-9E7B-612C4CB88C81}",
+      "Switches": [
+       {
+        "Id": "2909705924",
+        "Name": "Type01",
+        "ObjectPath": "\\Switches\\Default Work Unit\\CoinType\\Type01",
+        "GUID": "{2D641B24-835C-47C6-A056-899E48913640}"
+       },
+       {
+        "Id": "2909705926",
+        "Name": "Type03",
+        "ObjectPath": "\\Switches\\Default Work Unit\\CoinType\\Type03",
+        "GUID": "{A8A90021-E877-422C-B28F-1C29A8BED686}"
+       },
+       {
+        "Id": "2909705927",
+        "Name": "Type02",
+        "ObjectPath": "\\Switches\\Default Work Unit\\CoinType\\Type02",
+        "GUID": "{59E651A7-DBF3-4A9C-9D72-98110424BC59}"
+       }
+      ]
+     },
+     {
+      "Id": "3886256903",
+      "Name": "GlassType",
+      "ObjectPath": "\\Switches\\Default Work Unit\\GlassType",
+      "GUID": "{627B3F8D-D78F-4D26-B921-B41F4718DD5D}",
+      "Switches": [
+       {
+        "Id": "2909705924",
+        "Name": "Type01",
+        "ObjectPath": "\\Switches\\Default Work Unit\\GlassType\\Type01",
+        "GUID": "{2E12AFDA-A4E0-4C01-B9F3-1E9A03B02ACA}"
+       },
+       {
+        "Id": "2909705926",
+        "Name": "Type03",
+        "ObjectPath": "\\Switches\\Default Work Unit\\GlassType\\Type03",
+        "GUID": "{FBB4AEE5-2849-4770-A697-8A4B53ABFCE4}"
+       },
+       {
+        "Id": "2909705927",
+        "Name": "Type02",
+        "ObjectPath": "\\Switches\\Default Work Unit\\GlassType\\Type02",
+        "GUID": "{F2EC18F9-7C2A-4436-8F42-BB624C2C3E2A}"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{0633CE07-9A3E-F607-FA0F-85CF3D9834EA}"
+ }
+}

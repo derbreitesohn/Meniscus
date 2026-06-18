@@ -1,0 +1,3 @@
+Auxiliary Bus	ID	Name			Wwise Object Path	Notes
+	588602472	saloon_reverb			\Default Work Unit\Main Audio Bus\saloon_reverb	
+

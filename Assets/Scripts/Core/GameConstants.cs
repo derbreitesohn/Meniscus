@@ -9,6 +9,19 @@ namespace Meniscus.Core
         public const int MaxCoinsPerActor = 12;
         public const int MaxEnemyCoinsPerTurn = 2;
 
+        public const int MinGlassCapacity = 8;
+        public const int MaxGlassCapacity = 15;
+        public const int MinDeposit = 1;
+        public const int MaxDeposit = 2;
+        public const int RoundsToWin = 2;
+        public const int RoundsPerMatch = TotalRounds;
+
+        public static bool IsValidBet(int amount) =>
+            amount >= MinCoinsPerActor && amount <= MaxCoinsPerActor;
+
+        public static bool IsValidDeposit(int amount) =>
+            amount >= MinDeposit && amount <= MaxDeposit;
+
         public const float SmallCoinRisk = 5f;
         public const float MediumCoinRisk = 10f;
         public const float LargeCoinRisk = 15f;

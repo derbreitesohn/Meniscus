@@ -1,0 +1,29 @@
+State Group	ID	Name			Wwise Object Path	Notes
+	1021618141	MusicState			\Default Work Unit\MusicState	
+	4091656514	GameState			\Default Work Unit\GameState	
+
+State	ID	Name	State Group			Notes
+	391998042	Tense	MusicState			
+	748895195	None	MusicState			
+	1874288895	Idle	MusicState			
+	2135990474	Chritical	MusicState			
+	221232726	Lose	GameState			
+	748895195	None	GameState			
+	979765101	WIn	GameState			
+	1852808225	Playing	GameState			
+	2607556080	Menu	GameState			
+
+Audio Bus	ID	Name			Wwise Object Path	Notes
+	174546974	ambience_bus			\Default Work Unit\Main Audio Bus\ambience_bus	
+	213475909	sfx_bus			\Default Work Unit\Main Audio Bus\sfx_bus	
+	2246998526	Main Audio Bus			\Default Work Unit\Main Audio Bus	
+	3247222208	ui_bus			\Default Work Unit\Main Audio Bus\ui_bus	
+	3392034617	character_bus			\Default Work Unit\Main Audio Bus\character_bus	
+
+Auxiliary Bus	ID	Name			Wwise Object Path	Notes
+	588602472	saloon_reverb			\Default Work Unit\Main Audio Bus\saloon_reverb	
+
+Audio Devices	ID	Name	Type				Notes
+	2317455096	No_Output	No Output			
+	3859886410	System	System			
+

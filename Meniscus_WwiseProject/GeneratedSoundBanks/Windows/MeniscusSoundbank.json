@@ -1,0 +1,142 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "1434658785",
+    "Type": "User",
+    "GUID": "{E33B0DE8-8FA6-464D-B859-11D132EEE225}",
+    "Language": "SFX",
+    "Hash": "{F20DD4FA-4E62-942E-ED38-2C4F2007BDA3}",
+    "ObjectPath": "\\SoundBanks\\Default Work Unit\\MeniscusSoundbank",
+    "ShortName": "MeniscusSoundbank",
+    "Path": "MeniscusSoundbank.bnk",
+    "Media": [
+     {
+      "Id": "91653063",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "bar_ambience01.wav",
+      "CachePath": "6A/{6A99C526-8B18-DE0F-5B44-BF7308BC3F42}.wem"
+     },
+     {
+      "Id": "438190318",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "coindrop01_into_water.wav",
+      "CachePath": "77/{7787D35F-E4B7-0FFA-D48D-969B20332BB4}.wem"
+     },
+     {
+      "Id": "1002545419",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Piano_Chords_State1_82BPM.wav",
+      "CachePath": "9A/{9A6FFE82-F668-F069-1B98-1713A97DC42D}.wem"
+     }
+    ],
+    "Plugins": {
+     "ShareSets": [
+      {
+       "Id": "1990128658",
+       "Name": "Room_Medium",
+       "ObjectPath": "\\Effects\\Factory Effects\\RoomVerb\\Rooms\\Room_Medium",
+       "GUID": "{F5C06EC1-E4A4-4332-A7D3-A89E2986B74F}",
+       "LibName": "Wwise RoomVerb",
+       "LibId": "7733251"
+      }
+     ]
+    },
+    "Events": [
+     {
+      "Id": "3708788113",
+      "Name": "Play_bar_ambience01",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_bar_ambience01",
+      "GUID": "{74BB6CB6-24EF-40B7-87B1-7C164AA6EC77}",
+      "DurationType": "OneShot",
+      "DurationMin": "60.822376",
+      "DurationMax": "60.822376",
+      "MediaRefs": [
+       {
+        "Id": "91653063"
+       }
+      ]
+     },
+     {
+      "Id": "3586401116",
+      "Name": "Play_coindrop01_into_water",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_coindrop01_into_water",
+      "GUID": "{80279C72-325F-466A-83DB-6D21C95A5E51}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.53191",
+      "DurationMax": "0.53191",
+      "MediaRefs": [
+       {
+        "Id": "438190318"
+       }
+      ]
+     },
+     {
+      "Id": "271372744",
+      "Name": "Play_Piano_Chords_State1_82BPM",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Piano_Chords_State1_82BPM",
+      "GUID": "{26D1134E-FDA9-475F-BE51-343A1C00C75E}",
+      "DurationType": "Infinite",
+      "MediaRefs": [
+       {
+        "Id": "1002545419"
+       }
+      ],
+      "PluginRefs": {
+       "ShareSets": [
+        {
+         "Id": "1990128658"
+        }
+       ]
+      }
+     }
+    ],
+    "StateGroups": [
+     {
+      "Id": "1021618141",
+      "Name": "MusicState",
+      "ObjectPath": "\\States\\Default Work Unit\\MusicState",
+      "GUID": "{A953B08C-76B6-4D13-9E95-874027D35B29}",
+      "States": [
+       {
+        "Id": "391998042",
+        "Name": "Tense",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\Tense",
+        "GUID": "{26510479-E127-49E9-9EF2-A57EE18E97F1}"
+       },
+       {
+        "Id": "748895195",
+        "Name": "None",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\None",
+        "GUID": "{B80BFC4A-01BB-43CD-8AE1-7D1C322427DF}"
+       },
+       {
+        "Id": "1874288895",
+        "Name": "Idle",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\Idle",
+        "GUID": "{BF046EDC-EC06-4BB4-8734-2C241B6FA7A2}"
+       },
+       {
+        "Id": "2135990474",
+        "Name": "Chritical",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\Chritical",
+        "GUID": "{51A583EB-ADA0-4C2A-B622-576077F8911C}"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{204CC098-1856-8D10-A50A-70A925369CE4}"
+ }
+}

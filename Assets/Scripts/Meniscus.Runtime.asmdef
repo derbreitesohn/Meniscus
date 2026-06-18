@@ -3,7 +3,8 @@
     "rootNamespace": "Meniscus",
     "references": [
         "Unity.InputSystem",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "AK.Wwise.Unity.API.WwiseTypes"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

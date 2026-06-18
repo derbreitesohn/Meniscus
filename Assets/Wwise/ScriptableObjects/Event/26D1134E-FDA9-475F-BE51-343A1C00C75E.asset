@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 276578224cc7c464ea3e399cd59679e6, type: 3}
+  m_Name: 26D1134E-FDA9-475F-BE51-343A1C00C75E
+  m_EditorClassIdentifier: AK.Wwise.Unity.API.WwiseTypes::WwiseEventReference
+  objectName: Play_Piano_Chords_State1_82BPM
+  id: 271372744
+  guid: 26D1134E-FDA9-475F-BE51-343A1C00C75E
+  IsInUserDefinedSoundBank: 1

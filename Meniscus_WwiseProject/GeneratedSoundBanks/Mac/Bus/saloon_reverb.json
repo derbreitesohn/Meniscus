@@ -1,0 +1,29 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Mac",
+  "BasePlatform": "Mac",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "588602472",
+    "Type": "Bus",
+    "GUID": "{7AA4AC98-A418-465C-BBC0-9FC25FFA15D0}",
+    "Language": "SFX",
+    "Hash": "{B67CF4FB-3406-6E1C-45AC-4115FB6FAF18}",
+    "ObjectPath": "saloon_reverb",
+    "ShortName": "saloon_reverb",
+    "Path": "Bus/saloon_reverb.bnk",
+    "AuxBusses": [
+     {
+      "Id": "588602472",
+      "Name": "saloon_reverb",
+      "ObjectPath": "\\Busses\\Default Work Unit\\Main Audio Bus\\saloon_reverb",
+      "GUID": "{7AA4AC98-A418-465C-BBC0-9FC25FFA15D0}"
+     }
+    ]
+   }
+  ],
+  "FileHash": "{5CDBBFEC-13F8-70B7-6A54-DB19973C5405}"
+ }
+}

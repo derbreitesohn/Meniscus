@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Meniscus.Core;
 using UnityEngine;
 
+
 namespace Meniscus.Gameplay
 {
     [DisallowMultipleComponent]
@@ -13,6 +14,8 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0.05f)] float dropAnimationSeconds = 0.98f;
         [SerializeField, Min(0f)] float liftArcHeight = 0.34f;
         [SerializeField, Min(0f)] float proxyLifetimeAfterDrop = 0.08f;
+        [SerializeField] AK.Wwise.Event coinIntoWater;   // im Inspector Play_Coin_IntoWater zuweisen
+
 
         void OnEnable()
         {
@@ -111,7 +114,13 @@ namespace Meniscus.Gameplay
                 yield break;
 
             proxy.transform.position = end;
+
+             var emitter = glassTarget != null ? glassTarget.gameObject : gameObject;
+        coinIntoWater?.Post(emitter);          // Splash am Glas 
+
             Destroy(proxy, proxyLifetimeAfterDrop);
+
+
         }
 
         static Vector3 CalculateRimHoldPosition(Vector3 targetPosition, TurnActor actor, int index)

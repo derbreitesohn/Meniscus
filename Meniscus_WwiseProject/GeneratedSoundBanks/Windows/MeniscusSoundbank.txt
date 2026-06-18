@@ -1,0 +1,22 @@
+Event	ID	Name			Wwise Object Path	Notes
+	271372744	Play_Piano_Chords_State1_82BPM			\Default Work Unit\Play_Piano_Chords_State1_82BPM	
+	3586401116	Play_coindrop01_into_water			\Default Work Unit\Play_coindrop01_into_water	
+	3708788113	Play_bar_ambience01			\Default Work Unit\Play_bar_ambience01	
+
+State Group	ID	Name			Wwise Object Path	Notes
+	1021618141	MusicState			\Default Work Unit\MusicState	
+
+State	ID	Name	State Group			Notes
+	391998042	Tense	MusicState			
+	748895195	None	MusicState			
+	1874288895	Idle	MusicState			
+	2135990474	Chritical	MusicState			
+
+Effect plug-ins	ID	Name	Type				Notes
+	1990128658	Room_Medium	Wwise RoomVerb			
+
+In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
+	91653063	bar_ambience01	.cache\6A\{6A99C526-8B18-DE0F-5B44-BF7308BC3F42}.wem		\Containers\Default Work Unit\ambience\bar_ambience01		5839044
+	438190318	coindrop01_into_water	.cache\77\{7787D35F-E4B7-0FFA-D48D-969B20332BB4}.wem		\Containers\Default Work Unit\sfx\coins\coin_into_water\coindrop01_into_water		51160
+	1002545419	Piano_Chords_State1_82BPM	.cache\9A\{9A6FFE82-F668-F069-1B98-1713A97DC42D}.wem		\Containers\Default Work Unit\music\Piano_Chords_State1_82BPM		4495708
+

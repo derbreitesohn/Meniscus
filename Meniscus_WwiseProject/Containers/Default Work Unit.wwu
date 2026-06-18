@@ -18,6 +18,13 @@
 					</ReferenceList>
 					<ChildrenList>
 						<Sound Name="bar_ambience01" ID="{4D003AD7-3956-4905-8ADF-42D3ED75C5F4}" ShortID="557847115">
+							<PropertyList>
+								<Property Name="Volume" Type="Real64">
+									<ValueList>
+										<Value>-5</Value>
+									</ValueList>
+								</Property>
+							</PropertyList>
 							<ReferenceList>
 								<Reference Name="Conversion">
 									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
@@ -601,6 +608,13 @@
 									<GroupingInfo/>
 								</SwitchContainer>
 								<RandomSequenceContainer Name="coin_into_water" ID="{3ED3A0A9-F983-42F0-9A79-7E9DB8702388}" ShortID="225140312">
+									<PropertyList>
+										<Property Name="Volume" Type="Real64">
+											<ValueList>
+												<Value>12</Value>
+											</ValueList>
+										</Property>
+									</PropertyList>
 									<ReferenceList>
 										<Reference Name="Conversion">
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
@@ -609,6 +623,42 @@
 											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 										</Reference>
 									</ReferenceList>
+									<ChildrenList>
+										<Sound Name="coindrop01_into_water" ID="{E8F01E11-C0E5-4C93-8B3B-5D6FE1698BFD}" ShortID="453361102">
+											<PropertyList>
+												<Property Name="Volume" Type="Real64">
+													<ValueList>
+														<Value>-11</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<ReferenceList>
+												<Reference Name="Conversion">
+													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+												</Reference>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="coindrop01_into_water" ID="{01C532D6-726E-43BD-8E26-9C2B5BE20C77}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="1.84475"/>
+														<Property Name="TrimEnd" Type="Real64" Value="2.37666"/>
+													</PropertyList>
+													<Language>SFX</Language>
+													<AudioFile>coindrop01_into_water.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="438190318"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ActiveSourceList>
+												<ActiveSource Name="coindrop01_into_water" ID="{01C532D6-726E-43BD-8E26-9C2B5BE20C77}" Platform="Linked"/>
+											</ActiveSourceList>
+										</Sound>
+									</ChildrenList>
 								</RandomSequenceContainer>
 							</ChildrenList>
 							<GroupingInfo>
@@ -639,6 +689,305 @@
 						<Property Name="OverrideColor" Type="bool" Value="True"/>
 					</PropertyList>
 				</Folder>
+				<SwitchContainer Name="music" ID="{C1E60124-BB65-4956-88FA-0AC78442A2C9}" ShortID="118230711">
+					<PropertyList>
+						<Property Name="Color" Type="int16" Value="3"/>
+						<Property Name="OverrideColor" Type="bool" Value="True"/>
+					</PropertyList>
+					<ReferenceList>
+						<Reference Name="Conversion">
+							<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+						</Reference>
+						<Reference Name="DefaultSwitchOrState">
+							<ObjectRef Name="None" ID="{B80BFC4A-01BB-43CD-8AE1-7D1C322427DF}" WorkUnitID="{0F3CDAEA-CB48-4465-89EA-DEBCABAD91B3}"/>
+						</Reference>
+						<Reference Name="OutputBus">
+							<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+						</Reference>
+						<Reference Name="SwitchGroupOrStateGroup">
+							<ObjectRef Name="MusicState" ID="{A953B08C-76B6-4D13-9E95-874027D35B29}" WorkUnitID="{0F3CDAEA-CB48-4465-89EA-DEBCABAD91B3}"/>
+						</Reference>
+					</ReferenceList>
+					<ChildrenList>
+						<Sound Name="Piano_Auftakt_State1_82BPM" ID="{45680877-C9D6-451C-AFBE-C376B2F2ACC3}" ShortID="347072415">
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="Piano_Auftakt_State1_82BPM" ID="{16891C72-C129-43BC-8F70-F89B0B3CC00D}">
+									<PropertyList>
+										<Property Name="LoopBegin" Type="Real64" Value="0.00246"/>
+										<Property Name="LoopEnd" Type="Real64" Value="1.46095"/>
+										<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+									</PropertyList>
+									<Language>SFX</Language>
+									<AudioFile>Piano_Auftakt_State1_82BPM.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="590189198"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<StateInfo>
+								<StateGroupList>
+									<StateGroupInfo>
+										<StateGroupRef Name="GameState" ID="{500FCC6A-DD4C-4DBA-BFC5-584C55427E91}"/>
+										<StateGroupInfo Name="" ID="{ADCACACC-8402-482C-8648-FEB3D38DF36B}" ShortID="185800733"/>
+									</StateGroupInfo>
+								</StateGroupList>
+								<CustomStateList>
+									<CustomState>
+										<StateRef Name="Lose" ID="{F824F28A-F26B-4887-B498-58FE5B397C1F}"/>
+										<CustomState Name="" ID="{3E8A089B-79C0-46ED-8BBE-EB75A90168A8}" ShortID="793974671"/>
+									</CustomState>
+									<CustomState>
+										<StateRef Name="None" ID="{F0B1F5B5-5881-4A99-944B-D74660C6FD0D}"/>
+										<CustomState Name="" ID="{43230968-4B8C-482A-8752-24A8AFBED8F3}" ShortID="202773645"/>
+									</CustomState>
+									<CustomState>
+										<StateRef Name="WIn" ID="{B60F8BE8-8B81-4C92-9015-AE57B5D3BAA4}"/>
+										<CustomState Name="" ID="{7B5280EB-C010-433D-B0D9-569C788D545A}" ShortID="674801885"/>
+									</CustomState>
+									<CustomState>
+										<StateRef Name="Playing" ID="{77C31010-1A42-4D89-80A0-A9927DC31612}"/>
+										<CustomState Name="" ID="{86D10F68-288A-41AE-8874-EA0FAE8FF26F}" ShortID="972740818"/>
+									</CustomState>
+									<CustomState>
+										<StateRef Name="Menu" ID="{D805E278-6E4E-4DC5-9A61-985A3FB60FA5}"/>
+										<CustomState Name="" ID="{207748B5-B6C5-40B3-A6EF-6E998A635F2B}" ShortID="794970311"/>
+									</CustomState>
+								</CustomStateList>
+							</StateInfo>
+							<ActiveSourceList>
+								<ActiveSource Name="Piano_Auftakt_State1_82BPM" ID="{16891C72-C129-43BC-8F70-F89B0B3CC00D}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+						<Sound Name="Piano_Chords_State1_82BPM" ID="{F31D6069-9FF7-481E-BC80-5416B997AD5E}" ShortID="526232397">
+							<PropertyList>
+								<Property Name="IsLoopingEnabled" Type="bool" Value="True"/>
+								<Property Name="OverrideEffect" Type="bool" Value="True"/>
+								<Property Name="Volume" Type="Real64">
+									<ValueList>
+										<Value>-10</Value>
+									</ValueList>
+								</Property>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="Piano_Chords_State1_82BPM" ID="{457CE2A7-65D5-49E9-B146-79DED112166A}">
+									<Language>SFX</Language>
+									<AudioFile>Piano_Chords_State1_82BPM.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="1002545419"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<StateInfo>
+								<StateGroupList>
+									<StateGroupInfo>
+										<StateGroupRef Name="MusicState" ID="{A953B08C-76B6-4D13-9E95-874027D35B29}"/>
+										<StateGroupInfo Name="" ID="{29F9B9EF-75D6-4B57-895D-F1FC2F4B1966}" ShortID="935614183"/>
+									</StateGroupInfo>
+								</StateGroupList>
+								<CustomStateList>
+									<CustomState>
+										<StateRef Name="None" ID="{B80BFC4A-01BB-43CD-8AE1-7D1C322427DF}"/>
+										<CustomState Name="" ID="{ADCB5DED-04D9-486E-8A6E-225FB74DC6D0}" ShortID="404626868"/>
+									</CustomState>
+									<CustomState>
+										<StateRef Name="Tense" ID="{26510479-E127-49E9-9EF2-A57EE18E97F1}"/>
+										<CustomState Name="" ID="{33823DC3-B3FB-45DE-99E5-592CF70AA04F}" ShortID="312603219"/>
+									</CustomState>
+									<CustomState>
+										<StateRef Name="Idle" ID="{BF046EDC-EC06-4BB4-8734-2C241B6FA7A2}"/>
+										<CustomState Name="" ID="{79D5E273-2443-43AE-9053-9EB2FE9EFFD5}" ShortID="269098605"/>
+									</CustomState>
+									<CustomState>
+										<StateRef Name="Chritical" ID="{51A583EB-ADA0-4C2A-B622-576077F8911C}"/>
+										<CustomState Name="" ID="{82575E3F-AE42-4672-9AB2-09B2843CCD5A}" ShortID="483128911"/>
+									</CustomState>
+								</CustomStateList>
+							</StateInfo>
+							<ObjectLists>
+								<ObjectList Name="Effects">
+									<EffectSlot Name="" ID="{FE9B202C-919D-44F5-82AD-E9E062CFCF2F}" ShortID="1070973240">
+										<ReferenceList>
+											<Reference Name="Effect" PluginName="Wwise RoomVerb" CompanyID="0" PluginID="118" PluginType="3">
+												<ObjectRef Name="Room_Medium" ID="{F5C06EC1-E4A4-4332-A7D3-A89E2986B74F}" WorkUnitID="{E8613F7D-BAD3-45CD-A3ED-505576F31277}"/>
+											</Reference>
+										</ReferenceList>
+										<StateInfo>
+											<CustomStateList>
+												<CustomState>
+													<StateRef Name="None" ID="{B80BFC4A-01BB-43CD-8AE1-7D1C322427DF}"/>
+													<CustomState Name="" ID="{D64AF094-8320-47D9-99A0-3FC0C63E6689}" ShortID="90558090"/>
+												</CustomState>
+												<CustomState>
+													<StateRef Name="Tense" ID="{26510479-E127-49E9-9EF2-A57EE18E97F1}"/>
+													<CustomState Name="" ID="{DABB83C3-2D67-478E-8516-A0057C41E699}" ShortID="630284505"/>
+												</CustomState>
+												<CustomState>
+													<StateRef Name="Idle" ID="{BF046EDC-EC06-4BB4-8734-2C241B6FA7A2}"/>
+													<CustomState Name="" ID="{36E8E874-9266-4D5C-ADE4-AE0FFB9C47C6}" ShortID="666400011"/>
+												</CustomState>
+												<CustomState>
+													<StateRef Name="Chritical" ID="{51A583EB-ADA0-4C2A-B622-576077F8911C}"/>
+													<CustomState Name="" ID="{01556FDB-4CDF-4FB0-86A7-50EC2C957377}" ShortID="173889999"/>
+												</CustomState>
+											</CustomStateList>
+										</StateInfo>
+									</EffectSlot>
+								</ObjectList>
+							</ObjectLists>
+							<ActiveSourceList>
+								<ActiveSource Name="Piano_Chords_State1_82BPM" ID="{457CE2A7-65D5-49E9-B146-79DED112166A}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+						<Sound Name="Piano_Chords_State2_102BPM" ID="{F41633FA-B958-4A9E-898B-D3AE8102D456}" ShortID="35737420">
+							<PropertyList>
+								<Property Name="IsLoopingEnabled" Type="bool" Value="True"/>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="Piano_Chords_State2_102BPM" ID="{9D8A0F54-A5CE-4E59-855E-2367456311D9}">
+									<Language>SFX</Language>
+									<AudioFile>Piano_Chords_State2_102BPM.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="121060361"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<StateInfo>
+								<StateGroupList>
+									<StateGroupInfo>
+										<StateGroupRef Name="MusicState" ID="{A953B08C-76B6-4D13-9E95-874027D35B29}"/>
+										<StateGroupInfo Name="" ID="{86A4A1BC-A0B0-450C-A329-61D9438619B1}" ShortID="654446212"/>
+									</StateGroupInfo>
+								</StateGroupList>
+								<CustomStateList>
+									<CustomState>
+										<StateRef Name="None" ID="{B80BFC4A-01BB-43CD-8AE1-7D1C322427DF}"/>
+										<CustomState Name="" ID="{D2936B59-5E26-4167-BE37-3A10CEC51AA1}" ShortID="147438309"/>
+									</CustomState>
+									<CustomState>
+										<StateRef Name="Tense" ID="{26510479-E127-49E9-9EF2-A57EE18E97F1}"/>
+										<CustomState Name="" ID="{78785C33-E87F-4D5A-99C6-16B7FF7F7A1E}" ShortID="570965493">
+											<PropertyList>
+												<Property Name="Volume" Type="Real64" Value="200"/>
+											</PropertyList>
+										</CustomState>
+									</CustomState>
+									<CustomState>
+										<StateRef Name="Idle" ID="{BF046EDC-EC06-4BB4-8734-2C241B6FA7A2}"/>
+										<CustomState Name="" ID="{7C683FFB-61EB-4ECA-9D3A-BE037E6DC938}" ShortID="676278928"/>
+									</CustomState>
+									<CustomState>
+										<StateRef Name="Chritical" ID="{51A583EB-ADA0-4C2A-B622-576077F8911C}"/>
+										<CustomState Name="" ID="{606C02F8-E323-4FE5-8AEF-A6EA03AADEFC}" ShortID="366857308"/>
+									</CustomState>
+								</CustomStateList>
+							</StateInfo>
+							<ActiveSourceList>
+								<ActiveSource Name="Piano_Chords_State2_102BPM" ID="{9D8A0F54-A5CE-4E59-855E-2367456311D9}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+						<Sound Name="Piano_Ende_Langsam" ID="{46E9BE89-8BE2-4E01-96A7-EBE954CB64E7}" ShortID="872297344">
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="Piano_Ende_Langsam" ID="{D273FC72-7FB8-400B-B60A-597C862A3517}">
+									<PropertyList>
+										<Property Name="LoopBegin" Type="Real64" Value="0"/>
+										<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+										<Property Name="TrimEnd" Type="Real64" Value="4.78943"/>
+									</PropertyList>
+									<Language>SFX</Language>
+									<AudioFile>Piano_Ende_Langsam.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="433593070"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="Piano_Ende_Langsam" ID="{D273FC72-7FB8-400B-B60A-597C862A3517}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+					</ChildrenList>
+					<StateInfo>
+						<StateGroupList>
+							<StateGroupInfo>
+								<StateGroupRef Name="MusicState" ID="{A953B08C-76B6-4D13-9E95-874027D35B29}"/>
+								<StateGroupInfo Name="" ID="{9AB9A20D-9976-4B40-8BCF-4D1C725BBC13}" ShortID="20370326"/>
+							</StateGroupInfo>
+						</StateGroupList>
+						<CustomStateList>
+							<CustomState>
+								<StateRef Name="None" ID="{B80BFC4A-01BB-43CD-8AE1-7D1C322427DF}"/>
+								<CustomState Name="" ID="{6BD90809-9AD0-428E-A097-9BD6F747D2D2}" ShortID="936406060"/>
+							</CustomState>
+							<CustomState>
+								<StateRef Name="Tense" ID="{26510479-E127-49E9-9EF2-A57EE18E97F1}"/>
+								<CustomState Name="" ID="{99DB18B8-5DD8-42B1-B6B4-218FAEED240A}" ShortID="567267040"/>
+							</CustomState>
+							<CustomState>
+								<StateRef Name="Idle" ID="{BF046EDC-EC06-4BB4-8734-2C241B6FA7A2}"/>
+								<CustomState Name="" ID="{3435A2E2-E9B9-410D-9A0A-60BFD0C787F7}" ShortID="760475098"/>
+							</CustomState>
+							<CustomState>
+								<StateRef Name="Chritical" ID="{51A583EB-ADA0-4C2A-B622-576077F8911C}"/>
+								<CustomState Name="" ID="{4EAF2548-4281-4441-8494-CF57D5BDDB4C}" ShortID="443815380"/>
+							</CustomState>
+						</CustomStateList>
+					</StateInfo>
+					<GroupingInfo>
+						<GroupingBehaviorList>
+							<GroupingBehavior>
+								<ItemRef Name="Piano_Chords_State1_82BPM" ID="{F31D6069-9FF7-481E-BC80-5416B997AD5E}"/>
+							</GroupingBehavior>
+							<GroupingBehavior>
+								<ItemRef Name="Piano_Auftakt_State1_82BPM" ID="{45680877-C9D6-451C-AFBE-C376B2F2ACC3}"/>
+							</GroupingBehavior>
+							<GroupingBehavior>
+								<ItemRef Name="Piano_Ende_Langsam" ID="{46E9BE89-8BE2-4E01-96A7-EBE954CB64E7}"/>
+							</GroupingBehavior>
+							<GroupingBehavior>
+								<ItemRef Name="Piano_Chords_State2_102BPM" ID="{F41633FA-B958-4A9E-898B-D3AE8102D456}"/>
+							</GroupingBehavior>
+						</GroupingBehaviorList>
+						<GroupingList>
+							<Grouping>
+								<SwitchRef Name="Idle" ID="{BF046EDC-EC06-4BB4-8734-2C241B6FA7A2}"/>
+								<ItemList>
+									<ItemRef Name="Piano_Chords_State1_82BPM" ID="{F31D6069-9FF7-481E-BC80-5416B997AD5E}"/>
+								</ItemList>
+							</Grouping>
+						</GroupingList>
+					</GroupingInfo>
+				</SwitchContainer>
 			</ChildrenList>
 		</WorkUnit>
 	</Containers>
