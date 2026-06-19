@@ -13,6 +13,9 @@ namespace Meniscus.Gameplay
         [SerializeField] float riseSpeed = 1.1f;
         [SerializeField] float dangerWobbleAmplitude = 0.008f;
         [SerializeField] float spillPuddleLifetime = 1.4f;
+        [Header("Audio")]
+[       SerializeField] AK.Wwise.Event waterSpill; 
+
 
         Vector3 waterLocalPosition;
         float currentSurfaceLocalY;
@@ -99,6 +102,7 @@ namespace Meniscus.Gameplay
             {
                 spillFlashTimer = 1f;
                 CreateSpillPuddle();
+                waterSpill?.Post(gameObject);
                 Debug.Log("[GlassVisualController] Overflow visual triggered: puddle and water surge.");
                 return;
             }

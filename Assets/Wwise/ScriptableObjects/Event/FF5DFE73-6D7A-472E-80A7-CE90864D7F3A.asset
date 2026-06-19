@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 276578224cc7c464ea3e399cd59679e6, type: 3}
+  m_Name: FF5DFE73-6D7A-472E-80A7-CE90864D7F3A
+  m_EditorClassIdentifier: AK.Wwise.Unity.API.WwiseTypes::WwiseEventReference
+  objectName: Play_coin_on_wood
+  id: 2511138137
+  guid: FF5DFE73-6D7A-472E-80A7-CE90864D7F3A
+  IsInUserDefinedSoundBank: 0

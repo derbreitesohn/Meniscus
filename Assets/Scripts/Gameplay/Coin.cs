@@ -15,6 +15,9 @@ namespace Meniscus.Gameplay
         [Header("Selection Feedback")]
         [SerializeField] float selectedYOffset = 0.12f;
 
+         [Header("Audio")]
+        [SerializeField] AK.Wwise.Event coinOnWood;
+
         Vector3 originalLocalPosition;
         bool hasCachedOriginalPosition;
         bool isSelected;
@@ -74,6 +77,9 @@ namespace Meniscus.Gameplay
             transform.localPosition = selected
                 ? originalLocalPosition + Vector3.up * selectedYOffset
                 : originalLocalPosition;
+
+                 if (selected)                      
+                coinOnWood?.Post(gameObject);
 
             Debug.Log($"[Coin] {(selected ? "Selected" : "Deselected")} {name}.");
         }

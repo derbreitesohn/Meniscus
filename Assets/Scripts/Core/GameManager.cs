@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections;
 using Meniscus.Gameplay;
 using Meniscus.UI;
 using UnityEngine;
@@ -14,6 +15,9 @@ namespace Meniscus.Core
         [Header("Lifecycle")]
         [SerializeField] bool autoStart = true;
         [SerializeField] bool shopBetweenRoundsEnabled = true;
+        [SerializeField] float endScreenDelay = 1.5f; 
+        [SerializeField] float resolveDelayAfterDrop = 1.0f;   // ~ dropAnimationSeconds (Münzen-Flugzeit)
+
 
         [Header("Managers")]
         [SerializeField] GlassManager glassManager;
@@ -159,23 +163,31 @@ namespace Meniscus.Core
                 StartRound();
         }
 
-        void ResolveDrop(TurnActor actor, IReadOnlyList<Coin> coins)
+       void ResolveDrop(TurnActor actor, IReadOnlyList<Coin> coins)
         {
             cameraController?.SwitchCamera(CameraState.GlassZoom);
             TransitionTo(GameState.Resolution);
-            DropCommitted?.Invoke(actor, coins);
+            DropCommitted?.Invoke(actor, coins);   
 
             var result = glassManager != null
                 ? glassManager.DropCoins(coins, actor)
                 : new GlassDropResult(actor, 0f, 0f, 0f, 0f, false, coins.Count);
 
-            DropResolved?.Invoke(result);
-            MarkCoinsSpent(actor, coins);
+            MarkCoinsSpent(actor, coins);          
+
+            StartCoroutine(ResolveDropAfterAnimation(result, coins));
+        }
+
+        IEnumerator ResolveDropAfterAnimation(GlassDropResult result, IReadOnlyList<Coin> coins)
+        {
+            yield return new WaitForSeconds(resolveDelayAfterDrop); 
+
+            DropResolved?.Invoke(result);          
 
             if (result.Overflowed)
             {
                 ResolveOverflow(result);
-                return;
+                yield break;
             }
 
             ResolveSafeDrop(result, coins);
@@ -352,13 +364,20 @@ namespace Meniscus.Core
             TransitionTo(GameState.GameOver);
             cameraController?.SwitchCamera(CameraState.TableOverview);
             shopManager?.HideShop();
+            StartCoroutine(ShowEndScreenAfterDelay(outcome, reason));   // ← statt ShowOutcome direkt
+
+            Debug.Log(
+                $"[GameManager] GameOver. Outcome={outcome}, reason={reason}. Final banked cash=" +
+                $"{(economyManager == null ? 0 : economyManager.PlayerTotalBankedCash)}.");
+        }
+
+        IEnumerator ShowEndScreenAfterDelay(MatchOutcome outcome, string reason)
+        {
+            yield return new WaitForSeconds(endScreenDelay);
             endScreenManager?.ShowOutcome(
                 outcome,
                 reason,
                 economyManager == null ? 0 : economyManager.PlayerTotalBankedCash);
-            Debug.Log(
-                $"[GameManager] GameOver. Outcome={outcome}, reason={reason}. Final banked cash=" +
-                $"{(economyManager == null ? 0 : economyManager.PlayerTotalBankedCash)}.");
         }
 
         void GenerateRoundCoinPools()

@@ -936,6 +936,28 @@
 								<ActiveSource Name="Piano_Ende_Langsam" ID="{D273FC72-7FB8-400B-B60A-597C862A3517}" Platform="Linked"/>
 							</ActiveSourceList>
 						</Sound>
+						<Sound Name="24Bit_Piano_Chords+Melodie_State2-3_102BPM" ID="{97A402C2-84AA-4DC9-B210-2F71B4F54F30}" ShortID="230834919">
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="24Bit_Piano_Chords+Melodie_State2-3_102BPM" ID="{101AA2D5-3638-42F8-8FB6-ECEBC056F04F}">
+									<Language>SFX</Language>
+									<AudioFile>24Bit_Piano_Chords+Melodie_State2-3_102BPM.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="897760597"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="24Bit_Piano_Chords+Melodie_State2-3_102BPM" ID="{101AA2D5-3638-42F8-8FB6-ECEBC056F04F}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
 					</ChildrenList>
 					<StateInfo>
 						<StateGroupList>
@@ -973,6 +995,9 @@
 							</GroupingBehavior>
 							<GroupingBehavior>
 								<ItemRef Name="Piano_Ende_Langsam" ID="{46E9BE89-8BE2-4E01-96A7-EBE954CB64E7}"/>
+							</GroupingBehavior>
+							<GroupingBehavior>
+								<ItemRef Name="24Bit_Piano_Chords+Melodie_State2-3_102BPM" ID="{97A402C2-84AA-4DC9-B210-2F71B4F54F30}"/>
 							</GroupingBehavior>
 							<GroupingBehavior>
 								<ItemRef Name="Piano_Chords_State2_102BPM" ID="{F41633FA-B958-4A9E-898B-D3AE8102D456}"/>

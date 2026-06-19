@@ -1,0 +1,72 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "2511138137",
+    "Type": "Event",
+    "GUID": "{FF5DFE73-6D7A-472E-80A7-CE90864D7F3A}",
+    "Language": "SFX",
+    "Hash": "{DE6B5E49-90E6-9734-073C-C86D4BB701B3}",
+    "ObjectPath": "Play_coin_on_wood",
+    "ShortName": "Play_coin_on_wood",
+    "Path": "Event/Play_coin_on_wood.bnk",
+    "Media": [
+     {
+      "Id": "166279222",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "coin_on_wood02.wav",
+      "Path": "Media/166279222.wem",
+      "CachePath": "D1/{D152F906-E416-AFDC-6D3B-5B09055B2D06}.wem"
+     },
+     {
+      "Id": "733563447",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "coin_on_wood01.wav",
+      "Path": "Media/733563447.wem",
+      "CachePath": "6B/{6B3E45EF-82AF-B1F5-1DF6-71F6EDE28D67}.wem"
+     },
+     {
+      "Id": "1055488962",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "coin_on_wood03.wav",
+      "Path": "Media/1055488962.wem",
+      "CachePath": "C7/{C75DEBA3-D340-AD52-3DBE-5B4C7D996C81}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "2511138137",
+      "Name": "Play_coin_on_wood",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_coin_on_wood",
+      "GUID": "{FF5DFE73-6D7A-472E-80A7-CE90864D7F3A}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.31016666",
+      "DurationMax": "0.44472918",
+      "MediaRefs": [
+       {
+        "Id": "166279222"
+       },
+       {
+        "Id": "733563447"
+       },
+       {
+        "Id": "1055488962"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{83121DDD-F5AE-3754-CDDE-D813F291CCC9}"
+ }
+}

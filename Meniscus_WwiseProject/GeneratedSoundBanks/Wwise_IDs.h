@@ -14,8 +14,10 @@ namespace AK
     namespace EVENTS
     {
         static const AkUniqueID PLAY_BAR_AMBIENCE01 = 3708788113U;
+        static const AkUniqueID PLAY_COIN_ON_WOOD = 2511138137U;
         static const AkUniqueID PLAY_COINDROP01_INTO_WATER = 3586401116U;
         static const AkUniqueID PLAY_PIANO_CHORDS_STATE1_82BPM = 271372744U;
+        static const AkUniqueID PLAY_WATERSPILLS = 3991957282U;
     } // namespace EVENTS
 
     namespace STATES
