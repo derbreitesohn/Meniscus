@@ -67,5 +67,5 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "CCL-4.slnx"
+    "dotnet.defaultSolution": "Meniscus.slnx"
 }
