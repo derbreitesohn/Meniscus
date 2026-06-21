@@ -10,6 +10,7 @@ namespace Meniscus.Tests.EditMode
     {
         GameObject glassObject;
         GlassManager glassManager;
+        Coin fillCoin;
 
         [SetUp]
         public void SetUp()
@@ -22,6 +23,7 @@ namespace Meniscus.Tests.EditMode
         public void TearDown()
         {
             Object.DestroyImmediate(glassObject);
+            if (fillCoin != null) Object.DestroyImmediate(fillCoin.gameObject);
         }
 
         [Test]
@@ -51,7 +53,7 @@ namespace Meniscus.Tests.EditMode
         [Test]
         public void Apply_ReduceCurrentRisk_LowersCurrentFill()
         {
-            var fillCoin = MakeCoin(40f);
+            fillCoin = MakeCoin(40f);
             glassManager.DropCoins(new[] { fillCoin }, TurnActor.Player);
             Assert.AreEqual(40f, glassManager.CurrentOverflowProbability, 0.001f);
 
@@ -62,7 +64,6 @@ namespace Meniscus.Tests.EditMode
             ItemEffectApplier.Apply(item, null, glassManager, null);
 
             Assert.AreEqual(25f, glassManager.CurrentOverflowProbability, 0.001f);
-            Object.DestroyImmediate(fillCoin.gameObject);
         }
 
         static Coin MakeCoin(float risk)
