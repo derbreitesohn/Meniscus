@@ -58,6 +58,20 @@ namespace Meniscus.Items
                         WarnMissing(item, nameof(GlassManager));
                     break;
 
+                case ItemEffectKind.ReduceCurrentRisk:
+                    if (glass != null)
+                        glass.ReduceCurrentRisk(item.Magnitude);
+                    else
+                        WarnMissing(item, nameof(GlassManager));
+                    break;
+
+                case ItemEffectKind.SkipTurn:
+                    if (game != null)
+                        game.SkipPlayerTurn();
+                    else
+                        WarnMissing(item, nameof(GameManager));
+                    break;
+
                 default:
                     Debug.LogWarning($"[ItemEffectApplier] Unhandled effect '{item.Effect}' for item '{item.Id}'.");
                     break;

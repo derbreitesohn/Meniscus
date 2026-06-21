@@ -218,6 +218,23 @@ namespace Meniscus.Tests.EditMode
             fixture.Destroy();
         }
 
+        [Test]
+        public void TryUseItem_SkipTurnItem_EndsPlayerTurn()
+        {
+            var fixture = CreateGameFixture();
+            fixture.GameManager.StartMatch();   // → PlayerTurn
+
+            var skip = ItemDefinition.Create(
+                "step_outside", "Step Outside", "", 40, ItemEffectKind.SkipTurn, 0f);
+            fixture.GameManager.Inventory.Grant(skip);
+
+            Assert.IsTrue(fixture.GameManager.TryUseItem(skip));
+            Assert.AreEqual(GameState.EnemyTurn, fixture.GameManager.CurrentState);
+            Assert.IsFalse(fixture.GameManager.Inventory.Has(skip));
+
+            fixture.Destroy();
+        }
+
         static GameFixture CreateGameFixture()
         {
             var root = new GameObject("Game Flow Fixture");

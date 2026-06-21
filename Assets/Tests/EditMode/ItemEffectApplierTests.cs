@@ -1,4 +1,5 @@
 using Meniscus.Core;
+using Meniscus.Gameplay;
 using Meniscus.Items;
 using NUnit.Framework;
 using UnityEngine;
@@ -45,6 +46,31 @@ namespace Meniscus.Tests.EditMode
             ItemEffectApplier.Apply(item, null, glassManager, null);
 
             Assert.IsTrue(glassManager.TrueOddsRevealed);
+        }
+
+        [Test]
+        public void Apply_ReduceCurrentRisk_LowersCurrentFill()
+        {
+            var fillCoin = MakeCoin(40f);
+            glassManager.DropCoins(new[] { fillCoin }, TurnActor.Player);
+            Assert.AreEqual(40f, glassManager.CurrentOverflowProbability, 0.001f);
+
+            var item = ItemDefinition.Create(
+                "buy_the_house_a_round", "Buy the House a Round", "",
+                45, ItemEffectKind.ReduceCurrentRisk, 15f);
+
+            ItemEffectApplier.Apply(item, null, glassManager, null);
+
+            Assert.AreEqual(25f, glassManager.CurrentOverflowProbability, 0.001f);
+            Object.DestroyImmediate(fillCoin.gameObject);
+        }
+
+        static Coin MakeCoin(float risk)
+        {
+            var coinObject = new GameObject("Coin");
+            var coin = coinObject.AddComponent<Coin>();
+            coin.Configure(CoinSize.Medium, risk, 10, true);
+            return coin;
         }
     }
 }
