@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 422dd48cffdab474897a1cb6770785f0, type: 3}
+  m_Name: Standard Glass
+  m_EditorClassIdentifier:
+  id: standard
+  displayName: Standard Glass
+  modelPrefab: {fileID: 100100000, guid: 359d88fc9e1aa95479ad9455774a4c76, type: 3}
+  modelChildName: Standard_Glas
+  modelLocalPosition: {x: 0, y: 0, z: 0}
+  modelLocalEuler: {x: 0, y: 0, z: 0}
+  modelLocalScale: {x: 1, y: 1, z: 1}
+  waterSurfaceLocalY: 0.62
+  waterSurfaceRadius: 0.39
+  fillBottomLocalY: 0.06
+  fillBottomRadiusScale: 0.82
