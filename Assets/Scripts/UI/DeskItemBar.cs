@@ -19,7 +19,8 @@ namespace Meniscus.UI
         [SerializeField] Canvas barCanvas;
 
         Transform rowRoot;
-        bool subscribed;
+        bool subscribedManager;
+        bool subscribedInventory;
 
         void Awake()
         {
@@ -40,6 +41,7 @@ namespace Meniscus.UI
 
         public void Configure(GameManager manager, PlayerInventory playerInventory)
         {
+            Unsubscribe();
             gameManager = manager;
             inventory = playerInventory;
             EnsureCanvas();
@@ -49,29 +51,31 @@ namespace Meniscus.UI
 
         void Subscribe()
         {
-            if (subscribed)
-                return;
-
             ResolveReferences();
 
-            if (gameManager != null)
+            if (!subscribedManager && gameManager != null)
+            {
                 gameManager.StateChanged += OnStateChanged;
+                subscribedManager = true;
+            }
 
-            if (inventory != null)
+            if (!subscribedInventory && inventory != null)
+            {
                 inventory.Changed += Rebuild;
-
-            subscribed = gameManager != null || inventory != null;
+                subscribedInventory = true;
+            }
         }
 
         void Unsubscribe()
         {
-            if (gameManager != null)
+            if (subscribedManager && gameManager != null)
                 gameManager.StateChanged -= OnStateChanged;
 
-            if (inventory != null)
+            if (subscribedInventory && inventory != null)
                 inventory.Changed -= Rebuild;
 
-            subscribed = false;
+            subscribedManager = false;
+            subscribedInventory = false;
         }
 
         void OnStateChanged(GameState state) => Rebuild();
