@@ -39,7 +39,6 @@ namespace Meniscus.Tests.EditMode
                 2,
                 GameConstants.TotalRounds,
                 35f,
-                GameConstants.SpillSafeZoneThreshold,
                 40,
                 120,
                 8,
@@ -84,6 +83,39 @@ namespace Meniscus.Tests.EditMode
             Assert.AreEqual(stableSurfaceY, emptyGlassY);
             Assert.AreEqual(stableSurfaceY + maxRise, fullRiskY);
             Assert.LessOrEqual(fullRiskY - emptyGlassY, 0.015f);
+        }
+
+        [Test]
+        public void CalculateWallRingY_LerpsFloorToRimAndClamps()
+        {
+            Assert.AreEqual(0.06f, GlassVisualController.CalculateWallRingY(0.06f, 0.62f, 0f), 1e-4f);
+            Assert.AreEqual(0.62f, GlassVisualController.CalculateWallRingY(0.06f, 0.62f, 1f), 1e-4f);
+            Assert.AreEqual(0.34f, GlassVisualController.CalculateWallRingY(0.06f, 0.62f, 0.5f), 1e-4f);
+            Assert.AreEqual(0.62f, GlassVisualController.CalculateWallRingY(0.06f, 0.62f, 2f), 1e-4f); // clamps
+            Assert.AreEqual(0.06f, GlassVisualController.CalculateWallRingY(0.06f, 0.62f, -1f), 1e-4f); // clamps
+        }
+
+        [Test]
+        public void RunDownProgress_RisesFromZeroToOneAndClamps()
+        {
+            Assert.AreEqual(0f, GlassSpillEffect.RunDownProgress(0f, 0.4f), 1e-4f);
+            Assert.AreEqual(1f, GlassSpillEffect.RunDownProgress(0.4f, 0.4f), 1e-4f);
+            Assert.AreEqual(1f, GlassSpillEffect.RunDownProgress(1f, 0.4f), 1e-4f); // clamps past the end
+
+            var mid = GlassSpillEffect.RunDownProgress(0.2f, 0.4f);
+            Assert.Greater(mid, 0f);
+            Assert.Less(mid, 1f);
+        }
+
+        [Test]
+        public void GlassTypeDefinition_Create_DefaultsLiquidFloorFit()
+        {
+            var glass = GlassTypeDefinition.Create("test", "Test Glass", null);
+
+            Assert.AreEqual(0.06f, glass.FillBottomLocalY, 1e-4f);
+            Assert.AreEqual(0.82f, glass.FillBottomRadiusScale, 1e-4f);
+
+            Object.DestroyImmediate(glass);
         }
 
         [Test]

@@ -57,6 +57,59 @@ namespace Meniscus.Tests.EditMode
             Assert.AreEqual("Gold", GameConstants.GetDisplayNameForSize(CoinSize.Large));
         }
 
+        [Test]
+        public void ApplyModel_WithNullPrefab_KeepsPlaceholderVisible()
+        {
+            var coin = CreateRenderedCoin("Placeholder Coin");
+            coin.Configure(CoinSize.Medium, 10f, 20, true);
+
+            coin.ApplyModel(null, Vector3.one);
+
+            Assert.IsTrue(coin.GetComponent<MeshRenderer>().enabled,
+                "A coin with no assigned model must keep its placeholder visible.");
+            Assert.IsNull(coin.transform.Find("Coin Model"),
+                "No model child should be created when the model prefab is null.");
+
+            Object.DestroyImmediate(coin.gameObject);
+        }
+
+        [Test]
+        public void ApplyModel_WithValidPrefab_ShowsModelAndHidesPlaceholder()
+        {
+            var coin = CreateRenderedCoin("Modeled Coin");
+            coin.Configure(CoinSize.Medium, 10f, 20, true);
+            var prefab = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+
+            coin.ApplyModel(prefab, Vector3.one);
+
+            Assert.IsFalse(coin.GetComponent<MeshRenderer>().enabled,
+                "The placeholder must hide once a real model is showing.");
+            Assert.IsNotNull(coin.transform.Find("Coin Model"),
+                "A model child should be instantiated for a valid prefab.");
+
+            Object.DestroyImmediate(prefab);
+            Object.DestroyImmediate(coin.gameObject);
+        }
+
+        [Test]
+        public void ApplyModel_SwappingModelBackToNull_RestoresPlaceholder()
+        {
+            var coin = CreateRenderedCoin("Swapped Coin");
+            coin.Configure(CoinSize.Medium, 10f, 20, true);
+            var prefab = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            coin.ApplyModel(prefab, Vector3.one);
+
+            coin.ApplyModel(null, Vector3.one);
+
+            Assert.IsTrue(coin.GetComponent<MeshRenderer>().enabled,
+                "Clearing the model must restore the placeholder so the coin never goes invisible.");
+            Assert.IsNull(coin.transform.Find("Coin Model"),
+                "The old model child must be destroyed when the model is cleared.");
+
+            Object.DestroyImmediate(prefab);
+            Object.DestroyImmediate(coin.gameObject);
+        }
+
         static Coin CreateRenderedCoin(string name)
         {
             var coinObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);

@@ -64,11 +64,12 @@ namespace Meniscus.UI
                 gameManager.CurrentRound,
                 GameConstants.TotalRounds,
                 glassManager == null ? 0f : glassManager.CurrentOverflowProbability,
-                glassManager == null ? 0f : glassManager.CurrentSafeZoneThreshold,
                 economyManager == null ? 0 : economyManager.CurrentRoundEarnings,
                 economyManager == null ? 0 : economyManager.PlayerTotalBankedCash,
                 gameManager.PlayerCoins.Count,
-                gameManager.EnemyCoins.Count);
+                gameManager.EnemyCoins.Count,
+                glassManager != null && glassManager.TrueOddsRevealed,
+                glassManager == null ? 0f : glassManager.CurrentTrueSpillChance);
         }
 
         void ResolveReferences()
@@ -88,32 +89,19 @@ namespace Meniscus.UI
             if (hudCanvas != null && statusText != null)
                 return;
 
-            var canvasObject = new GameObject(
-                "Runtime Saloon HUD Canvas",
-                typeof(RectTransform),
-                typeof(Canvas),
-                typeof(CanvasScaler),
-                typeof(GraphicRaycaster));
-            canvasObject.transform.SetParent(transform, false);
+            hudCanvas = RuntimeUiFactory.CreateOverlayCanvas(transform, "Runtime Saloon HUD Canvas");
 
-            hudCanvas = canvasObject.GetComponent<Canvas>();
-            hudCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-            var scaler = canvasObject.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-
-            var panelObject = new GameObject("HUD Table Card", typeof(RectTransform), typeof(Image));
-            panelObject.transform.SetParent(canvasObject.transform, false);
+            var panelObject = RuntimeUiFactory.CreateImage(
+                hudCanvas.transform,
+                "HUD Table Card",
+                new Vector2(720f, 70f),
+                new Vector2(24f, -24f),
+                new Color(0.075f, 0.042f, 0.024f, 0.78f));
 
             var panelRect = panelObject.GetComponent<RectTransform>();
             panelRect.anchorMin = new Vector2(0f, 1f);
             panelRect.anchorMax = new Vector2(0f, 1f);
             panelRect.pivot = new Vector2(0f, 1f);
-            panelRect.anchoredPosition = new Vector2(24f, -24f);
-            panelRect.sizeDelta = new Vector2(720f, 70f);
-
-            panelObject.GetComponent<Image>().color = new Color(0.075f, 0.042f, 0.024f, 0.78f);
 
             var textObject = new GameObject("Status", typeof(RectTransform), typeof(Text));
             textObject.transform.SetParent(panelObject.transform, false);
@@ -129,8 +117,6 @@ namespace Meniscus.UI
             statusText.fontSize = 20;
             statusText.alignment = TextAnchor.MiddleLeft;
             statusText.color = new Color(0.95f, 0.84f, 0.62f);
-
-            Debug.Log("[SaloonHudController] Created runtime fallback HUD canvas.");
         }
 
         public static string BuildStatusLine(
@@ -138,21 +124,27 @@ namespace Meniscus.UI
             int currentRound,
             int totalRounds,
             float totalRiskWeight,
-            float safeZoneThreshold,
             int roundEarnings,
             int bankedCash,
             int playerCoinCount,
-            int enemyCoinCount)
+            int enemyCoinCount,
+            bool revealTrueOdds = false,
+            float trueSpillChance = 0f)
         {
-            var riskLabel = totalRiskWeight <= safeZoneThreshold
-                ? "Risk Building"
-                : totalRiskWeight < 75f
-                    ? "Danger"
-                    : "Critical";
+            var riskLabel = totalRiskWeight < 30f
+                ? "Steady"
+                : totalRiskWeight < 60f
+                    ? "Risk Building"
+                    : totalRiskWeight < 85f
+                        ? "Danger"
+                        : "Critical";
+
+            var spillSuffix = revealTrueOdds ? $"   Spill {trueSpillChance:0}%" : string.Empty;
 
             return
                 $"Round {currentRound}/{totalRounds}   {state}   {riskLabel} {totalRiskWeight:0}%   " +
-                $"Round ${roundEarnings}   Bank ${bankedCash}   You {playerCoinCount} / Dealer {enemyCoinCount}";
+                $"Round ${roundEarnings}   Bank ${bankedCash}   You {playerCoinCount} / Dealer {enemyCoinCount}" +
+                spillSuffix;
         }
     }
 }

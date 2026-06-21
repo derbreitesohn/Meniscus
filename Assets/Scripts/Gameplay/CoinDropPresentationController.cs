@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Meniscus.Core;
 using UnityEngine;
 
-
 namespace Meniscus.Gameplay
 {
     [DisallowMultipleComponent]
@@ -14,8 +13,12 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0.05f)] float dropAnimationSeconds = 0.98f;
         [SerializeField, Min(0f)] float liftArcHeight = 0.34f;
         [SerializeField, Min(0f)] float proxyLifetimeAfterDrop = 0.08f;
-        [SerializeField] AK.Wwise.Event coinIntoWater;   // im Inspector Play_Coin_IntoWater zuweisen
+        [SerializeField, Range(0f, 45f)] float carryTiltDegrees = 12f;   // gentle bank while the coin is carried
+        [SerializeField, Range(0f, 120f)] float releaseTipDegrees = 40f; // leading edge dips in as it is released
+        [SerializeField] AK.Wwise.Event coinIntoWater;   // assign Play_Coin_IntoWater in the Inspector
 
+        const float LiftPhaseEnd = 0.58f;
+        const float HoldPhaseEnd = 0.72f;
 
         void OnEnable()
         {
@@ -58,26 +61,32 @@ namespace Meniscus.Gameplay
                 var proxy = CreateCoinProxy(coins[i], actor, i);
                 StartCoroutine(AnimateProxyDrop(proxy, targetPosition, actor, i));
             }
-
-            Debug.Log(
-                $"[CoinDropPresentationController] Started {coins.Count} coin drop proxy animation(s) " +
-                $"for {actor} toward {targetPosition}.");
         }
 
         GameObject CreateCoinProxy(Coin sourceCoin, TurnActor actor, int index)
         {
+            // Mirror the coin's *visible* mesh, not the logical root, so a model coin flies as itself and
+            // a placeholder coin still flies as its cylinder.
+            var sourceRenderer = sourceCoin.GetComponentInChildren<Renderer>();
+            var sourceFilter = sourceCoin.GetComponentInChildren<MeshFilter>();
+            var visualTransform = sourceRenderer != null ? sourceRenderer.transform : sourceCoin.transform;
+
             var proxy = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             proxy.name = $"{actor} Drop Proxy {sourceCoin.name}";
-            proxy.transform.position = sourceCoin.transform.position;
-            proxy.transform.rotation = sourceCoin.transform.rotation;
-            proxy.transform.localScale = sourceCoin.transform.lossyScale;
+            proxy.transform.position = visualTransform.position;
+            proxy.transform.rotation = visualTransform.rotation;
+            proxy.transform.localScale = visualTransform.lossyScale;
 
             var collider = proxy.GetComponent<Collider>();
 
             if (collider != null)
                 Destroy(collider);
 
-            var sourceRenderer = sourceCoin.GetComponentInChildren<Renderer>();
+            var proxyFilter = proxy.GetComponent<MeshFilter>();
+
+            if (sourceFilter != null && sourceFilter.sharedMesh != null && proxyFilter != null)
+                proxyFilter.sharedMesh = sourceFilter.sharedMesh;
+
             var proxyRenderer = proxy.GetComponent<Renderer>();
 
             if (sourceRenderer != null && proxyRenderer != null)
@@ -95,6 +104,10 @@ namespace Meniscus.Gameplay
             var start = proxy.transform.position;
             var hold = CalculateRimHoldPosition(targetPosition, actor, index);
             var end = targetPosition + new Vector3((index - 0.5f) * 0.035f, -0.02f, index * 0.02f);
+
+            var startRotation = proxy.transform.rotation;
+            var carryRotation = CalculateCarryRotation(startRotation, start, hold, carryTiltDegrees);
+            var releaseRotation = CalculateReleaseRotation(carryRotation, hold, end, releaseTipDegrees);
             var elapsed = 0f;
 
             while (elapsed < dropAnimationSeconds && proxy != null)
@@ -102,11 +115,7 @@ namespace Meniscus.Gameplay
                 elapsed += Time.deltaTime;
                 var normalized = Mathf.Clamp01(elapsed / dropAnimationSeconds);
                 proxy.transform.position = CalculateStagedDropPosition(start, hold, end, normalized, liftArcHeight);
-                proxy.transform.Rotate(
-                    normalized < 0.58f ? 0f : 180f * Time.deltaTime,
-                    520f * Time.deltaTime,
-                    normalized < 0.72f ? 90f * Time.deltaTime : 420f * Time.deltaTime,
-                    Space.Self);
+                proxy.transform.rotation = CalculateStagedDropRotation(startRotation, carryRotation, releaseRotation, normalized);
                 yield return null;
             }
 
@@ -114,13 +123,12 @@ namespace Meniscus.Gameplay
                 yield break;
 
             proxy.transform.position = end;
+            proxy.transform.rotation = releaseRotation;
 
-             var emitter = glassTarget != null ? glassTarget.gameObject : gameObject;
-        coinIntoWater?.Post(emitter);          // Splash am Glas 
+            var emitter = glassTarget != null ? glassTarget.gameObject : gameObject;
+            coinIntoWater?.Post(emitter);   // splash at the glass
 
             Destroy(proxy, proxyLifetimeAfterDrop);
-
-
         }
 
         static Vector3 CalculateRimHoldPosition(Vector3 targetPosition, TurnActor actor, int index)
@@ -166,23 +174,67 @@ namespace Meniscus.Gameplay
             float normalizedTime,
             float liftArcHeight)
         {
-            const float liftEnd = 0.58f;
-            const float holdEnd = 0.72f;
-
             var t = Mathf.Clamp01(normalizedTime);
 
-            if (t <= liftEnd)
+            if (t <= LiftPhaseEnd)
             {
-                var liftT = Mathf.SmoothStep(0f, 1f, t / liftEnd);
+                var liftT = Mathf.SmoothStep(0f, 1f, t / LiftPhaseEnd);
                 return CalculateArcPosition(start, hold, liftT, liftArcHeight);
             }
 
-            if (t <= holdEnd)
+            if (t <= HoldPhaseEnd)
                 return hold;
 
-            var releaseT = Mathf.SmoothStep(0f, 1f, (t - holdEnd) / (1f - holdEnd));
+            var releaseT = Mathf.SmoothStep(0f, 1f, (t - HoldPhaseEnd) / (1f - HoldPhaseEnd));
             var sideSag = Mathf.Sin(releaseT * Mathf.PI) * 0.035f;
             return Vector3.Lerp(hold, end, releaseT) + Vector3.down * sideSag;
+        }
+
+        public static Quaternion CalculateStagedDropRotation(
+            Quaternion start,
+            Quaternion carry,
+            Quaternion release,
+            float normalizedTime)
+        {
+            var t = Mathf.Clamp01(normalizedTime);
+
+            if (t <= LiftPhaseEnd)
+            {
+                var liftT = Mathf.SmoothStep(0f, 1f, t / LiftPhaseEnd);
+                return Quaternion.Slerp(start, carry, liftT);
+            }
+
+            if (t <= HoldPhaseEnd)
+                return carry;
+
+            var releaseT = Mathf.SmoothStep(0f, 1f, (t - HoldPhaseEnd) / (1f - HoldPhaseEnd));
+            return Quaternion.Slerp(carry, release, releaseT);
+        }
+
+        static Quaternion CalculateCarryRotation(Quaternion start, Vector3 from, Vector3 to, float tiltDegrees)
+        {
+            var travel = to - from;
+            travel.y = 0f;
+
+            if (travel.sqrMagnitude < 1e-5f)
+                return start;
+
+            // Bank the coin toward the way it is being carried, as if pinched steady between fingers.
+            var bankAxis = Vector3.Cross(Vector3.up, travel.normalized);
+            return Quaternion.AngleAxis(tiltDegrees, bankAxis) * start;
+        }
+
+        static Quaternion CalculateReleaseRotation(Quaternion carry, Vector3 from, Vector3 to, float tipDegrees)
+        {
+            var travel = to - from;
+            travel.y = 0f;
+
+            // Tip the leading edge down so the coin slides into the water as the fingers let go, not spinning.
+            var tipAxis = travel.sqrMagnitude < 1e-5f
+                ? Vector3.right
+                : Vector3.Cross(Vector3.up, travel.normalized);
+
+            return Quaternion.AngleAxis(tipDegrees, tipAxis) * carry;
         }
     }
 }

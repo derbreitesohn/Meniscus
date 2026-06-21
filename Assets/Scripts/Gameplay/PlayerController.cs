@@ -51,10 +51,7 @@ namespace Meniscus.Gameplay
             }
 
             if (gameManager.CurrentState != GameState.PlayerTurn)
-            {
-                Debug.Log($"[PlayerController] Click ignored while state={gameManager.CurrentState}.");
                 return;
-            }
 
             HandleClick();
         }
@@ -72,12 +69,7 @@ namespace Meniscus.Gameplay
             var ray = cameraToUse.ScreenPointToRay(Mouse.current.position.ReadValue());
 
             if (!Physics.Raycast(ray, out var hit, maxRaycastDistance, interactionMask))
-            {
-                Debug.Log("[PlayerController] Click hit nothing selectable.");
                 return;
-            }
-
-            Debug.Log($"[PlayerController] Raycast hit {hit.collider.name}.");
 
             var coin = hit.collider.GetComponentInParent<Coin>();
             if (coin != null)
@@ -87,12 +79,7 @@ namespace Meniscus.Gameplay
             }
 
             if (IsGlassHit(hit.collider))
-            {
                 SubmitSelectedCoins();
-                return;
-            }
-
-            Debug.Log($"[PlayerController] Hit object is not a coin or glass: {hit.collider.name}.");
         }
 
         void ToggleCoinSelection(Coin coin)
@@ -101,39 +88,27 @@ namespace Meniscus.Gameplay
                 return;
 
             if (!coin.isPlayerCoin)
-            {
-                Debug.Log($"[PlayerController] Ignored enemy coin click: {coin.name}.");
                 return;
-            }
 
             if (coin.IsSpent || !coin.gameObject.activeInHierarchy)
-            {
-                Debug.Log($"[PlayerController] Ignored unavailable coin click: {coin.name}.");
                 return;
-            }
 
             if (selectedCoins.Contains(coin))
             {
                 selectedCoins.Remove(coin);
                 coin.SetSelected(false);
-                Debug.Log($"[PlayerController] Deselected coin {coin.name}. Selected count={selectedCoins.Count}.");
                 return;
             }
 
             selectedCoins.Add(coin);
             coin.SetSelected(true);
-            Debug.Log($"[PlayerController] Selected coin {coin.name}. Selected count={selectedCoins.Count}.");
         }
 
         void SubmitSelectedCoins()
         {
             if (selectedCoins.Count == 0)
-            {
-                Debug.Log("[PlayerController] Glass clicked with no selected coins.");
                 return;
-            }
 
-            Debug.Log($"[PlayerController] Glass clicked. Submitting {selectedCoins.Count} selected coin(s).");
             gameManager.TryPlayerDropSelectedCoins(selectedCoins);
             ClearSelection();
         }
@@ -167,10 +142,7 @@ namespace Meniscus.Gameplay
         void OnGameStateChanged(GameState newState)
         {
             if (newState != GameState.PlayerTurn && selectedCoins.Count > 0)
-            {
-                Debug.Log($"[PlayerController] Clearing selection because state changed to {newState}.");
                 ClearSelection();
-            }
         }
 
         void ResolveReferences()

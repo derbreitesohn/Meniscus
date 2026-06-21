@@ -1026,15 +1026,64 @@ namespace Meniscus.Tests.EditMode
 Run `<FILTER>` = `Meniscus.Tests.EditMode.ShopManagerTests`.
 Expected: FAIL — assertions fail (today `TryBuyItem` applies the effect and never grants; `inventory.Has(item)` is false).
 
-- [ ] **Step 3: Add a PlayerInventory reference to ShopManager**
+- [ ] **Step 3: Swap ShopManager's dead glass reference for a PlayerInventory reference**
 
-In `Assets/Scripts/UI/ShopManager.cs`, add a field beside the other serialized refs:
+`glassManager` was only used to feed `ItemEffectApplier.Apply` (removed in Step 4), so it goes dead — remove it and add `playerInventory` in its place.
+
+In `Assets/Scripts/UI/ShopManager.cs`, replace the field declaration:
+
+```csharp
+        [SerializeField] GlassManager glassManager;
+```
+
+with:
 
 ```csharp
         [SerializeField] PlayerInventory playerInventory;
 ```
 
-In `ResolveReferences()`, resolve it (after the `glassManager` resolution):
+In `Configure`, drop the `glass` parameter and its assignment. Change the signature:
+
+```csharp
+        public void Configure(
+            Canvas canvas,
+            EconomyManager economy,
+            GameManager manager,
+            GlassManager glass = null)
+        {
+            shopCanvas = canvas;
+            economyManager = economy;
+            gameManager = manager;
+            glassManager = glass;
+            HideShop();
+        }
+```
+
+to:
+
+```csharp
+        public void Configure(
+            Canvas canvas,
+            EconomyManager economy,
+            GameManager manager)
+        {
+            shopCanvas = canvas;
+            economyManager = economy;
+            gameManager = manager;
+            HideShop();
+        }
+```
+
+(The sole caller, `GameManager.cs:~627` `shopManager.Configure(null, economyManager, this);`, passes three arguments and still compiles.)
+
+In `ResolveReferences()`, replace the `glassManager` resolution:
+
+```csharp
+            if (glassManager == null)
+                glassManager = FindAnyObjectByType<GlassManager>();
+```
+
+with the inventory resolution:
 
 ```csharp
             if (playerInventory == null && gameManager != null)
@@ -1081,7 +1130,7 @@ Replace the body of `TryBuyItem`:
         }
 ```
 
-(`ItemEffectApplier.Apply` is no longer called here — items now apply when *used*, in `GameManager.TryUseItem`. Leave the `glassManager` field as-is; it is harmless.)
+(`ItemEffectApplier.Apply` is no longer called here — items now apply when *used*, in `GameManager.TryUseItem`. With the `glassManager` field removed in Step 3, the `using Meniscus.Core;`/`GlassManager` reference in this file may now be unused; leave the `using` directives untouched unless the compiler warns.)
 
 - [ ] **Step 5: Run the test to verify it passes**
 

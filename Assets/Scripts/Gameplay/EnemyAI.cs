@@ -26,16 +26,12 @@ namespace Meniscus.Gameplay
 
         IEnumerator ExecuteTurnAfterDelay(GameManager gameManager)
         {
-            Debug.Log($"[EnemyAI] Enemy is thinking for {GameConstants.EnemyTurnDelaySeconds:0.##} seconds.");
             yield return new WaitForSeconds(GameConstants.EnemyTurnDelaySeconds);
 
             activeTurn = null;
 
             if (gameManager.CurrentState != GameState.EnemyTurn)
-            {
-                Debug.Log($"[EnemyAI] Enemy turn aborted. Current state={gameManager.CurrentState}.");
                 yield break;
-            }
 
             var forcedCoinCount = gameManager.ConsumeQueuedEnemyForcedCoinCount();
             var trueSpillChance = gameManager.GlassManager == null
@@ -52,9 +48,6 @@ namespace Meniscus.Gameplay
             for (var i = 0; i < chosenCoins.Count; i++)
                 chosenCoins[i].SetSelected(true);
 
-            Debug.Log(
-                $"[EnemyAI] Enemy chose {chosenCoins.Count} coin(s) at trueSpillChance=" +
-                $"{trueSpillChance:0.##}%: {DescribeCoins(chosenCoins)}.");
             yield return new WaitForSeconds(GameConstants.EnemyTellDelaySeconds);
 
             gameManager.ExecuteEnemyDrop(chosenCoins);
@@ -114,22 +107,6 @@ namespace Meniscus.Gameplay
             return trueSpillChance >= GameConstants.EnemyConservativeSpillChanceThreshold
                 ? 1
                 : absoluteMax;
-        }
-
-        static string DescribeCoins(IReadOnlyList<Coin> coins)
-        {
-            var description = string.Empty;
-
-            for (var i = 0; i < coins.Count; i++)
-            {
-                description +=
-                    $"{coins[i].name}(size={coins[i].size}, risk={coins[i].riskContribution:0.##})";
-
-                if (i < coins.Count - 1)
-                    description += ", ";
-            }
-
-            return description;
         }
     }
 }

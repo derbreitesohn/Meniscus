@@ -343,7 +343,9 @@ namespace Meniscus.Core
             }
 
             TransitionTo(GameState.ShopPhase);
-            cameraController?.SwitchCamera(CameraState.ShopFocus);
+            // The book lifts itself into a held pose in front of the camera (BookShopView), so the
+            // camera holds the calm table framing instead of travelling to the book on the desk.
+            cameraController?.SwitchCamera(CameraState.TableOverview);
             shopManager?.ShowShop();
         }
 

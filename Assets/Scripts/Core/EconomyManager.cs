@@ -18,16 +18,12 @@ namespace Meniscus.Core
         public void ResetRoundEarnings()
         {
             currentRoundEarnings = 0;
-            Debug.Log("[EconomyManager] Current round earnings reset to 0.");
         }
 
         public int CalculateSafeDropPayout(IReadOnlyList<Coin> coins, float currentRisk)
         {
             if (coins == null || coins.Count == 0)
-            {
-                Debug.Log("[EconomyManager] Payout calculation received no coins. Payout=0.");
                 return 0;
-            }
 
             var greedMultiplier = 1f + Mathf.Max(0f, currentRisk) / GameConstants.GreedRiskDivisor;
             var total = 0f;
@@ -37,26 +33,13 @@ namespace Meniscus.Core
                 if (coins[i] == null)
                     continue;
 
-                var coinPayout = coins[i].basePayout * greedMultiplier;
-                total += coinPayout;
-
-                Debug.Log(
-                    $"[EconomyManager] Coin payout: coin={coins[i].name}, base={coins[i].basePayout}, " +
-                    $"riskBefore={currentRisk:0.##}, greedMultiplier={greedMultiplier:0.###}, " +
-                    $"coinPayout={coinPayout:0.##}.");
+                total += coins[i].basePayout * greedMultiplier;
             }
 
             if (coins.Count > 1)
-            {
                 total *= GameConstants.ComboMultiplier;
-                Debug.Log(
-                    $"[EconomyManager] Combo multiplier applied: coinCount={coins.Count}, " +
-                    $"multiplier={GameConstants.ComboMultiplier:0.##}, total={total:0.##}.");
-            }
 
-            var rounded = Mathf.RoundToInt(total);
-            Debug.Log($"[EconomyManager] Calculated safe drop payout={rounded}.");
-            return rounded;
+            return Mathf.RoundToInt(total);
         }
 
         public int AwardSafeDrop(IReadOnlyList<Coin> coins, float currentRisk)
@@ -65,21 +48,11 @@ namespace Meniscus.Core
 
             if (nextSafeDropPayoutMultiplier > 1f)
             {
-                var boostedPayout = Mathf.RoundToInt(payout * nextSafeDropPayoutMultiplier);
-                Debug.Log(
-                    $"[EconomyManager] Next safe-drop payout multiplier applied. " +
-                    $"basePayout={payout}, multiplier={nextSafeDropPayoutMultiplier:0.##}, " +
-                    $"boostedPayout={boostedPayout}.");
-                payout = boostedPayout;
+                payout = Mathf.RoundToInt(payout * nextSafeDropPayoutMultiplier);
                 nextSafeDropPayoutMultiplier = 1f;
             }
 
             currentRoundEarnings += payout;
-
-            Debug.Log(
-                $"[EconomyManager] Awarded safe drop payout={payout}. " +
-                $"Current round earnings={currentRoundEarnings}.");
-
             return payout;
         }
 
@@ -93,34 +66,21 @@ namespace Meniscus.Core
             }
 
             nextSafeDropPayoutMultiplier = Mathf.Max(nextSafeDropPayoutMultiplier, multiplier);
-            Debug.Log(
-                $"[EconomyManager] Queued next safe-drop payout multiplier=" +
-                $"{nextSafeDropPayoutMultiplier:0.##}.");
         }
 
         public void ClearQueuedShopBonuses()
         {
             nextSafeDropPayoutMultiplier = 1f;
-            Debug.Log("[EconomyManager] Cleared queued shop economy bonuses.");
         }
 
         public void BankCurrentRoundEarnings()
         {
             playerTotalBankedCash += currentRoundEarnings;
-
-            Debug.Log(
-                $"[EconomyManager] Banked current round earnings. Banked total={playerTotalBankedCash}, " +
-                $"bankedThisRound={currentRoundEarnings}.");
-
             currentRoundEarnings = 0;
         }
 
         public void WipeCurrentRoundEarnings()
         {
-            Debug.Log(
-                $"[EconomyManager] Player overflow. Wiping current round earnings={currentRoundEarnings}. " +
-                $"Banked total remains={playerTotalBankedCash}.");
-
             currentRoundEarnings = 0;
         }
 
@@ -143,7 +103,6 @@ namespace Meniscus.Core
             }
 
             playerTotalBankedCash -= cost;
-            Debug.Log($"[EconomyManager] Spent {cost}. Banked total now={playerTotalBankedCash}.");
             return true;
         }
     }

@@ -23,7 +23,9 @@ namespace Meniscus.Core
         TableOverview,
         PlayerFocus,
         DealerFocus,
-        GlassZoom
+        GlassZoom,
+        GlassInspect,
+        ShopFocus
     }
 
     public enum TurnActor
