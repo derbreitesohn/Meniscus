@@ -11,6 +11,27 @@ namespace Meniscus.Tests.EditMode
 {
     public class GameFlowTests
     {
+        [TearDown]
+        public void SweepStrayFixtureObjects()
+        {
+            // A failing test can throw before its fixture.Destroy() (the last line of the body),
+            // leaking its GameManager root and EventSystem into the shared EditMode scene. Sweep any
+            // leftovers so the next test's FindAnyObjectByType does not resolve a stale instance.
+            foreach (var gameManager in Object.FindObjectsByType<GameManager>(
+                         FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (gameManager != null)
+                    Object.DestroyImmediate(gameManager.gameObject);
+            }
+
+            foreach (var eventSystem in Object.FindObjectsByType<UnityEngine.EventSystems.EventSystem>(
+                         FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (eventSystem != null)
+                    Object.DestroyImmediate(eventSystem.gameObject);
+            }
+        }
+
         [Test]
         public void GetCoinCountForRound_GivesPlayerAtLeastEightCoinsAndScalesUp()
         {
