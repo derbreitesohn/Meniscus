@@ -186,7 +186,7 @@ namespace Meniscus.Tests.EditMode
             Assert.AreEqual(GameState.PlayerTurn, fixture.GameManager.CurrentState);
             Assert.IsTrue(fixture.GameManager.TryUseItem(item));
             Assert.IsFalse(fixture.GameManager.Inventory.Has(item));
-            Assert.AreEqual(10f, fixture.GlassManager.GetSafeZoneRelief(TurnActor.Player), 0.001f);
+            Assert.AreEqual(10f, fixture.GameManager.GlassManager.GetSafeZoneRelief(TurnActor.Player), 0.001f);
 
             fixture.Destroy();
         }
