@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections;
 using Meniscus.Gameplay;
+using Meniscus.Items;
 using Meniscus.UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -16,7 +17,7 @@ namespace Meniscus.Core
         [SerializeField] bool autoStart = true;
         [SerializeField] bool shopBetweenRoundsEnabled = true;
         [SerializeField] float endScreenDelay = 1.5f; 
-        [SerializeField] float resolveDelayAfterDrop = 1.0f;   // ~ dropAnimationSeconds (Münzen-Flugzeit)
+        [SerializeField] float resolveDelayAfterDrop = 1.0f;   // ~ dropAnimationSeconds (coin flight time)
 
 
         [Header("Managers")]
@@ -28,9 +29,12 @@ namespace Meniscus.Core
         [SerializeField] EndScreenManager endScreenManager;
         [SerializeField] CoinDropPresentationController dropPresentationController;
         [SerializeField] SaloonHudController saloonHudController;
+        [SerializeField] PlayerInventory playerInventory;
 
         [Header("Optional Coin Sources")]
         [SerializeField] Coin coinPrefab;
+        [Tooltip("Per-size coin models. Assign Small/Medium/Big coin models to replace the placeholder cylinders.")]
+        [SerializeField] CoinModelLibrary coinModels = new();
         [SerializeField] Transform playerCoinSpawnRoot;
         [SerializeField] Transform enemyCoinSpawnRoot;
         [SerializeField] List<Coin> handAuthoredPlayerCoins = new();
@@ -65,6 +69,7 @@ namespace Meniscus.Core
         public IReadOnlyList<Coin> EnemyCoins => enemyCoins;
         public GlassManager GlassManager => glassManager;
         public EconomyManager EconomyManager => economyManager;
+        public PlayerInventory Inventory => playerInventory;
 
         void Awake()
         {
@@ -87,9 +92,9 @@ namespace Meniscus.Core
             lastMatchOutcome = MatchOutcome.None;
             queuedEnemyForcedCoinCount = 0;
             economyManager?.ClearQueuedShopBonuses();
+            playerInventory?.Clear();
             shopManager?.HideShop();
             endScreenManager?.Hide();
-            Debug.Log("[GameManager] Starting new match.");
             StartRound();
         }
 
@@ -97,7 +102,6 @@ namespace Meniscus.Core
         {
             if (currentRound >= GameConstants.TotalRounds)
             {
-                Debug.Log("[GameManager] StartRound requested after final round. Entering GameOver.");
                 EnterGameOver("Round limit reached before a new round could begin.", MatchOutcome.PlayerWon);
                 return;
             }
@@ -105,8 +109,6 @@ namespace Meniscus.Core
             currentRound++;
             TransitionTo(GameState.StartRound);
             cameraController?.SwitchCamera(CameraState.TableOverview);
-
-            Debug.Log($"[GameManager] === Starting round {currentRound}/{GameConstants.TotalRounds} ===");
 
             glassManager?.ResetGlass();
             economyManager?.ResetRoundEarnings();
@@ -154,13 +156,39 @@ namespace Meniscus.Core
                 return;
             }
 
-            Debug.Log($"[GameManager] Shop phase finished after round {currentRound}.");
             shopManager?.HideShop();
 
             if (currentRound >= GameConstants.TotalRounds)
                 EnterGameOver("Finished final shop phase.", MatchOutcome.PlayerWon);
             else
                 StartRound();
+        }
+
+        public bool TryUseItem(ItemDefinition item)
+        {
+            if (currentState != GameState.PlayerTurn)
+            {
+                Debug.LogWarning($"[GameManager] Ignored item use while state={currentState}.");
+                return false;
+            }
+
+            if (item == null || playerInventory == null || !playerInventory.Has(item))
+                return false;
+
+            playerInventory.TryConsume(item);
+            ItemEffectApplier.Apply(item, economyManager, glassManager, this);
+            return true;
+        }
+
+        public void SkipPlayerTurn()
+        {
+            if (currentState != GameState.PlayerTurn)
+            {
+                Debug.LogWarning($"[GameManager] SkipPlayerTurn ignored while state={currentState}.");
+                return;
+            }
+
+            BeginEnemyTurn();
         }
 
        void ResolveDrop(TurnActor actor, IReadOnlyList<Coin> coins)
@@ -197,19 +225,11 @@ namespace Meniscus.Core
         {
             if (result.Actor == TurnActor.Player)
             {
-                var payout = economyManager != null
-                    ? economyManager.AwardSafeDrop(coins, result.RiskBeforeDrop)
-                    : 0;
-
-                Debug.Log(
-                    $"[GameManager] Player safe drop resolved. Payout={payout}, " +
-                    $"roundEarnings={(economyManager == null ? 0 : economyManager.CurrentRoundEarnings)}.");
-
+                economyManager?.AwardSafeDrop(coins, result.RiskBeforeDrop);
                 BeginEnemyTurn();
                 return;
             }
 
-            Debug.Log("[GameManager] Enemy safe drop resolved. Returning control to player.");
             BeginPlayerTurn();
         }
 
@@ -217,18 +237,10 @@ namespace Meniscus.Core
         {
             if (result.Actor == TurnActor.Player)
             {
-                Debug.Log(
-                    $"[GameManager] Player caused overflow on round {currentRound}. " +
-                    "Player instantly loses and current round earnings are wiped.");
-
                 economyManager?.WipeCurrentRoundEarnings();
                 EnterGameOver("Player overflowed the glass.", MatchOutcome.PlayerLost);
                 return;
             }
-
-            Debug.Log(
-                $"[GameManager] Enemy caused overflow on round {currentRound}. " +
-                "Player wins the round and banks current earnings.");
 
             economyManager?.BankCurrentRoundEarnings();
 
@@ -248,17 +260,12 @@ namespace Meniscus.Core
                     return;
                 }
 
-                Debug.Log("[GameManager] Player has no coins left. Skipping player turn.");
                 BeginEnemyTurn();
                 return;
             }
 
             TransitionTo(GameState.PlayerTurn);
             cameraController?.SwitchCamera(CameraState.PlayerFocus);
-
-            Debug.Log(
-                $"[GameManager] Player turn started. PlayerCoins={playerCoins.Count}, " +
-                $"EnemyCoins={enemyCoins.Count}, risk={GetCurrentRiskForLog():0.##}%.");
         }
 
         void BeginEnemyTurn()
@@ -274,14 +281,12 @@ namespace Meniscus.Core
                     return;
                 }
 
-                Debug.Log("[GameManager] Enemy has no coins left. Skipping enemy turn.");
                 BeginPlayerTurn();
                 return;
             }
 
             TransitionTo(GameState.EnemyTurn);
             cameraController?.SwitchCamera(CameraState.DealerFocus);
-            Debug.Log($"[GameManager] Enemy turn started with {enemyCoins.Count} coin(s) remaining.");
 
             if (enemyAI != null)
                 enemyAI.BeginTurn(this);
@@ -294,29 +299,20 @@ namespace Meniscus.Core
             TransitionTo(GameState.RestockPhase);
             cameraController?.SwitchCamera(CameraState.TableOverview);
 
-            Debug.Log(
-                $"[GameManager] Restock phase started in round {currentRound}. Reason={reason}. " +
-                $"Glass risk maintained at {GetCurrentRiskForLog():0.##}%.");
-
             GenerateRoundCoinPools();
-            HandsRestocked?.Invoke(currentRound, GetCurrentRiskForLog());
+            HandsRestocked?.Invoke(currentRound, GetCurrentRisk());
             BeginPlayerTurn();
         }
 
         public void QueueEnemyForcedCoinCount(int coinCount)
         {
             queuedEnemyForcedCoinCount = Mathf.Clamp(coinCount, 0, GameConstants.MaxEnemyCoinsPerTurn);
-            Debug.Log($"[GameManager] Queued enemy forced coin count={queuedEnemyForcedCoinCount}.");
         }
 
         public int ConsumeQueuedEnemyForcedCoinCount()
         {
             var forcedCount = queuedEnemyForcedCoinCount;
             queuedEnemyForcedCoinCount = 0;
-
-            if (forcedCount > 0)
-                Debug.Log($"[GameManager] Consumed queued enemy forced coin count={forcedCount}.");
-
             return forcedCount;
         }
 
@@ -334,9 +330,6 @@ namespace Meniscus.Core
                 return;
             }
 
-            Debug.Log(
-                $"[GameManager] Round {currentRound} won. Shop disabled for this build, " +
-                "starting next round immediately.");
             StartRound();
         }
 
@@ -344,18 +337,13 @@ namespace Meniscus.Core
         {
             if (!shopBetweenRoundsEnabled)
             {
-                Debug.Log("[GameManager] Shop phase requested but disabled. Starting next round.");
                 StartRound();
                 return;
             }
 
             TransitionTo(GameState.ShopPhase);
-            cameraController?.SwitchCamera(CameraState.TableOverview);
+            cameraController?.SwitchCamera(CameraState.ShopFocus);
             shopManager?.ShowShop();
-
-            Debug.Log(
-                $"[GameManager] Shop phase entered after round {currentRound}. " +
-                $"BankedCash={(economyManager == null ? 0 : economyManager.PlayerTotalBankedCash)}.");
         }
 
         void EnterGameOver(string reason, MatchOutcome outcome)
@@ -364,11 +352,9 @@ namespace Meniscus.Core
             TransitionTo(GameState.GameOver);
             cameraController?.SwitchCamera(CameraState.TableOverview);
             shopManager?.HideShop();
-            StartCoroutine(ShowEndScreenAfterDelay(outcome, reason));   // ← statt ShowOutcome direkt
 
-            Debug.Log(
-                $"[GameManager] GameOver. Outcome={outcome}, reason={reason}. Final banked cash=" +
-                $"{(economyManager == null ? 0 : economyManager.PlayerTotalBankedCash)}.");
+            // Delay the end screen so the final drop animation can finish playing.
+            StartCoroutine(ShowEndScreenAfterDelay(outcome, reason));
         }
 
         IEnumerator ShowEndScreenAfterDelay(MatchOutcome outcome, string reason)
@@ -398,9 +384,6 @@ namespace Meniscus.Core
 
             if (enemyCoins.Count == 0)
                 Debug.LogWarning("[GameManager] Enemy coin pool is empty after generation.");
-
-            LogPool("Player", playerCoins);
-            LogPool("Enemy", enemyCoins);
         }
 
         void PopulateSceneCoinListsIfEmpty()
@@ -420,10 +403,6 @@ namespace Meniscus.Core
                 else
                     handAuthoredEnemyCoins.Add(sceneCoins[i]);
             }
-
-            Debug.Log(
-                $"[GameManager] Found scene coins. Player={handAuthoredPlayerCoins.Count}, " +
-                $"Enemy={handAuthoredEnemyCoins.Count}.");
         }
 
         void PopulatePool(TurnActor actor, List<Coin> sourceCoins, List<Coin> targetPool)
@@ -463,10 +442,6 @@ namespace Meniscus.Core
 
             if (missingCount <= 0)
                 return;
-
-            Debug.Log(
-                $"[GameManager] {actor} pool had {targetPool.Count}/{targetCount} coin(s). " +
-                $"Generating {missingCount} runtime fallback coin(s).");
 
             GenerateRuntimeCoins(actor, targetPool, missingCount, targetPool.Count);
         }
@@ -533,6 +508,9 @@ namespace Meniscus.Core
                 GameConstants.GetRiskForSize(size),
                 GameConstants.GetBasePayoutForSize(size),
                 actor == TurnActor.Player);
+
+            // Show the real per-size model when one is assigned; null falls back to the placeholder.
+            coin.ApplyModel(coinModels.GetModelForSize(size), coinModels.ModelScale);
 
             coin.name = $"{actor} {displayName} Coin {index + 1}";
         }
@@ -617,7 +595,6 @@ namespace Meniscus.Core
                 return false;
             }
 
-            Debug.Log($"[GameManager] {actor} committed {validCoins.Count} valid coin(s).");
             return true;
         }
 
@@ -633,10 +610,6 @@ namespace Meniscus.Core
                 coins[i].MarkSpent();
                 sourcePool.Remove(coins[i]);
             }
-
-            Debug.Log(
-                $"[GameManager] Removed spent {actor} coin(s). PlayerCoins={playerCoins.Count}, " +
-                $"EnemyCoins={enemyCoins.Count}.");
         }
 
         static void RemoveUnavailableCoins(List<Coin> coins)
@@ -662,26 +635,6 @@ namespace Meniscus.Core
             generatedCoins.Clear();
         }
 
-        void LogPool(string label, IReadOnlyList<Coin> coins)
-        {
-            var description = coins.Count == 0 ? "none" : string.Empty;
-
-            for (var i = 0; i < coins.Count; i++)
-            {
-                if (coins[i] == null)
-                    continue;
-
-                description +=
-                    $"{coins[i].name}(size={coins[i].size}, risk={coins[i].riskContribution:0.##}, " +
-                    $"payout={coins[i].basePayout})";
-
-                if (i < coins.Count - 1)
-                    description += ", ";
-            }
-
-            Debug.Log($"[GameManager] {label} coin pool: {description}");
-        }
-
         void ResolveReferences()
         {
             if (glassManager == null)
@@ -703,7 +656,6 @@ namespace Meniscus.Core
             {
                 shopManager = gameObject.AddComponent<ShopManager>();
                 shopManager.Configure(null, economyManager, this);
-                Debug.Log("[GameManager] Created runtime ShopManager fallback.");
             }
 
             if (endScreenManager == null)
@@ -719,8 +671,13 @@ namespace Meniscus.Core
             {
                 dropPresentationController = gameObject.AddComponent<CoinDropPresentationController>();
                 dropPresentationController.Configure(this, FindGlassTransform());
-                Debug.Log("[GameManager] Created runtime CoinDropPresentationController fallback.");
             }
+
+            if (playerInventory == null)
+                playerInventory = FindAnyObjectByType<PlayerInventory>();
+
+            if (playerInventory == null)
+                playerInventory = gameObject.AddComponent<PlayerInventory>();
 
             if (saloonHudController == null)
                 saloonHudController = FindAnyObjectByType<SaloonHudController>();
@@ -729,7 +686,6 @@ namespace Meniscus.Core
             {
                 saloonHudController = gameObject.AddComponent<SaloonHudController>();
                 saloonHudController.Configure(null, null, this, glassManager, economyManager);
-                Debug.Log("[GameManager] Created runtime SaloonHudController fallback.");
             }
 
             if (glassManager == null)
@@ -745,9 +701,6 @@ namespace Meniscus.Core
                 return;
 
             shopBetweenRoundsEnabled = true;
-            Debug.Log(
-                "[GameManager] Shop phase was disabled on this scene asset. " +
-                "Re-enabled it for the current saloon loop.");
         }
 
         void NormalizeFallbackLayoutIfNeeded()
@@ -758,28 +711,21 @@ namespace Meniscus.Core
             playerFallbackStart = new Vector3(-0.62f, 1.09f, -1.02f);
             enemyFallbackStart = new Vector3(-0.62f, 1.09f, 0.88f);
             coinSpacing = new Vector3(0.38f, 0f, 0f);
-
-            Debug.Log(
-                "[GameManager] Normalized fallback coin layout to saloon table coordinates. " +
-                "This keeps runtime-spawned restock coins visible in legacy scene layouts.");
         }
 
         void TransitionTo(GameState newState)
         {
             if (currentState == newState)
             {
-                Debug.Log($"[GameManager] State remains {newState}.");
                 StateChanged?.Invoke(currentState);
                 return;
             }
 
-            var oldState = currentState;
             currentState = newState;
-            Debug.Log($"[GameManager] State transition: {oldState} -> {newState}.");
             StateChanged?.Invoke(currentState);
         }
 
-        float GetCurrentRiskForLog() =>
+        float GetCurrentRisk() =>
             glassManager == null ? 0f : glassManager.CurrentOverflowProbability;
 
         static Transform FindGlassTransform()
@@ -797,7 +743,6 @@ namespace Meniscus.Core
                 var eventSystemObject = new GameObject("EventSystem");
                 eventSystemObject.AddComponent<EventSystem>();
                 eventSystemObject.AddComponent<InputSystemUIInputModule>();
-                Debug.Log("[GameManager] Created EventSystem with InputSystemUIInputModule.");
             }
 
             var standaloneModules = FindObjectsByType<StandaloneInputModule>(
@@ -818,9 +763,6 @@ namespace Meniscus.Core
                     eventSystemObject.AddComponent<InputSystemUIInputModule>();
 
                 Destroy(standaloneModule);
-                Debug.Log(
-                    $"[GameManager] Replaced legacy StandaloneInputModule on {eventSystemObject.name} " +
-                    "with InputSystemUIInputModule.");
             }
 
             var eventSystems = FindObjectsByType<EventSystem>(
@@ -835,8 +777,6 @@ namespace Meniscus.Core
                 if (eventSystems[i].GetComponent<InputSystemUIInputModule>() == null)
                 {
                     eventSystems[i].gameObject.AddComponent<InputSystemUIInputModule>();
-                    Debug.Log(
-                        $"[GameManager] Added InputSystemUIInputModule to {eventSystems[i].name}.");
                 }
             }
         }

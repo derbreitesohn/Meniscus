@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Meniscus.Core;
 using Meniscus.Gameplay;
+using Meniscus.Items;
 using Meniscus.UI;
 using NUnit.Framework;
 using UnityEngine;
@@ -150,28 +151,81 @@ namespace Meniscus.Tests.EditMode
 
         static void ForceNextPlayerDropSafe(GameFixture fixture)
         {
+            fixture.GlassManager.SpillRollProvider = () => GameConstants.MaxOverflowProbability;
             fixture.GameManager.PlayerCoins[0].riskContribution = 0f;
         }
 
         static void ForceNextEnemyDropSafe(GameFixture fixture)
         {
+            fixture.GlassManager.SpillRollProvider = () => GameConstants.MaxOverflowProbability;
             fixture.GameManager.EnemyCoins[0].riskContribution = 0f;
         }
 
         static void ForceNextPlayerDropToOverflow(GameFixture fixture)
         {
+            fixture.GlassManager.SpillRollProvider = () => 0f;
             fixture.GameManager.PlayerCoins[0].riskContribution = 100f;
         }
 
         static void ForceNextEnemyDropToOverflow(GameFixture fixture)
         {
+            fixture.GlassManager.SpillRollProvider = () => 0f;
             fixture.GameManager.EnemyCoins[0].riskContribution = 100f;
+        }
+
+        [Test]
+        public void TryUseItem_DuringPlayerTurn_ConsumesItemAndAppliesEffect()
+        {
+            var fixture = CreateGameFixture();
+            fixture.GameManager.StartMatch();   // → PlayerTurn
+
+            var item = ItemDefinition.Create(
+                "steady_hand", "Steady Hand", "", 50, ItemEffectKind.SafeZoneBonus, 10f);
+            fixture.GameManager.Inventory.Grant(item);
+
+            Assert.AreEqual(GameState.PlayerTurn, fixture.GameManager.CurrentState);
+            Assert.IsTrue(fixture.GameManager.TryUseItem(item));
+            Assert.IsFalse(fixture.GameManager.Inventory.Has(item));
+            Assert.AreEqual(10f, fixture.GlassManager.GetSafeZoneRelief(TurnActor.Player), 0.001f);
+
+            fixture.Destroy();
+        }
+
+        [Test]
+        public void TryUseItem_NotInInventory_ReturnsFalse()
+        {
+            var fixture = CreateGameFixture();
+            fixture.GameManager.StartMatch();
+
+            var item = ItemDefinition.Create(
+                "steady_hand", "Steady Hand", "", 50, ItemEffectKind.SafeZoneBonus, 10f);
+
+            Assert.IsFalse(fixture.GameManager.TryUseItem(item));
+
+            fixture.Destroy();
+        }
+
+        [Test]
+        public void SkipPlayerTurn_DuringPlayerTurn_EndsPlayerTurn()
+        {
+            var fixture = CreateGameFixture();
+            fixture.GameManager.StartMatch();   // → PlayerTurn, enemy has coins
+
+            fixture.GameManager.SkipPlayerTurn();
+
+            Assert.AreEqual(GameState.EnemyTurn, fixture.GameManager.CurrentState);
+
+            fixture.Destroy();
         }
 
         static GameFixture CreateGameFixture()
         {
             var root = new GameObject("Game Flow Fixture");
             var glassManager = root.AddComponent<GlassManager>();
+
+            // Deterministic, non-spilling roll by default; force helpers flip it to force a spill.
+            glassManager.SpillRollProvider = () => GameConstants.MaxOverflowProbability;
+
             var economyManager = root.AddComponent<EconomyManager>();
             var endScreenManager = root.AddComponent<EndScreenManager>();
             var gameManager = root.AddComponent<GameManager>();
