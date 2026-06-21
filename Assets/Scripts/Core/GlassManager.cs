@@ -10,41 +10,73 @@ namespace Meniscus.Core
     {
         [SerializeField, Range(0f, GameConstants.MaxOverflowProbability)]
         float currentOverflowProbability;
-        [SerializeField, Min(0f)] float pendingNextRoundSafeZoneBonus;
-        [SerializeField, Min(0f)] float activeSafeZoneBonus;
+        [SerializeField, Min(0f)] float activePlayerPourRelief;
+        [SerializeField, Min(0f)] float activeEnemyPourPenalty;
+        [SerializeField] bool activeRevealTrueOdds;
 
         public event Action<float> ProbabilityChanged;
         public event Action<GlassDropResult> DropResolved;
 
+        // Source of the 0..MaxOverflowProbability roll compared against the spill chance. Defaults to
+        // UnityEngine.Random; tests inject a deterministic roll so outcomes don't depend on the RNG.
+        public Func<float> SpillRollProvider { get; set; }
+
         public float CurrentOverflowProbability => currentOverflowProbability;
         public float CurrentSafeZoneThreshold => Mathf.Clamp(
-            GameConstants.SpillSafeZoneThreshold + activeSafeZoneBonus,
+            GameConstants.SpillSafeZoneThreshold + activePlayerPourRelief,
             0f,
             GameConstants.MaxOverflowProbability);
         public float CurrentTrueSpillChance => CalculateCurrentTrueSpillChance(currentOverflowProbability);
+        public bool TrueOddsRevealed => activeRevealTrueOdds;
+
+        // Relief is a subtractive discount on the fill. The player's safe-zone bonus raises it; the
+        // enemy's "drunk" penalty pushes it negative (more effective fill, higher spill chance). This is
+        // the only per-actor difference in the spill resolution.
+        public float GetSafeZoneRelief(TurnActor actor) =>
+            actor == TurnActor.Enemy
+                ? GameConstants.SpillSafeZoneThreshold - activeEnemyPourPenalty
+                : CurrentSafeZoneThreshold;
 
         public void ResetGlass()
         {
-            activeSafeZoneBonus = pendingNextRoundSafeZoneBonus;
-            pendingNextRoundSafeZoneBonus = 0f;
+            activePlayerPourRelief = 0f;
+            activeEnemyPourPenalty = 0f;
+            activeRevealTrueOdds = false;
             currentOverflowProbability = 0f;
-            Debug.Log(
-                $"[GlassManager] Glass reset. Overflow probability is now 0%. " +
-                $"Safe zone threshold={CurrentSafeZoneThreshold:0.##}%.");
             ProbabilityChanged?.Invoke(currentOverflowProbability);
         }
 
-        public void QueueNextRoundSafeZoneBonus(float bonus)
+        public void AddPlayerPourRelief(float relief)
         {
-            var clampedBonus = Mathf.Clamp(
-                bonus,
+            if (relief <= 0f)
+                return;
+
+            activePlayerPourRelief = Mathf.Clamp(
+                activePlayerPourRelief + relief,
                 0f,
                 GameConstants.MaxOverflowProbability - GameConstants.SpillSafeZoneThreshold);
-            pendingNextRoundSafeZoneBonus = Mathf.Max(pendingNextRoundSafeZoneBonus, clampedBonus);
+        }
 
-            Debug.Log(
-                $"[GlassManager] Queued next-round safe-zone bonus={clampedBonus:0.##}%. " +
-                $"Pending bonus={pendingNextRoundSafeZoneBonus:0.##}%.");
+        public void AddEnemyPourPenalty(float penalty)
+        {
+            if (penalty <= 0f)
+                return;
+
+            activeEnemyPourPenalty = Mathf.Clamp(
+                activeEnemyPourPenalty + penalty,
+                0f,
+                GameConstants.MaxOverflowProbability);
+        }
+
+        public void RevealTrueOddsForRound() => activeRevealTrueOdds = true;
+
+        public void ReduceCurrentRisk(float amount)
+        {
+            if (amount <= 0f)
+                return;
+
+            currentOverflowProbability = Mathf.Max(0f, currentOverflowProbability - amount);
+            ProbabilityChanged?.Invoke(currentOverflowProbability);
         }
 
         public float CalculateCurrentTrueSpillChance(float totalRiskWeight) =>
@@ -60,8 +92,10 @@ namespace Meniscus.Core
                 0f,
                 GameConstants.MaxOverflowProbability);
 
-            var trueSpillChance = CalculateCurrentTrueSpillChance(currentOverflowProbability);
-            var roll = UnityEngine.Random.Range(0f, GameConstants.MaxOverflowProbability);
+            var trueSpillChance = CalculateTrueSpillChance(
+                currentOverflowProbability, GetSafeZoneRelief(actor));
+            var roll = SpillRollProvider?.Invoke()
+                ?? UnityEngine.Random.Range(0f, GameConstants.MaxOverflowProbability);
             var overflowed = trueSpillChance > 0f && roll <= trueSpillChance;
 
             var result = new GlassDropResult(
@@ -74,11 +108,11 @@ namespace Meniscus.Core
                 coinCount,
                 trueSpillChance);
 
-            Debug.Log(
-                $"[GlassManager] {actor} dropped {coinCount} coin(s). Risk before={riskBeforeDrop:0.##}, " +
-                $"added={addedRisk:0.##}, Total Risk Weight={currentOverflowProbability:0.##}, " +
-                $"Safe Zone Threshold={CurrentSafeZoneThreshold:0.##}, " +
-                $"True Spill Chance={trueSpillChance:0.##}%, roll={roll:0.##}, overflow={overflowed}.");
+            // One-shot pour modifiers are spent by the pour they applied to.
+            if (actor == TurnActor.Player)
+                activePlayerPourRelief = 0f;
+            else
+                activeEnemyPourPenalty = 0f;
 
             DropResolved?.Invoke(result);
             ProbabilityChanged?.Invoke(currentOverflowProbability);
@@ -88,17 +122,30 @@ namespace Meniscus.Core
         public static float CalculateTrueSpillChance(float totalRiskWeight) =>
             CalculateTrueSpillChance(totalRiskWeight, GameConstants.SpillSafeZoneThreshold);
 
-        public static float CalculateTrueSpillChance(float totalRiskWeight, float safeZoneThreshold)
+        /// <summary>
+        /// Spill chance as a continuous curve of the accumulated risk already in the glass. It rises
+        /// from 0 on an empty glass, climbs convexly (small early, steeper as it fills, so more and
+        /// bigger coins bite harder) and asymptotically approaches <see cref="GameConstants.MaxSpillChance"/>
+        /// — getting closer and closer but never reaching it, so a spill is never a certainty.
+        /// <paramref name="safeZoneRelief"/> is a temporary discount (from shop items) that subtracts
+        /// from the effective fill.
+        /// </summary>
+        public static float CalculateTrueSpillChance(float totalRiskWeight, float safeZoneRelief)
         {
             var clampedRisk = Mathf.Clamp(totalRiskWeight, 0f, GameConstants.MaxOverflowProbability);
-            var clampedThreshold = Mathf.Clamp(safeZoneThreshold, 0f, GameConstants.MaxOverflowProbability);
+            var clampedRelief = Mathf.Clamp(
+                safeZoneRelief,
+                -GameConstants.MaxOverflowProbability,
+                GameConstants.MaxOverflowProbability);
 
-            if (clampedRisk <= clampedThreshold)
+            var effectiveRisk = clampedRisk - clampedRelief;
+            if (effectiveRisk <= 0f)
                 return 0f;
 
-            var riskyRange = Mathf.Max(0.001f, GameConstants.MaxOverflowProbability - clampedThreshold);
-            var normalizedRisk = (clampedRisk - clampedThreshold) / riskyRange;
-            return GameConstants.MaxOverflowProbability * Mathf.Pow(normalizedRisk, GameConstants.SpillCurveExponent);
+            // Half the meter sets the climb rate, so the curve is nearly at the ceiling by a maxed glass
+            // yet never touches it. Squaring keeps the early game gentle and the rise convex.
+            var load = effectiveRisk / (GameConstants.MaxOverflowProbability * 0.5f);
+            return GameConstants.MaxSpillChance * (1f - Mathf.Exp(-load * load));
         }
 
         static float SumRisk(IReadOnlyList<Coin> coins)
