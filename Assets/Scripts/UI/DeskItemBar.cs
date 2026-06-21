@@ -89,7 +89,14 @@ namespace Meniscus.UI
                 return;
 
             for (var i = rowRoot.childCount - 1; i >= 0; i--)
-                Destroy(rowRoot.GetChild(i).gameObject);
+            {
+                var child = rowRoot.GetChild(i).gameObject;
+
+                if (Application.isPlaying)
+                    Destroy(child);
+                else
+                    DestroyImmediate(child);
+            }
 
             var isPlayerTurn = gameManager != null && gameManager.CurrentState == GameState.PlayerTurn;
             barCanvas.enabled = isPlayerTurn && inventory != null && inventory.TotalCount > 0;
