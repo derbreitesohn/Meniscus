@@ -1,0 +1,84 @@
+using Meniscus.Core;
+using Meniscus.Gameplay;
+using Meniscus.Items;
+using Meniscus.UI;
+using NUnit.Framework;
+using UnityEngine;
+
+namespace Meniscus.Tests.EditMode
+{
+    public class ShopManagerTests
+    {
+        GameObject host;
+        EconomyManager economy;
+        PlayerInventory inventory;
+        ShopManager shop;
+
+        [SetUp]
+        public void SetUp()
+        {
+            host = new GameObject("Shop Test Host");
+            economy = host.AddComponent<EconomyManager>();
+            inventory = host.AddComponent<PlayerInventory>();
+            shop = host.AddComponent<ShopManager>();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            Object.DestroyImmediate(host);
+        }
+
+        // EconomyManager has no public cash setter; bank cash through the normal award path.
+        void BankCash(int amount)
+        {
+            var coinObject = new GameObject("Cash Coin");
+            var coin = coinObject.AddComponent<Coin>();
+            coin.Configure(CoinSize.Medium, 0f, amount, true);
+            economy.AwardSafeDrop(new[] { coin }, 0f);
+            economy.BankCurrentRoundEarnings();
+            Object.DestroyImmediate(coinObject);
+        }
+
+        static ItemDefinition Item(string id, int cost) =>
+            ItemDefinition.Create(id, id, "", cost, ItemEffectKind.PayoutMultiplier, 2f);
+
+        [Test]
+        public void TryBuyItem_GrantsToInventoryAndChargesCash()
+        {
+            BankCash(100);
+            var item = Item("marked_coin", 35);
+
+            Assert.IsTrue(shop.TryBuyItem(item));
+            Assert.IsTrue(inventory.Has(item));
+            Assert.AreEqual(65, economy.PlayerTotalBankedCash);
+        }
+
+        [Test]
+        public void TryBuyItem_Unaffordable_ReturnsFalseAndGrantsNothing()
+        {
+            BankCash(20);
+            var item = Item("loaded_dice", 70);
+
+            Assert.IsFalse(shop.TryBuyItem(item));
+            Assert.IsFalse(inventory.Has(item));
+            Assert.AreEqual(20, economy.PlayerTotalBankedCash);
+        }
+
+        [Test]
+        public void TryBuyItem_DeskFull_NotChargedAndNotGranted()
+        {
+            BankCash(1000);
+
+            for (var i = 0; i < GameConstants.DeskCapacity; i++)
+                Assert.IsTrue(inventory.Grant(Item($"filler{i}", 1)));
+
+            var cashBefore = economy.PlayerTotalBankedCash;
+            var item = Item("marked_coin", 35);
+
+            Assert.IsFalse(shop.TryBuyItem(item));
+            Assert.IsFalse(inventory.Has(item));
+            Assert.AreEqual(cashBefore, economy.PlayerTotalBankedCash);
+        }
+    }
+}

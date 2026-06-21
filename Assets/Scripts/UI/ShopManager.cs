@@ -1,6 +1,7 @@
+using System.Collections.Generic;
 using Meniscus.Core;
+using Meniscus.Items;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Meniscus.UI
 {
@@ -10,7 +11,19 @@ namespace Meniscus.UI
         [SerializeField] Canvas shopCanvas;
         [SerializeField] EconomyManager economyManager;
         [SerializeField] GameManager gameManager;
-        [SerializeField] GlassManager glassManager;
+        [SerializeField] PlayerInventory playerInventory;
+
+        [Tooltip("Authored items. Leave empty to use the code-built default catalog.")]
+        [SerializeField] List<ItemDefinition> itemCatalog = new();
+
+        [Header("Presentation")]
+        [Tooltip("When on, the shop opens as the diegetic book on the desk instead of a screen overlay.")]
+        [SerializeField] bool useDiegeticBookShop = true;
+        [SerializeField] BookShopView bookShop;
+
+        List<ItemDefinition> resolvedCatalog;
+
+        public IReadOnlyList<ItemDefinition> Catalog => ResolveCatalog();
 
         void Awake()
         {
@@ -21,91 +34,146 @@ namespace Meniscus.UI
         public void Configure(
             Canvas canvas,
             EconomyManager economy,
-            GameManager manager,
-            GlassManager glass = null)
+            GameManager manager)
         {
             shopCanvas = canvas;
             economyManager = economy;
             gameManager = manager;
-            glassManager = glass;
             HideShop();
         }
 
         public void ShowShop()
         {
             ResolveReferences();
+
+            if (useDiegeticBookShop)
+            {
+                EnsureBookShop();
+
+                if (bookShop != null)
+                {
+                    HideShopCanvas();
+                    bookShop.Open(Catalog, this);
+                    return;
+                }
+            }
+
             EnsureFallbackShopCanvas();
 
             if (shopCanvas != null)
                 shopCanvas.enabled = true;
-
-            Debug.Log(
-                $"[ShopManager] Saloon Menu Card opened. Banked cash={GetBankedCashForLog()}.");
         }
 
         public void HideShop()
         {
+            HideShopCanvas();
+
+            if (bookShop != null)
+                bookShop.Close();
+        }
+
+        void HideShopCanvas()
+        {
             if (shopCanvas != null)
                 shopCanvas.enabled = false;
-
-            Debug.Log("[ShopManager] Saloon Menu Card closed.");
         }
 
-        public void BuyMarkedCoin()
+        /// <summary>
+        /// Attempts to buy an item: charges banked cash and grants it to the player's desk inventory.
+        /// Returns false (and changes nothing) when the item is null, the desk is full, or it is
+        /// unaffordable.
+        /// </summary>
+        public bool TryBuyItem(ItemDefinition item)
         {
             ResolveReferences();
 
-            if (!TryBuy("Marked Coin", 35))
-                return;
-
-            economyManager.QueueNextSafeDropPayoutMultiplier(2f);
-            Debug.Log("[ShopManager] Marked Coin armed. Next safe player drop pays double.");
-        }
-
-        public void BuySteadyHand()
-        {
-            ResolveReferences();
-
-            if (!TryBuy("Steady Hand", 50))
-                return;
-
-            if (glassManager == null)
+            if (item == null)
             {
-                Debug.LogWarning("[ShopManager] Bought Steady Hand, but GlassManager is missing.");
-                return;
+                Debug.LogWarning("[ShopManager] Ignored purchase of a null item.");
+                return false;
             }
 
-            glassManager.QueueNextRoundSafeZoneBonus(10f);
-            Debug.Log("[ShopManager] Steady Hand bought. Next round safe zone extends by 10%.");
-        }
-
-        public void BuyDealersDebt()
-        {
-            ResolveReferences();
-
-            if (!TryBuy("Dealer's Debt", 60))
-                return;
-
-            if (gameManager == null)
+            if (playerInventory == null)
             {
-                Debug.LogWarning("[ShopManager] Bought Dealer's Debt, but GameManager is missing.");
-                return;
+                Debug.LogWarning($"[ShopManager] Cannot buy {item.DisplayName}: PlayerInventory is missing.");
+                return false;
             }
 
-            gameManager.QueueEnemyForcedCoinCount(2);
-            Debug.Log("[ShopManager] Dealer's Debt bought. Dealer must drop 2 coins on next enemy turn.");
+            if (playerInventory.IsFull)
+            {
+                Debug.LogWarning(
+                    $"[ShopManager] Desk is full ({playerInventory.TotalCount}/{GameConstants.DeskCapacity}); " +
+                    $"cannot buy {item.DisplayName}.");
+                return false;
+            }
+
+            if (!TrySpend(item.DisplayName, item.Cost))
+                return false;
+
+            playerInventory.Grant(item);
+            return true;
         }
+
+        public bool TryBuyItemById(string id)
+        {
+            var item = FindItem(id);
+
+            if (item == null)
+            {
+                Debug.LogWarning($"[ShopManager] No catalog item with id '{id}'.");
+                return false;
+            }
+
+            return TryBuyItem(item);
+        }
+
+        // Thin wrappers so authored scene buttons (which call these by name) keep working until the
+        // diegetic book shop replaces the presentation.
+        public void BuyMarkedCoin() => TryBuyItemById("marked_coin");
+        public void BuySteadyHand() => TryBuyItemById("steady_hand");
+        public void BuyDealersDebt() => TryBuyItemById("dealers_debt");
 
         public void FinishOrdering()
         {
             ResolveReferences();
             HideShop();
-            Debug.Log("[ShopManager] Finish Drink pressed. Signaling GameManager.");
 
             if (gameManager != null)
                 gameManager.FinishShopPhase();
             else
                 Debug.LogWarning("[ShopManager] Cannot finish ordering: GameManager reference is missing.");
+        }
+
+        List<ItemDefinition> ResolveCatalog()
+        {
+            if (resolvedCatalog != null)
+                return resolvedCatalog;
+
+            resolvedCatalog = new List<ItemDefinition>();
+
+            for (var i = 0; i < itemCatalog.Count; i++)
+            {
+                if (itemCatalog[i] != null)
+                    resolvedCatalog.Add(itemCatalog[i]);
+            }
+
+            if (resolvedCatalog.Count == 0)
+                resolvedCatalog = ShopCatalog.CreateDefaultCatalog();
+
+            return resolvedCatalog;
+        }
+
+        ItemDefinition FindItem(string id)
+        {
+            var catalog = ResolveCatalog();
+
+            for (var i = 0; i < catalog.Count; i++)
+            {
+                if (catalog[i] != null && catalog[i].Id == id)
+                    return catalog[i];
+            }
+
+            return null;
         }
 
         void ResolveReferences()
@@ -116,11 +184,14 @@ namespace Meniscus.UI
             if (gameManager == null)
                 gameManager = FindAnyObjectByType<GameManager>();
 
-            if (glassManager == null)
-                glassManager = FindAnyObjectByType<GlassManager>();
+            if (playerInventory == null && gameManager != null)
+                playerInventory = gameManager.Inventory;
+
+            if (playerInventory == null)
+                playerInventory = FindAnyObjectByType<PlayerInventory>();
         }
 
-        bool TryBuy(string itemName, int cost)
+        bool TrySpend(string itemName, int cost)
         {
             if (economyManager == null)
             {
@@ -136,10 +207,16 @@ namespace Meniscus.UI
                 return false;
             }
 
-            Debug.Log(
-                $"[ShopManager] Purchased {itemName} for {cost}. " +
-                $"Banked cash remaining={economyManager.PlayerTotalBankedCash}.");
             return true;
+        }
+
+        void EnsureBookShop()
+        {
+            if (bookShop == null)
+                bookShop = FindAnyObjectByType<BookShopView>();
+
+            if (bookShop == null)
+                bookShop = new GameObject("Runtime Book Shop").AddComponent<BookShopView>();
         }
 
         void EnsureFallbackShopCanvas()
@@ -148,132 +225,69 @@ namespace Meniscus.UI
                 return;
 
             shopCanvas = CreateFallbackShopCanvas();
-            Debug.Log("[ShopManager] Created runtime fallback Saloon Menu canvas.");
         }
 
         Canvas CreateFallbackShopCanvas()
         {
-            var canvasObject = new GameObject(
-                "Runtime Saloon Menu Canvas",
-                typeof(RectTransform),
-                typeof(Canvas),
-                typeof(CanvasScaler),
-                typeof(GraphicRaycaster));
-            canvasObject.transform.SetParent(transform, false);
+            var canvas = RuntimeUiFactory.CreateOverlayCanvas(transform, "Runtime Saloon Menu Canvas", enabled: false);
 
-            var canvas = canvasObject.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.enabled = false;
-
-            var scaler = canvasObject.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-
-            var scrim = CreateUiImage(
-                canvasObject.transform,
+            var scrim = RuntimeUiFactory.CreateImage(
+                canvas.transform,
                 "Shop Table Dimming Scrim",
                 new Vector2(1920f, 1080f),
                 Vector2.zero,
                 new Color(0.02f, 0.012f, 0.008f, 0.45f));
 
-            var card = CreateUiImage(
+            var catalog = ResolveCatalog();
+
+            const float headerHeight = 150f;
+            const float rowHeight = 58f;
+            const float footerHeight = 96f;
+            var cardWidth = 470f;
+            var cardHeight = headerHeight + catalog.Count * rowHeight + footerHeight;
+
+            var card = RuntimeUiFactory.CreateImage(
                 scrim.transform,
                 "Greasy Saloon Menu Card",
-                new Vector2(470f, 360f),
-                new Vector2(0f, -48f),
+                new Vector2(cardWidth, cardHeight),
+                Vector2.zero,
                 new Color(0.56f, 0.43f, 0.25f, 0.97f));
 
-            CreateUiImage(
-                card.transform,
-                "Coffee Ring Stain",
-                new Vector2(118f, 72f),
-                new Vector2(-150f, 96f),
-                new Color(0.18f, 0.09f, 0.03f, 0.22f));
-            CreateUiImage(
-                card.transform,
-                "Water Stain",
-                new Vector2(96f, 54f),
-                new Vector2(152f, -92f),
-                new Color(0.11f, 0.07f, 0.035f, 0.18f));
+            var cardTextColor = new Color(0.08f, 0.045f, 0.025f);
+            var top = cardHeight * 0.5f;
 
-            CreateUiText(card.transform, "Title", "SALOON MENU", new Vector2(0f, 124f), 32, TextAnchor.MiddleCenter);
-            CreateUiText(
-                card.transform,
-                "Description",
-                "Spend banked cash between rounds.",
-                new Vector2(0f, 76f),
-                18,
-                TextAnchor.MiddleCenter);
+            RuntimeUiFactory.CreateText(
+                card.transform, "Title", "SALOON MENU",
+                new Vector2(0f, top - 48f), new Vector2(cardWidth - 60f, 44f), 32, cardTextColor);
+            RuntimeUiFactory.CreateText(
+                card.transform, "Description", "Spend banked cash between rounds.",
+                new Vector2(0f, top - 92f), new Vector2(cardWidth - 60f, 32f), 18, cardTextColor);
 
-            CreateButton(card.transform, "Marked Coin Button", "MARKED $35", new Vector2(-112f, -12f), BuyMarkedCoin);
-            CreateButton(card.transform, "Steady Hand Button", "STEADY $50", new Vector2(112f, -12f), BuySteadyHand);
-            CreateButton(card.transform, "Dealer Debt Button", "DEBT $60", new Vector2(0f, -72f), BuyDealersDebt);
-            CreateButton(card.transform, "Finish Drink Button", "FINISH DRINK", new Vector2(0f, -132f), FinishOrdering);
+            var rowY = top - headerHeight;
+            var buttonSize = new Vector2(cardWidth - 70f, rowHeight - 12f);
+
+            for (var i = 0; i < catalog.Count; i++)
+            {
+                var item = catalog[i];
+                var label = $"{item.DisplayName.ToUpperInvariant()}   ${item.Cost}";
+
+                RuntimeUiFactory.CreateButton(
+                    card.transform,
+                    $"{item.Id} Button",
+                    label,
+                    buttonSize,
+                    new Vector2(0f, rowY),
+                    17,
+                    () => TryBuyItem(item));
+
+                rowY -= rowHeight;
+            }
+
+            RuntimeUiFactory.CreateButton(
+                card.transform, "Finish Drink Button", "FINISH DRINK",
+                new Vector2(200f, 50f), new Vector2(0f, -top + 48f), 18, FinishOrdering, boldLabel: true);
 
             return canvas;
         }
-
-        static GameObject CreateUiImage(Transform parent, string name, Vector2 size, Vector2 position, Color color)
-        {
-            var imageObject = new GameObject(name, typeof(RectTransform), typeof(Image));
-            imageObject.transform.SetParent(parent, false);
-
-            var rectTransform = imageObject.GetComponent<RectTransform>();
-            rectTransform.sizeDelta = size;
-            rectTransform.anchoredPosition = position;
-
-            imageObject.GetComponent<Image>().color = color;
-            return imageObject;
-        }
-
-        static GameObject CreateUiText(
-            Transform parent,
-            string name,
-            string text,
-            Vector2 position,
-            int fontSize,
-            TextAnchor alignment)
-        {
-            var textObject = new GameObject(name, typeof(RectTransform), typeof(Text));
-            textObject.transform.SetParent(parent, false);
-
-            var rectTransform = textObject.GetComponent<RectTransform>();
-            rectTransform.sizeDelta = new Vector2(390f, 48f);
-            rectTransform.anchoredPosition = position;
-
-            var uiText = textObject.GetComponent<Text>();
-            uiText.text = text;
-            uiText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            uiText.fontSize = fontSize;
-            uiText.alignment = alignment;
-            uiText.color = new Color(0.08f, 0.045f, 0.025f);
-
-            return textObject;
-        }
-
-        static void CreateButton(Transform parent, string name, string label, Vector2 position, UnityEngine.Events.UnityAction action)
-        {
-            var buttonObject = CreateUiImage(
-                parent,
-                name,
-                new Vector2(170f, 48f),
-                position,
-                new Color(0.18f, 0.08f, 0.04f, 1f));
-
-            var button = buttonObject.AddComponent<Button>();
-            var colors = button.colors;
-            colors.normalColor = new Color(0.18f, 0.08f, 0.04f, 1f);
-            colors.highlightedColor = new Color(0.34f, 0.15f, 0.07f, 1f);
-            colors.pressedColor = new Color(0.08f, 0.03f, 0.02f, 1f);
-            button.colors = colors;
-            button.onClick.AddListener(action);
-
-            CreateUiText(buttonObject.transform, "Label", label, Vector2.zero, 17, TextAnchor.MiddleCenter);
-            var labelText = buttonObject.transform.Find("Label").GetComponent<Text>();
-            labelText.color = new Color(0.98f, 0.86f, 0.58f);
-        }
-
-        string GetBankedCashForLog() =>
-            economyManager == null ? "unknown" : economyManager.PlayerTotalBankedCash.ToString();
     }
 }
