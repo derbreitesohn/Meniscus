@@ -235,6 +235,20 @@ namespace Meniscus.Tests.EditMode
             fixture.Destroy();
         }
 
+        [Test]
+        public void StartMatch_BootstrapsDeskItemBarWiredToInventory()
+        {
+            var fixture = CreateGameFixture();
+            fixture.GameManager.StartMatch();
+
+            var bar = Object.FindAnyObjectByType<DeskItemBar>();
+
+            Assert.IsNotNull(bar);
+            Assert.IsNotNull(fixture.GameManager.Inventory);
+
+            fixture.Destroy();
+        }
+
         static GameFixture CreateGameFixture()
         {
             var root = new GameObject("Game Flow Fixture");
