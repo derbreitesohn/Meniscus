@@ -8,6 +8,7 @@ namespace Meniscus.Core
         public const int MinCoinsPerActor = 8;
         public const int MaxCoinsPerActor = 12;
         public const int MaxEnemyCoinsPerTurn = 2;
+        public const int DeskCapacity = 8;
 
         public const int MinGlassCapacity = 8;
         public const int MaxGlassCapacity = 15;
@@ -33,8 +34,19 @@ namespace Meniscus.Core
         public const float GreedRiskDivisor = 50f;
         public const float ComboMultiplier = 1.5f;
         public const float MaxOverflowProbability = 100f;
-        public const float SpillSafeZoneThreshold = 45f;
-        public const float SpillCurveExponent = 1.8f;
+
+        // No default grace period: with zero relief the spill curve rises straight from an empty glass,
+        // so even the first coins of a round carry a small chance. Shop items (Steady Hand / Iron Grip)
+        // raise the relief to temporarily shrug off some accumulated risk.
+        public const float SpillSafeZoneThreshold = 0f;
+
+        // The spill chance is a continuous curve that climbs with fill and asymptotically approaches
+        // MaxSpillChance — getting ever closer but never reaching it, so a spill is never guaranteed.
+        // The ceiling sits well below 100% on purpose: even a brimming glass stays under a coin-flip, so
+        // pushing your luck is always tempting. This is the single tuning knob; the climb rate is
+        // derived from the meter scale (see GlassManager.CalculateTrueSpillChance).
+        public const float MaxSpillChance = 50f;
+
         public const float EnemyTurnDelaySeconds = 2f;
         public const float EnemyTellDelaySeconds = 0.35f;
         public const float EnemyConservativeSpillChanceThreshold = 50f;
