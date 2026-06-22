@@ -1,6 +1,7 @@
 using Meniscus.Core;
 using Meniscus.Gameplay;
 using Meniscus.Items;
+using Meniscus.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -105,6 +106,58 @@ namespace Meniscus.Editor
             serialized.ApplyModifiedProperties();
 
             Debug.Log("[RuntimeObjectAuthoring] PlayerInventory authored on the Managers object and wired.");
+            return true;
+        }
+
+        [MenuItem(MenuRoot + "Author Desk Item Bar")]
+        static void AuthorDeskItemBarMenu()
+        {
+            if (!TryOpenScene(out var scene))
+                return;
+
+            if (AuthorDeskItemBar())
+                SaveScene(scene);
+        }
+
+        public static bool AuthorDeskItemBar()
+        {
+            var manager = Object.FindAnyObjectByType<GameManager>();
+
+            if (manager == null)
+            {
+                Debug.LogError("[RuntimeObjectAuthoring] No GameManager in the scene. Aborting.");
+                return false;
+            }
+
+            var bar = Object.FindAnyObjectByType<DeskItemBar>();
+
+            if (bar == null)
+            {
+                Undo.RegisterCompleteObjectUndo(manager.gameObject, "Author Desk Item Bar");
+                bar = manager.gameObject.AddComponent<DeskItemBar>();
+            }
+
+            // Author the canvas + row container if not already wired.
+            var barSerialized = new SerializedObject(bar);
+            var canvasProp = barSerialized.FindProperty("barCanvas");
+            var rowRootProp = barSerialized.FindProperty("rowRoot");
+
+            if (canvasProp.objectReferenceValue == null || rowRootProp.objectReferenceValue == null)
+            {
+                var (canvas, rowRoot) = DeskItemBarBuilder.Build(bar.transform);
+                Undo.RegisterCreatedObjectUndo(canvas.gameObject, "Author Desk Item Bar Canvas");
+                canvasProp.objectReferenceValue = canvas;
+                rowRootProp.objectReferenceValue = rowRoot;
+            }
+
+            barSerialized.FindProperty("gameManager").objectReferenceValue = manager;
+            barSerialized.ApplyModifiedProperties();
+
+            var managerSerialized = new SerializedObject(manager);
+            managerSerialized.FindProperty("deskItemBar").objectReferenceValue = bar;
+            managerSerialized.ApplyModifiedProperties();
+
+            Debug.Log("[RuntimeObjectAuthoring] DeskItemBar authored (component + canvas + rowRoot) and wired.");
             return true;
         }
 
