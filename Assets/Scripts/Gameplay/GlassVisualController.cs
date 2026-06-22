@@ -93,7 +93,7 @@ namespace Meniscus.Gameplay
             ResolveReferences();
 
             if (waterTransform == null)
-                waterTransform = CreateRuntimeWaterSurface();
+                waterTransform = WaterSurfaceBuilder.Build(transform, WaterSurfaceBuilder.DefaultName);
 
             SetupSurfaceRendererAndMesh();
 
@@ -424,15 +424,6 @@ namespace Meniscus.Gameplay
             var lp = waterTransform.localPosition;
             waterTransform.localPosition = new Vector3(lp.x, 0f, lp.z);
             waterLocalPosition = waterTransform.localPosition;
-        }
-
-        Transform CreateRuntimeWaterSurface()
-        {
-            var waterObject = new GameObject("Runtime Water Surface", typeof(MeshFilter), typeof(MeshRenderer));
-            waterObject.transform.SetParent(transform, false);
-            waterObject.transform.localPosition = Vector3.zero;
-            waterObject.transform.localScale = Vector3.one;
-            return waterObject.transform;
         }
 
         public static Material CreateTransparentLiquidMaterial(string materialName, Color color)
