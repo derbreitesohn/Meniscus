@@ -14,6 +14,18 @@ namespace Meniscus.UI
         public const float BoxSize = 0.05f;
         const float TileSize = 0.025f;
 
+        public static void ApplyColor(Renderer renderer, Color color)
+        {
+            if (renderer == null)
+                return;
+
+            var mpb = new MaterialPropertyBlock();
+            renderer.GetPropertyBlock(mpb);
+            mpb.SetColor("_BaseColor", color); // URP Lit
+            mpb.SetColor("_Color", color);     // built-in fallback
+            renderer.SetPropertyBlock(mpb);
+        }
+
         public static DeskItemBox BuildBox(Transform parent, DeskItemTray tray, ItemDefinition item)
         {
             // Container (unscaled) carries the DeskItemBox; children carry geometry/colliders.
@@ -25,7 +37,8 @@ namespace Meniscus.UI
             body.transform.SetParent(container.transform, false);
             body.transform.localScale = Vector3.one * BoxSize;
             var bodyRenderer = body.GetComponent<Renderer>();
-            bodyRenderer.material.color = new Color(0.55f, 0.4f, 0.25f);
+            var bodyColor = new Color(0.55f, 0.4f, 0.25f);
+            ApplyColor(bodyRenderer, bodyColor);
             body.AddComponent<DeskItemTileRelay>(); // wired below
 
             var label = CreateLabel(container.transform, new Vector3(0f, BoxSize * 0.9f, 0f));
@@ -40,7 +53,7 @@ namespace Meniscus.UI
             use.GetComponent<DeskItemTileRelay>().Initialize(box, DeskItemTileRelay.Kind.Use);
             cancel.GetComponent<DeskItemTileRelay>().Initialize(box, DeskItemTileRelay.Kind.Cancel);
 
-            box.Initialize(tray, item, label, use, cancel, bodyRenderer);
+            box.Initialize(tray, item, label, use, cancel, bodyRenderer, bodyColor);
             return box;
         }
 
@@ -67,7 +80,7 @@ namespace Meniscus.UI
             tile.transform.SetParent(parent, false);
             tile.transform.localPosition = localPos;
             tile.transform.localScale = new Vector3(TileSize * 1.6f, TileSize, TileSize * 0.4f);
-            tile.GetComponent<Renderer>().material.color = color;
+            ApplyColor(tile.GetComponent<Renderer>(), color);
             tile.AddComponent<DeskItemTileRelay>();
 
             var labelGo = new GameObject("Caption");

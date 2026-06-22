@@ -258,7 +258,10 @@ namespace Meniscus.UI
                              ?? GameObject.Find("Table");
 
             if (deskObject == null)
+            {
+                deskResolved = false; // desk not loaded yet — retry on next Rebuild
                 return;
+            }
 
             var renderers = deskObject.GetComponentsInChildren<Renderer>();
 

@@ -29,7 +29,7 @@ namespace Meniscus.UI
         public bool IsSelected { get; private set; }
 
         public void Initialize(DeskItemTray owner, ItemDefinition item, TextMesh labelText,
-            GameObject use, GameObject cancel, Renderer body)
+            GameObject use, GameObject cancel, Renderer body, Color restColor)
         {
             tray = owner;
             Item = item;
@@ -37,9 +37,7 @@ namespace Meniscus.UI
             useTile = use;
             cancelTile = cancel;
             bodyRenderer = body;
-
-            if (bodyRenderer != null)
-                restColor = bodyRenderer.material.color;
+            this.restColor = restColor;
 
             SetSelected(false);
         }
@@ -83,7 +81,7 @@ namespace Meniscus.UI
 
         IEnumerator FlashRoutine()
         {
-            bodyRenderer.material.color = new Color(0.7f, 0.2f, 0.2f);
+            DeskItemTrayBuilder.ApplyColor(bodyRenderer, new Color(0.7f, 0.2f, 0.2f));
             var elapsed = 0f;
 
             while (elapsed < FlashSeconds)
@@ -92,7 +90,7 @@ namespace Meniscus.UI
                 yield return null;
             }
 
-            bodyRenderer.material.color = restColor;
+            DeskItemTrayBuilder.ApplyColor(bodyRenderer, restColor);
             flash = null;
         }
 
