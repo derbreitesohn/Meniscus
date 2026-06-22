@@ -62,6 +62,9 @@ namespace Meniscus.Gameplay
         [SerializeField] float spillRunDownDuration = 0.4f;
         [SerializeField] float spillSurfaceDip = 0.02f;
         [SerializeField] float spillTableDrop = 0.34f;
+        [Tooltip("Authored spill prefab (built by Tools > Meniscus > Author Spill Effect Prefab). When set " +
+                 "it is instantiated per spill; left empty, a runtime overspill object is built instead.")]
+        [SerializeField] GlassSpillEffect spillPrefab;
 
         [Header("Audio")]
         [SerializeField] AK.Wwise.Event waterSpill;
@@ -408,15 +411,31 @@ namespace Meniscus.Gameplay
             var rimWorldY = transform.TransformPoint(new Vector3(0f, currentSurfaceLocalY, 0f)).y;
             var worldRimRadius = surfaceRadius * Mathf.Max(scale.x, scale.z);
 
-            GlassSpillEffect.Spawn(
-                transform.position,
-                worldRimRadius,
-                rimWorldY,
-                transform.position.y - spillTableDrop,
-                liquidColor,
-                spillRivuletCount,
-                spillRunDownDuration,
-                spillPuddleLifetime);
+            if (spillPrefab != null)
+            {
+                var effect = Instantiate(spillPrefab);
+                effect.Begin(
+                    transform.position,
+                    worldRimRadius,
+                    rimWorldY,
+                    transform.position.y - spillTableDrop,
+                    liquidColor,
+                    spillRivuletCount,
+                    spillRunDownDuration,
+                    spillPuddleLifetime);
+            }
+            else
+            {
+                GlassSpillEffect.Spawn(
+                    transform.position,
+                    worldRimRadius,
+                    rimWorldY,
+                    transform.position.y - spillTableDrop,
+                    liquidColor,
+                    spillRivuletCount,
+                    spillRunDownDuration,
+                    spillPuddleLifetime);
+            }
         }
 
         void PinWaterTransform()

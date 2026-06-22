@@ -11,12 +11,16 @@ namespace Meniscus.Gameplay
     /// </summary>
     public class GlassSpillEffect : MonoBehaviour
     {
-        const float RivuletWidth = 0.05f;
-        const float RivuletDepth = 0.015f;
-        const float RivuletRadiusOffset = 0.015f;
+        [Header("Rivulet Tuning")]
+        [SerializeField] float rivuletWidth = 0.05f;
+        [SerializeField] float rivuletDepth = 0.015f;
+        [SerializeField] float rivuletRadiusOffset = 0.015f;
+        [Tooltip("Authored material for the spill. Left empty, a transparent one is built from the spill color.")]
+        [SerializeField] Material overspillMaterial;
 
         Material material;
         Color baseColor;
+        bool ownsMaterial;
         readonly List<Renderer> renderers = new();
 
         public static GlassSpillEffect Spawn(
@@ -29,15 +33,31 @@ namespace Meniscus.Gameplay
             float runDownDuration,
             float puddleLifetime)
         {
-            // World-rooted (no parent): the glass sits under a non-uniform scale, so the effect must
-            // live at identity world scale for rivulet world positions and sizes to match the glass.
-            // The coroutine self-destructs, so no parent is needed for cleanup.
+            // Fallback path: no authored prefab. World-rooted at identity scale (the glass is non-uniformly
+            // scaled), self-destructing when finished.
             var host = new GameObject("Runtime Overspill Effect");
-
             var effect = host.AddComponent<GlassSpillEffect>();
-            effect.baseColor = color;
-            effect.material = GlassVisualController.CreateTransparentLiquidMaterial("Runtime Overspill Material", color);
-            effect.StartCoroutine(effect.Run(
+            effect.Begin(glassWorldPosition, rimRadius, rimWorldY, tableWorldY, color, rivuletCount, runDownDuration, puddleLifetime);
+            return effect;
+        }
+
+        public void Begin(
+            Vector3 glassWorldPosition,
+            float rimRadius,
+            float rimWorldY,
+            float tableWorldY,
+            Color color,
+            int rivuletCount,
+            float runDownDuration,
+            float puddleLifetime)
+        {
+            baseColor = color;
+            material = overspillMaterial != null
+                ? overspillMaterial
+                : GlassVisualController.CreateTransparentLiquidMaterial("Runtime Overspill Material", color);
+            ownsMaterial = overspillMaterial == null;
+
+            StartCoroutine(Run(
                 glassWorldPosition,
                 rimRadius,
                 rimWorldY,
@@ -45,8 +65,6 @@ namespace Meniscus.Gameplay
                 Mathf.Max(1, rivuletCount),
                 Mathf.Max(0.05f, runDownDuration),
                 Mathf.Max(0.1f, puddleLifetime)));
-
-            return effect;
         }
 
         IEnumerator Run(
@@ -85,10 +103,10 @@ namespace Meniscus.Gameplay
                 {
                     var dir = directions[i];
                     streaks[i].position = new Vector3(
-                        glassWorldPosition.x + dir.x * (rimRadius + RivuletRadiusOffset),
+                        glassWorldPosition.x + dir.x * (rimRadius + rivuletRadiusOffset),
                         centreY,
-                        glassWorldPosition.z + dir.z * (rimRadius + RivuletRadiusOffset));
-                    streaks[i].localScale = new Vector3(RivuletWidth, Mathf.Max(0.001f, length), RivuletDepth);
+                        glassWorldPosition.z + dir.z * (rimRadius + rivuletRadiusOffset));
+                    streaks[i].localScale = new Vector3(rivuletWidth, Mathf.Max(0.001f, length), rivuletDepth);
                 }
 
                 yield return null;
@@ -155,7 +173,7 @@ namespace Meniscus.Gameplay
 
         void OnDestroy()
         {
-            if (material != null)
+            if (ownsMaterial && material != null)
                 Destroy(material);
         }
     }
