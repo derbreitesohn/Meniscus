@@ -217,9 +217,25 @@ namespace Meniscus.UI
         }
 
         /// <summary>
-        /// Click handler for the book prop. Closed on the desk, a click lifts it open as a read-only
-        /// preview; while previewing, a click closes it again. Ignored once the shop phase has opened it
-        /// for real, where closing is done via "Finish Drink".
+        /// Pure transition for a book-prop click. Closed → opens as a read-only preview;
+        /// previewing → closes; shop-phase-open (open, not preview) → unchanged (the player
+        /// closes that via "Finish Drink"). No side effects, so it is unit-testable.
+        /// </summary>
+        public static (bool isOpen, bool previewMode) ComputeBrowseToggle(bool isOpen, bool previewMode)
+        {
+            if (!isOpen)
+                return (true, true);
+
+            if (previewMode)
+                return (false, false);
+
+            return (isOpen, previewMode);
+        }
+
+        /// <summary>
+        /// Applies a book-prop click. Closed on the desk, a click lifts it open as a read-only
+        /// preview; while previewing, a click closes it again. Ignored once the shop phase has
+        /// opened it for real, where closing is done via "Finish Drink".
         /// </summary>
         void OnBookClicked()
         {
@@ -228,22 +244,8 @@ namespace Meniscus.UI
             if (!built)
                 return;
 
-            if (!isOpen)
-            {
-                isOpen = true;
-                previewMode = true;
-                Log("-> opening read-only preview");
-            }
-            else if (previewMode)
-            {
-                isOpen = false;
-                previewMode = false;
-                Log("-> closing preview");
-            }
-            else
-            {
-                Log("-> ignored (shop phase open; close via Finish Drink)");
-            }
+            (isOpen, previewMode) = ComputeBrowseToggle(isOpen, previewMode);
+            Log($"-> isOpen={isOpen}, previewMode={previewMode}");
         }
 
         void Update()
@@ -339,10 +341,6 @@ namespace Meniscus.UI
             });
 
             hingePivot = root.Find("Book Hinge");
-
-            var clickTarget = root.GetComponent<BookClickTarget>();
-            clickTarget.Clicked = OnBookClicked;
-            clickTarget.LogDiagnostics = logDiagnostics;
         }
 
         void ResolveAuthoredProp()
@@ -350,14 +348,9 @@ namespace Meniscus.UI
             root = authoredBook;
             hingePivot = root.Find("Book Hinge");
 
-            // onClick/Clicked delegates are not serialized, so re-wire the authored prop's click target.
-            var clickTarget = root.GetComponent<BookClickTarget>();
-
-            if (clickTarget == null)
-                clickTarget = root.gameObject.AddComponent<BookClickTarget>();
-
-            clickTarget.Clicked = OnBookClicked;
-            clickTarget.LogDiagnostics = logDiagnostics;
+            // The raycast identifies the book by this marker, so guarantee an authored prop has one.
+            if (root.GetComponent<BookClickTarget>() == null)
+                root.gameObject.AddComponent<BookClickTarget>();
         }
 
         void BuildMenuCanvas(IReadOnlyList<ItemDefinition> catalog)
@@ -917,28 +910,13 @@ namespace Meniscus.UI
     }
 
     /// <summary>
-    /// Tiny relay placed on the book's collider so a mouse click on the 3D prop can be forwarded back
-    /// to <see cref="BookShopView"/>. (OnMouseUpAsButton is only delivered to the GameObject carrying
-    /// the collider, so the behaviour cannot live on the view itself.)
+    /// Marker placed on the book's click collider so <see cref="BookShopView"/>'s raycast can
+    /// identify the prop it hit. Clicks are detected by <see cref="BookShopView"/> via the Input
+    /// System (legacy OnMouse* messages do not fire under the new input backend), so this type
+    /// carries no behaviour — it is purely a tag.
     /// </summary>
     [DisallowMultipleComponent]
     public class BookClickTarget : MonoBehaviour
     {
-        public System.Action Clicked;
-        public bool LogDiagnostics = true;
-
-        void OnMouseDown()
-        {
-            if (LogDiagnostics)
-                Debug.Log("[BookClickTarget] OnMouseDown (book collider pressed)");
-        }
-
-        void OnMouseUpAsButton()
-        {
-            if (LogDiagnostics)
-                Debug.Log("[BookClickTarget] OnMouseUpAsButton (book click)");
-
-            Clicked?.Invoke();
-        }
     }
 }
