@@ -88,5 +88,30 @@ namespace Meniscus.Tests.EditMode
             Assert.IsFalse(inventory.Has(item));
             Assert.AreEqual(cashBefore, economy.PlayerTotalBankedCash);
         }
+
+        [Test]
+        public void BankedCash_MirrorsEconomyManager()
+        {
+            BankCash(120);
+            Assert.AreEqual(120, shop.BankedCash);
+        }
+
+        [Test]
+        public void IsDeskFull_TrueWhenInventoryFull()
+        {
+            for (var i = 0; i < GameConstants.DeskCapacity; i++)
+                inventory.Grant(ItemDefinition.Create($"f_{i}", $"F{i}", "", 1, ItemEffectKind.PayoutMultiplier, 0f));
+            Assert.IsTrue(shop.IsDeskFull);
+        }
+
+        [Test]
+        public void OwnedCount_ReflectsGrants()
+        {
+            var item = ItemDefinition.Create("steady_hand", "Steady Hand", "", 50, ItemEffectKind.PayoutMultiplier, 0f);
+            Assert.AreEqual(0, shop.OwnedCount(item));
+            inventory.Grant(item);
+            inventory.Grant(item);
+            Assert.AreEqual(2, shop.OwnedCount(item));
+        }
     }
 }

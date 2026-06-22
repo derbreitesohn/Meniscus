@@ -25,6 +25,25 @@ namespace Meniscus.UI
 
         public IReadOnlyList<ItemDefinition> Catalog => ResolveCatalog();
 
+        /// <summary>Banked cash the player can spend right now (0 if economy is unwired).</summary>
+        public int BankedCash => economyManager != null ? economyManager.PlayerTotalBankedCash : 0;
+
+        /// <summary>True when the desk cannot hold any more items.</summary>
+        public bool IsDeskFull => playerInventory != null && playerInventory.IsFull;
+
+        /// <summary>How many of <paramref name="item"/> the player already owns.</summary>
+        public int OwnedCount(ItemDefinition item)
+        {
+            if (item == null || playerInventory == null)
+                return 0;
+
+            foreach (var stack in playerInventory.Contents())
+                if (stack.Item == item)
+                    return stack.Count;
+
+            return 0;
+        }
+
         void Awake()
         {
             ResolveReferences();
