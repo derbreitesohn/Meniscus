@@ -6,8 +6,7 @@ namespace Meniscus.UI
     /// <summary>
     /// Builds one desk item box: a placeholder cube body (with the collider that receives clicks), a
     /// camera-facing name/count label, and two hidden Use/Cancel tiles. Pure geometry — shared by the
-    /// runtime tray and (indirectly) the authoring tool. Mirrors <c>DeskItemBarBuilder</c>'s split of
-    /// geometry from logic.
+    /// runtime tray and (indirectly) the authoring tool. Splits geometry from logic (see DeskItemTray).
     /// </summary>
     public static class DeskItemTrayBuilder
     {

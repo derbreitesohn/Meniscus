@@ -111,17 +111,17 @@ namespace Meniscus.Editor
             return true;
         }
 
-        [MenuItem(MenuRoot + "Author Desk Item Bar")]
-        static void AuthorDeskItemBarMenu()
+        [MenuItem(MenuRoot + "Author Desk Item Tray")]
+        static void AuthorDeskItemTrayMenu()
         {
             if (!TryOpenScene(out var scene))
                 return;
 
-            if (AuthorDeskItemBar())
+            if (AuthorDeskItemTray())
                 SaveScene(scene);
         }
 
-        public static bool AuthorDeskItemBar()
+        public static bool AuthorDeskItemTray()
         {
             var manager = Object.FindAnyObjectByType<GameManager>();
 
@@ -131,35 +131,31 @@ namespace Meniscus.Editor
                 return false;
             }
 
-            var bar = Object.FindAnyObjectByType<DeskItemBar>();
+            // The retired DeskItemBar serializes onto the Managers object as a missing script once its
+            // class is deleted; purge it so re-authoring leaves a clean component set.
+            var removed = GameObjectUtility.RemoveMonoBehavioursWithMissingScript(manager.gameObject);
 
-            if (bar == null)
+            var tray = Object.FindAnyObjectByType<DeskItemTray>();
+
+            if (tray == null)
             {
-                Undo.RegisterCompleteObjectUndo(manager.gameObject, "Author Desk Item Bar");
-                bar = manager.gameObject.AddComponent<DeskItemBar>();
+                Undo.RegisterCompleteObjectUndo(manager.gameObject, "Author Desk Item Tray");
+                tray = manager.gameObject.AddComponent<DeskItemTray>();
             }
 
-            // Author the canvas + row container if not already wired.
-            var barSerialized = new SerializedObject(bar);
-            var canvasProp = barSerialized.FindProperty("barCanvas");
-            var rowRootProp = barSerialized.FindProperty("rowRoot");
+            var inventory = Object.FindAnyObjectByType<PlayerInventory>();
 
-            if (canvasProp.objectReferenceValue == null || rowRootProp.objectReferenceValue == null)
-            {
-                var (canvas, rowRoot) = DeskItemBarBuilder.Build(bar.transform);
-                Undo.RegisterCreatedObjectUndo(canvas.gameObject, "Author Desk Item Bar Canvas");
-                canvasProp.objectReferenceValue = canvas;
-                rowRootProp.objectReferenceValue = rowRoot;
-            }
-
-            barSerialized.FindProperty("gameManager").objectReferenceValue = manager;
-            barSerialized.ApplyModifiedProperties();
+            var traySerialized = new SerializedObject(tray);
+            traySerialized.FindProperty("gameManager").objectReferenceValue = manager;
+            traySerialized.FindProperty("inventory").objectReferenceValue = inventory;
+            traySerialized.ApplyModifiedProperties();
 
             var managerSerialized = new SerializedObject(manager);
-            managerSerialized.FindProperty("deskItemBar").objectReferenceValue = bar;
+            managerSerialized.FindProperty("deskItemTray").objectReferenceValue = tray;
             managerSerialized.ApplyModifiedProperties();
 
-            Debug.Log("[RuntimeObjectAuthoring] DeskItemBar authored (component + canvas + rowRoot) and wired.");
+            Debug.Log($"[RuntimeObjectAuthoring] DeskItemTray authored and wired " +
+                      $"(removed {removed} missing script(s); position via deskItemsAnchor or the desk auto-fit).");
             return true;
         }
 
@@ -282,7 +278,7 @@ namespace Meniscus.Editor
 
         /// <summary>
         /// Headless: Unity -batchmode -executeMethod Meniscus.Editor.RuntimeObjectAuthoring.Run -quit
-        /// Authors all targets in dependency order (PlayerInventory before the DeskItemBar that references it).
+        /// Authors all targets in dependency order (PlayerInventory before the DeskItemTray that references it).
         /// </summary>
         public static void Run()
         {
@@ -292,7 +288,7 @@ namespace Meniscus.Editor
             var changed = false;
             changed |= AuthorWaterSurface();
             changed |= AuthorPlayerInventory();
-            changed |= AuthorDeskItemBar();
+            changed |= AuthorDeskItemTray();
             changed |= AuthorBookShop();
             changed |= AuthorSpillPrefab();
 

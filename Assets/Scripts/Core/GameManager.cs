@@ -30,7 +30,7 @@ namespace Meniscus.Core
         [SerializeField] CoinDropPresentationController dropPresentationController;
         [SerializeField] SaloonHudController saloonHudController;
         [SerializeField] PlayerInventory playerInventory;
-        [SerializeField] DeskItemBar deskItemBar;
+        [SerializeField] DeskItemTray deskItemTray;
 
         [Header("Optional Coin Sources")]
         [SerializeField] Coin coinPrefab;
@@ -699,13 +699,13 @@ namespace Meniscus.Core
             if (playerInventory == null)
                 playerInventory = gameObject.AddComponent<PlayerInventory>();
 
-            if (deskItemBar == null)
-                deskItemBar = FindAnyObjectByType<DeskItemBar>();
+            if (deskItemTray == null)
+                deskItemTray = FindAnyObjectByType<DeskItemTray>();
 
-            if (deskItemBar == null)
+            if (deskItemTray == null)
             {
-                deskItemBar = gameObject.AddComponent<DeskItemBar>();
-                deskItemBar.Configure(this, playerInventory);
+                deskItemTray = gameObject.AddComponent<DeskItemTray>();
+                deskItemTray.Configure(this, playerInventory);
             }
 
             if (saloonHudController == null)

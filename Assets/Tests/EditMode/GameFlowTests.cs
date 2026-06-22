@@ -257,14 +257,14 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void StartMatch_BootstrapsDeskItemBarWiredToInventory()
+        public void StartMatch_BootstrapsDeskItemTrayWiredToInventory()
         {
             var fixture = CreateGameFixture();
             fixture.GameManager.StartMatch();
 
-            var bar = Object.FindAnyObjectByType<DeskItemBar>();
+            var tray = Object.FindAnyObjectByType<DeskItemTray>();
 
-            Assert.IsNotNull(bar);
+            Assert.IsNotNull(tray);
             Assert.IsNotNull(fixture.GameManager.Inventory);
 
             fixture.Destroy();
