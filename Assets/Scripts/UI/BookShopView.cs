@@ -203,6 +203,17 @@ namespace Meniscus.UI
             Log("Close");
             isOpen = false;
             previewMode = false;
+            ResetPageTurn();
+        }
+
+        void ResetPageTurn()
+        {
+            isTurning = false;
+            turnT = 0f;
+            prevTurnT = 0f;
+
+            if (turningPivot != null)
+                turningPivot.gameObject.SetActive(false);
         }
 
         /// <summary>
