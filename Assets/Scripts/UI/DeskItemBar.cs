@@ -18,7 +18,7 @@ namespace Meniscus.UI
         [SerializeField] PlayerInventory inventory;
         [SerializeField] Canvas barCanvas;
 
-        Transform rowRoot;
+        [SerializeField] Transform rowRoot;
         bool subscribedManager;
         bool subscribedInventory;
 
@@ -139,22 +139,7 @@ namespace Meniscus.UI
             if (barCanvas != null && rowRoot != null)
                 return;
 
-            barCanvas = RuntimeUiFactory.CreateOverlayCanvas(transform, "Desk Item Bar Canvas", enabled: false);
-
-            var row = RuntimeUiFactory.CreateImage(
-                barCanvas.transform,
-                "Desk Item Row",
-                new Vector2(1500f, 84f),
-                new Vector2(0f, 130f),
-                new Color(0f, 0f, 0f, 0f));   // transparent container; buttons carry the look
-
-            var rect = row.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0.5f, 0f);
-            rect.anchorMax = new Vector2(0.5f, 0f);
-            rect.pivot = new Vector2(0.5f, 0f);
-            rect.anchoredPosition = new Vector2(0f, 130f);
-
-            rowRoot = row.transform;
+            (barCanvas, rowRoot) = DeskItemBarBuilder.Build(transform);
         }
 
         void ResolveReferences()
