@@ -277,6 +277,31 @@ namespace Meniscus.Editor
             return true;
         }
 
+        [MenuItem(MenuRoot + "Author All")]
+        static void AuthorAllMenu() => Run();
+
+        /// <summary>
+        /// Headless: Unity -batchmode -executeMethod Meniscus.Editor.RuntimeObjectAuthoring.Run -quit
+        /// Authors all targets in dependency order (PlayerInventory before the DeskItemBar that references it).
+        /// </summary>
+        public static void Run()
+        {
+            if (!TryOpenScene(out var scene))
+                return;
+
+            var changed = false;
+            changed |= AuthorWaterSurface();
+            changed |= AuthorPlayerInventory();
+            changed |= AuthorDeskItemBar();
+            changed |= AuthorBookShop();
+            changed |= AuthorSpillPrefab();
+
+            if (changed)
+                SaveScene(scene);
+
+            Debug.Log("[RuntimeObjectAuthoring] Author All complete.");
+        }
+
         static bool TryOpenScene(out Scene scene)
         {
             var active = EditorSceneManager.GetActiveScene();
