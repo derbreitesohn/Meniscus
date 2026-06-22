@@ -74,6 +74,13 @@ namespace Meniscus.UI
         [Tooltip("World width of the printed menu, spread across both pages. Keep it at or inside the full " +
                  "two-page width so the ink stays on the paper.")]
         [SerializeField] float menuWorldWidth = 0.56f;
+        [Tooltip("World depth bound for the printed menu so it stays within the page depth.")]
+        [SerializeField] float menuWorldDepth = 0.34f;
+        // Declared here per the menu spec but consumed by the page-turn animation in a later task.
+#pragma warning disable CS0414
+        [Tooltip("Seconds for a page-turn animation.")]
+        [SerializeField, Min(0.05f)] float pageTurnSeconds = 0.35f;
+#pragma warning restore CS0414
 
         static readonly Color CoverColor = new(0.34f, 0.16f, 0.08f);
         static readonly Color PageColor = new(0.86f, 0.78f, 0.6f);
@@ -84,8 +91,9 @@ namespace Meniscus.UI
         static readonly Color InkSoftColor = new(0.34f, 0.20f, 0.10f);
         static readonly Color RuleColor = new(0.34f, 0.20f, 0.10f, 0.35f);
         static readonly Color RowTransparent = new(0f, 0f, 0f, 0f);
-        static readonly Color RowHover = new(0.30f, 0.17f, 0.08f, 0.14f);
+        static readonly Color RowHover = new(0.30f, 0.17f, 0.08f, 0.30f);
         static readonly Color RowPressed = new(0.30f, 0.17f, 0.08f, 0.24f);
+        static readonly Color RowSelected = new(0.30f, 0.17f, 0.08f, 0.55f);
         static readonly Color StampColor = new(0.30f, 0.15f, 0.07f, 0.92f);
         static readonly Color StampHover = new(0.42f, 0.23f, 0.10f, 0.95f);
         static readonly Color StampPressed = new(0.20f, 0.10f, 0.04f, 1f);
@@ -104,6 +112,33 @@ namespace Meniscus.UI
         float menuScaleBase = 1f;
         bool built;
         bool isOpen;
+
+        // Menu presentation: a fixed-size canvas with a left "order ticket" page and a right paginated
+        // item list. The selection model is pure view-model state (catalog, current page, selection).
+        readonly MenuSelectionModel model = new();
+
+        // Right-page list container (rows are rebuilt into this per page) and the per-page row lookup
+        // used to repaint selection/hover backgrounds and toggle the ▸ selection pointer.
+        Transform rightListContainer;
+        readonly Dictionary<ItemDefinition, Image> rowBackgrounds = new();
+        readonly Dictionary<ItemDefinition, GameObject> rowPointers = new();
+        readonly Dictionary<ItemDefinition, Text> rowBadges = new();
+
+        // Left-page ticket references, refreshed on select/buy.
+        Text ticketName;
+        Text ticketDesc;
+        Text ticketCostOwn;
+        Button buyButton;
+        Text buyLabel;
+
+        // Right-page paging chrome.
+        Button prevArrow;
+        Button nextArrow;
+        Text pageIndicator;
+
+        // Geometry needed to rebuild the right page each turn (set in BuildMenuCanvas).
+        float rowHeightPx;
+        float rowWidthPx;
 
         // True while the book was opened by clicking it mid-round: the catalog is shown to read, but
         // purchasing is disabled and the only action is to close it again.
@@ -298,15 +333,11 @@ namespace Meniscus.UI
 
         void BuildMenuCanvas(IReadOnlyList<ItemDefinition> catalog)
         {
-            var itemCount = catalog?.Count ?? 0;
-
-            // The canvas spans the whole spread; content is divided into a left page (heading) and a
-            // right page (the order list). Sizes are in canvas pixels and scaled to world by menuScaleBase.
+            // The canvas is a FIXED-size spread now (not grown by item count): a left "order ticket"
+            // page and a right paginated item list. Sizes are in canvas pixels; the whole canvas is
+            // scaled to world via menuScaleBase so it fits within both the page width and depth.
             const float pixelWidth = 1040f;
-            const float topPad = 120f;
-            const float rowHeight = 96f;
-            const float footerHeight = 150f;
-            var pixelHeight = topPad + Mathf.Max(1, itemCount) * rowHeight + footerHeight;
+            const float pixelHeight = 1280f;
             var pixelSize = new Vector2(pixelWidth, pixelHeight);
 
             var canvas = RuntimeUiFactory.CreateWorldCanvas(root, "Book Menu Canvas", pixelSize, ActiveCamera());
@@ -315,7 +346,7 @@ namespace Meniscus.UI
             // Centred over the spine, just proud of the paper so it reads as printing on the spread.
             menuCanvasTransform.localPosition = new Vector3(0f, coverThickness + menuFloatHeight, 0f);
 
-            menuScaleBase = menuWorldWidth / pixelWidth;
+            menuScaleBase = MenuLayout.ComputeScale(menuWorldWidth, menuWorldDepth, pixelWidth, pixelHeight);
             menuCanvasTransform.localScale = Vector3.one * menuScaleBase;
 
             menuGroup = canvas.gameObject.AddComponent<CanvasGroup>();
@@ -335,58 +366,62 @@ namespace Meniscus.UI
 
             var top = pixelHeight * 0.5f;
 
-            // Left page: the heading.
+            BuildLeftTicket(canvas.transform, leftCenter, pageTextWidth, top);
+            BuildRightList(canvas, catalog, rightCenter, pageTextWidth, top);
+
+            RebuildRightPage();
+            RefreshTicket();
+        }
+
+        /// <summary>
+        /// Left page: the title plus a fixed "order ticket" showing the selected item's detail and the
+        /// Buy / Finish Drink actions. The ticket fields are kept so <see cref="RefreshTicket"/> can
+        /// repaint them as the selection changes.
+        /// </summary>
+        void BuildLeftTicket(Transform canvas, float leftCenter, float pageTextWidth, float top)
+        {
+            // Title.
             RuntimeUiFactory.CreateText(
-                canvas.transform, "Menu Title", "Saloon\nMenu",
-                new Vector2(leftCenter, 60f), new Vector2(pageTextWidth, 240f), 72, InkColor,
+                canvas, "Menu Title", "Saloon Menu",
+                new Vector2(leftCenter, top - 110f), new Vector2(pageTextWidth, 110f), 64, InkColor,
                 TextAnchor.MiddleCenter, bold: true);
-            RuntimeUiFactory.CreateText(
-                canvas.transform, "Menu Subtitle", "~ Order between rounds ~",
-                new Vector2(leftCenter, -120f), new Vector2(pageTextWidth, 50f), 30, InkSoftColor);
 
-            // Right page: the order list.
-            var rowY = top - topPad;
-            var rowSize = new Vector2(pageTextWidth, rowHeight - 16f);
+            RuntimeUiFactory.CreateImage(
+                canvas, "Title Rule", new Vector2(pageTextWidth, 3f),
+                new Vector2(leftCenter, top - 180f), RuleColor);
 
-            if (catalog != null)
-            {
-                foreach (var item in catalog)
-                {
-                    if (item == null)
-                        continue;
+            // Selected item name.
+            ticketName = RuntimeUiFactory.CreateText(
+                canvas, "Ticket Name", "",
+                new Vector2(leftCenter, top - 270f), new Vector2(pageTextWidth, 100f), 48, InkColor,
+                TextAnchor.UpperLeft, bold: true);
 
-                    var captured = item;
-                    var price = $"${item.Cost}";
+            // Description body.
+            ticketDesc = RuntimeUiFactory.CreateText(
+                canvas, "Ticket Desc", "",
+                new Vector2(leftCenter, 40f), new Vector2(pageTextWidth, 360f), 32, InkSoftColor,
+                TextAnchor.UpperLeft);
 
-                    var row = RuntimeUiFactory.CreateButton(
-                        canvas.transform, $"{item.Id} Order", item.DisplayName, rowSize,
-                        new Vector2(rightCenter, rowY), 36, () => OnBuy(captured),
-                        normalColor: RowTransparent,
-                        highlightedColor: RowHover,
-                        pressedColor: RowPressed,
-                        labelColor: InkColor,
-                        labelAlignment: TextAnchor.MiddleLeft,
-                        labelPadding: new Vector2(24f, 0f));
+            // Cost / owned line.
+            ticketCostOwn = RuntimeUiFactory.CreateText(
+                canvas, "Ticket Cost/Own", "",
+                new Vector2(leftCenter, -top + 320f), new Vector2(pageTextWidth, 60f), 34, InkColor,
+                TextAnchor.MiddleLeft, bold: true);
 
-                    // Price to the right, like a menu line.
-                    RuntimeUiFactory.CreateText(
-                        row.transform, "Price", price,
-                        new Vector2(-24f, 0f), rowSize, 36, InkSoftColor, TextAnchor.MiddleRight);
-
-                    // Ruled line under each order.
-                    RuntimeUiFactory.CreateImage(
-                        canvas.transform, $"{item.Id} Rule", new Vector2(pageTextWidth, 2f),
-                        new Vector2(rightCenter, rowY - rowHeight * 0.5f + 8f), RuleColor);
-
-                    rowY -= rowHeight;
-                }
-            }
-
-            var footerPosition = new Vector2(rightCenter, -top + 84f);
+            // Buy then Finish Drink, stacked near the bottom of the page.
+            buyButton = RuntimeUiFactory.CreateButton(
+                canvas, "Buy Button", "", new Vector2(pageTextWidth * 0.9f, 96f),
+                new Vector2(leftCenter, -top + 210f), 38, OnBuyClicked, boldLabel: true,
+                normalColor: StampColor,
+                highlightedColor: StampHover,
+                pressedColor: StampPressed,
+                labelColor: PaperColor);
+            buyLabel = buyButton.transform.Find("Label").GetComponent<Text>();
 
             finishButtonObject = RuntimeUiFactory.CreateButton(
-                canvas.transform, "Finish Drink Button", "Finish Drink",
-                new Vector2(pageTextWidth * 0.85f, 90f), footerPosition, 36, OnFinish, boldLabel: true,
+                canvas, "Finish Drink Button", "Finish Drink",
+                new Vector2(pageTextWidth * 0.9f, 96f),
+                new Vector2(leftCenter, -top + 90f), 36, OnFinish, boldLabel: true,
                 normalColor: StampColor,
                 highlightedColor: StampHover,
                 pressedColor: StampPressed,
@@ -394,15 +429,257 @@ namespace Meniscus.UI
 
             // Shown only while previewing mid-round (purchasing disabled); hidden during the shop phase.
             browseHint = RuntimeUiFactory.CreateText(
-                canvas.transform, "Browse Hint", "— Just looking · click the book to close —",
-                footerPosition, new Vector2(pageTextWidth, 60f), 26, InkSoftColor);
+                canvas, "Browse Hint", "— Just looking · click the book to close —",
+                new Vector2(leftCenter, -top + 90f), new Vector2(pageTextWidth, 60f), 26, InkSoftColor);
             browseHint.enabled = false;
         }
 
-        void OnBuy(ItemDefinition item)
+        /// <summary>
+        /// Right page chrome: the list container, the corner page arrows and the page indicator. The
+        /// rows themselves are (re)built per page by <see cref="RebuildRightPage"/>. Also sizes the
+        /// list area and derives itemsPerPage so the model can split the catalog into pages.
+        /// </summary>
+        void BuildRightList(Canvas canvas, IReadOnlyList<ItemDefinition> catalog, float rightCenter, float pageTextWidth, float top)
         {
-            if (shopManager != null)
-                shopManager.TryBuyItem(item);
+            const float headerPad = 130f;   // space at the top of the page for the arrows + indicator
+            const float footerPad = 110f;   // space at the bottom for the page indicator
+            const float rowHeight = 150f;   // readable rows; ≈ 5 rows fit the list area
+
+            var listDepthPx = (top * 2f) - headerPad - footerPad;
+            var itemsPerPage = MenuLayout.ItemsPerPage(listDepthPx, rowHeight);
+
+            // Stash the geometry RebuildRightPage needs (rows are positioned within the list container).
+            rowHeightPx = rowHeight;
+            rowWidthPx = pageTextWidth;
+
+            // Corner arrows.
+            prevArrow = RuntimeUiFactory.CreateButton(
+                canvas.transform, "Prev Arrow", "‹", new Vector2(70f, 70f),
+                new Vector2(rightCenter - pageTextWidth * 0.5f + 24f, top - 70f), 56, () => OnTurn(-1),
+                boldLabel: true,
+                normalColor: RowTransparent,
+                highlightedColor: RowHover,
+                pressedColor: RowPressed,
+                labelColor: InkColor);
+
+            nextArrow = RuntimeUiFactory.CreateButton(
+                canvas.transform, "Next Arrow", "›", new Vector2(70f, 70f),
+                new Vector2(rightCenter + pageTextWidth * 0.5f - 24f, top - 70f), 56, () => OnTurn(1),
+                boldLabel: true,
+                normalColor: RowTransparent,
+                highlightedColor: RowHover,
+                pressedColor: RowPressed,
+                labelColor: InkColor);
+
+            pageIndicator = RuntimeUiFactory.CreateText(
+                canvas.transform, "Page Indicator", "",
+                new Vector2(rightCenter, -top + 60f), new Vector2(pageTextWidth, 50f), 30, InkSoftColor);
+
+            // The rows live under a dedicated container so a page rebuild only clears the list.
+            var containerObject = RuntimeUiFactory.CreateImage(
+                canvas.transform, "Right List", new Vector2(pageTextWidth, listDepthPx),
+                new Vector2(rightCenter, top - headerPad - listDepthPx * 0.5f), RowTransparent);
+            rightListContainer = containerObject.transform;
+
+            model.SetCatalog(catalog, itemsPerPage);
+        }
+
+        /// <summary>
+        /// Rebuilds the right-page rows for the current page: one selectable row per item with its price
+        /// and an owned badge, plus the page indicator and arrow interactability. Selecting a row does
+        /// NOT purchase — it calls <see cref="OnSelect"/>.
+        /// </summary>
+        void RebuildRightPage()
+        {
+            if (rightListContainer == null)
+                return;
+
+            for (var i = rightListContainer.childCount - 1; i >= 0; i--)
+                Destroy(rightListContainer.GetChild(i).gameObject);
+
+            rowBackgrounds.Clear();
+            rowPointers.Clear();
+            rowBadges.Clear();
+
+            var pageItems = model.CurrentPageItems();
+            var rowSize = new Vector2(rowWidthPx, rowHeightPx - 16f);
+
+            // Rows are positioned relative to the list container's centre.
+            var halfList = ((RectTransform)rightListContainer).sizeDelta.y * 0.5f;
+            var rowY = halfList - rowHeightPx * 0.5f;
+
+            foreach (var item in pageItems)
+            {
+                if (item == null)
+                    continue;
+
+                var captured = item;
+
+                // A dedicated background Image holds the persistent selection bar: the row Button uses
+                // its own (transparent) graphic for hover/press tinting, so the selected colour set in
+                // ApplySelectionVisual is not clobbered by the Button's colour transition.
+                var background = RuntimeUiFactory.CreateImage(
+                    rightListContainer, $"{item.Id} Row BG", rowSize, new Vector2(0f, rowY), RowTransparent);
+                rowBackgrounds[item] = background.GetComponent<Image>();
+
+                var row = RuntimeUiFactory.CreateButton(
+                    background.transform, $"{item.Id} Order", item.DisplayName, rowSize,
+                    Vector2.zero, 38, () => OnSelect(captured),
+                    normalColor: RowTransparent,
+                    highlightedColor: RowHover,
+                    pressedColor: RowPressed,
+                    labelColor: InkColor,
+                    labelAlignment: TextAnchor.MiddleLeft,
+                    labelPadding: new Vector2(60f, 0f));
+
+                // ▸ selection pointer in the left margin (hidden until selected).
+                var pointer = RuntimeUiFactory.CreateText(
+                    row.transform, "Pointer", "▸",
+                    new Vector2(-rowWidthPx * 0.5f + 24f, 0f), new Vector2(40f, rowSize.y), 40, InkColor,
+                    TextAnchor.MiddleCenter, bold: true);
+                pointer.gameObject.SetActive(false);
+                rowPointers[item] = pointer.gameObject;
+
+                // Price.
+                RuntimeUiFactory.CreateText(
+                    row.transform, "Price", $"${item.Cost}",
+                    new Vector2(-24f, 18f), rowSize, 34, InkSoftColor, TextAnchor.MiddleRight);
+
+                // Owned badge ✓×N (only shown when owned > 0).
+                var badge = RuntimeUiFactory.CreateText(
+                    row.transform, "Owned Badge", "",
+                    new Vector2(-24f, -28f), rowSize, 26, InkSoftColor, TextAnchor.MiddleRight);
+                rowBadges[item] = badge;
+
+                // Ruled line under each order.
+                RuntimeUiFactory.CreateImage(
+                    row.transform, "Rule", new Vector2(rowWidthPx, 2f),
+                    new Vector2(0f, -rowHeightPx * 0.5f + 8f), RuleColor);
+
+                rowY -= rowHeightPx;
+            }
+
+            // Page indicator (1-based) hidden on a single-page catalog.
+            if (pageIndicator != null)
+            {
+                var single = model.PageCount <= 1;
+                pageIndicator.enabled = !single;
+
+                if (!single)
+                    pageIndicator.text = $"Page {model.CurrentPage + 1} / {model.PageCount}";
+            }
+
+            if (prevArrow != null)
+                prevArrow.interactable = model.CanTurnPrev;
+
+            if (nextArrow != null)
+                nextArrow.interactable = model.CanTurnNext;
+
+            RefreshOwnedBadges();
+            ApplySelectionVisual();
+        }
+
+        /// <summary>Row click: select the item (read its detail), never purchase.</summary>
+        void OnSelect(ItemDefinition item)
+        {
+            model.Select(item);
+            RefreshTicket();
+            ApplySelectionVisual();
+        }
+
+        /// <summary>Buy button: purchase the selected item if affordable; the book is the only buyer.</summary>
+        void OnBuyClicked()
+        {
+            if (model.Selected == null || shopManager == null)
+                return;
+
+            if (shopManager.TryBuyItem(model.Selected))
+            {
+                RefreshTicket();
+                RefreshOwnedBadges();
+            }
+        }
+
+        /// <summary>Corner arrow: change page then rebuild the right-page rows (no animation yet).</summary>
+        void OnTurn(int dir)
+        {
+            if (dir < 0)
+                model.TurnPrev();
+            else
+                model.TurnNext();
+
+            RebuildRightPage();
+        }
+
+        /// <summary>
+        /// Repaints the left ticket from the current selection: a hint when nothing is selected (Buy
+        /// hidden), else the item detail with its cost/owned line and the Buy button state.
+        /// </summary>
+        void RefreshTicket()
+        {
+            if (ticketName == null)
+                return;
+
+            if (model.Selected == null)
+            {
+                ticketName.text = "Pick an order from the menu →";
+                ticketDesc.text = "";
+                ticketCostOwn.text = "";
+
+                if (buyButton != null)
+                {
+                    buyButton.gameObject.SetActive(false);
+                    buyButton.interactable = false;
+                }
+
+                return;
+            }
+
+            var item = model.Selected;
+            ticketName.text = item.DisplayName;
+            ticketDesc.text = item.Description;
+
+            var owned = shopManager != null ? shopManager.OwnedCount(item) : 0;
+            ticketCostOwn.text = $"Cost: ${item.Cost}    Own: {owned}";
+
+            var bankedCash = shopManager != null ? shopManager.BankedCash : 0;
+            var deskFull = shopManager != null && shopManager.IsDeskFull;
+            var state = model.EvaluateBuy(bankedCash, deskFull);
+
+            if (buyButton != null)
+            {
+                buyButton.gameObject.SetActive(true);
+                buyButton.interactable = state.CanBuy;
+
+                if (buyLabel != null)
+                    buyLabel.text = state.Label;
+            }
+        }
+
+        /// <summary>Updates each visible row's ✓×N badge from the owned count (blank when 0).</summary>
+        void RefreshOwnedBadges()
+        {
+            foreach (var pair in rowBadges)
+            {
+                var owned = shopManager != null ? shopManager.OwnedCount(pair.Key) : 0;
+                pair.Value.text = owned > 0 ? $"✓×{owned}" : "";
+            }
+        }
+
+        /// <summary>
+        /// Paints the selected row as a solid bar with its ▸ pointer shown and clears the others, so the
+        /// current selection reads strongly against the page.
+        /// </summary>
+        void ApplySelectionVisual()
+        {
+            foreach (var pair in rowBackgrounds)
+            {
+                var selected = pair.Key == model.Selected;
+                pair.Value.color = selected ? RowSelected : RowTransparent;
+
+                if (rowPointers.TryGetValue(pair.Key, out var pointer))
+                    pointer.SetActive(selected);
+            }
         }
 
         void OnFinish()
