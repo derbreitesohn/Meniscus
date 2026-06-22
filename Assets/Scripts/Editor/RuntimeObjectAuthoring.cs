@@ -161,6 +161,68 @@ namespace Meniscus.Editor
             return true;
         }
 
+        [MenuItem(MenuRoot + "Author Book Shop")]
+        static void AuthorBookShopMenu()
+        {
+            if (!TryOpenScene(out var scene))
+                return;
+
+            if (AuthorBookShop())
+                SaveScene(scene);
+        }
+
+        public static bool AuthorBookShop()
+        {
+            var shopManager = Object.FindAnyObjectByType<ShopManager>();
+
+            if (shopManager == null)
+            {
+                Debug.LogError("[RuntimeObjectAuthoring] No ShopManager in the scene. Aborting.");
+                return false;
+            }
+
+            var view = Object.FindAnyObjectByType<BookShopView>();
+
+            if (view == null)
+            {
+                var go = new GameObject("Book Shop");
+                Undo.RegisterCreatedObjectUndo(go, "Author Book Shop");
+                view = go.AddComponent<BookShopView>();
+            }
+
+            var viewSerialized = new SerializedObject(view);
+            var authoredProp = viewSerialized.FindProperty("authoredBook");
+
+            var prop = authoredProp.objectReferenceValue as Transform;
+
+            if (prop == null)
+                prop = view.transform.Find("Diegetic Book Shop");
+
+            if (prop == null)
+            {
+                prop = BookShopBuilder.BuildProp(view.transform, new BookShopBuilder.BookPropParams
+                {
+                    pageWidth = 0.30f,
+                    pageDepth = 0.38f,
+                    coverThickness = 0.02f,
+                    coverColor = new Color(0.34f, 0.16f, 0.08f),
+                    pageColor = new Color(0.86f, 0.78f, 0.6f),
+                });
+                Undo.RegisterCreatedObjectUndo(prop.gameObject, "Author Book Prop");
+            }
+
+            authoredProp.objectReferenceValue = prop;
+            viewSerialized.ApplyModifiedProperties();
+
+            var shopSerialized = new SerializedObject(shopManager);
+            shopSerialized.FindProperty("bookShop").objectReferenceValue = view;
+            shopSerialized.ApplyModifiedProperties();
+
+            Debug.Log("[RuntimeObjectAuthoring] Book Shop authored (prop) and wired (BookShopView.authoredBook + ShopManager.bookShop). " +
+                      "Position the 'Book Shop' object / set its deskAnchor in the Inspector.");
+            return true;
+        }
+
         static bool TryOpenScene(out Scene scene)
         {
             var active = EditorSceneManager.GetActiveScene();
