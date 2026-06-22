@@ -26,9 +26,27 @@ namespace Meniscus.UI
     {
         readonly List<ItemDefinition> catalog = new();
 
+        // The "cart": items toggled for a multi-buy. Selected is the detail-focused item (last tapped);
+        // the cart is what the Buy button purchases. Ordered so the display is stable.
+        readonly List<ItemDefinition> cart = new();
+
         public int ItemsPerPage { get; private set; } = 1;
         public int CurrentPage { get; private set; }
         public ItemDefinition Selected { get; private set; }
+
+        public IReadOnlyList<ItemDefinition> Cart => cart;
+        public int CartCount => cart.Count;
+        public bool IsInCart(ItemDefinition item) => item != null && cart.Contains(item);
+        public int CartTotalCost
+        {
+            get
+            {
+                var total = 0;
+                foreach (var item in cart)
+                    total += item.Cost;
+                return total;
+            }
+        }
 
         public int Count => catalog.Count;
         public int PageCount => MenuLayout.PageCount(catalog.Count, ItemsPerPage);
@@ -47,6 +65,7 @@ namespace Meniscus.UI
             ItemsPerPage = Mathf.Max(1, itemsPerPage);
             CurrentPage = 0;
             Selected = null;
+            cart.Clear();
         }
 
         public IReadOnlyList<ItemDefinition> CurrentPageItems()
@@ -78,6 +97,22 @@ namespace Meniscus.UI
                 Selected = item;
         }
 
+        /// <summary>Taps an item: focuses it for the detail view and toggles it in the buy cart.</summary>
+        public void ToggleCart(ItemDefinition item)
+        {
+            if (item == null || !catalog.Contains(item))
+                return;
+
+            Selected = item;
+
+            if (!cart.Remove(item))
+                cart.Add(item);
+        }
+
+        public void RemoveFromCart(ItemDefinition item) => cart.Remove(item);
+
+        public void ClearCart() => cart.Clear();
+
         public BuyState EvaluateBuy(int bankedCash, bool deskFull)
         {
             if (Selected == null)
@@ -90,6 +125,26 @@ namespace Meniscus.UI
                 return new BuyState(false, $"Need ${Selected.Cost}");
 
             return new BuyState(true, $"Buy — ${Selected.Cost}");
+        }
+
+        /// <summary>Buy-button state for the whole cart: enabled when at least one item is affordable
+        /// and the desk has room; the label shows how many and the total.</summary>
+        public BuyState EvaluateCart(int bankedCash, bool deskFull)
+        {
+            if (cart.Count == 0)
+                return new BuyState(false, "Tap items to add");
+
+            if (deskFull)
+                return new BuyState(false, "Desk full");
+
+            var cheapest = int.MaxValue;
+            foreach (var item in cart)
+                cheapest = Mathf.Min(cheapest, item.Cost);
+
+            if (bankedCash < cheapest)
+                return new BuyState(false, $"Need ${cheapest}");
+
+            return new BuyState(true, $"Buy {cart.Count} — ${CartTotalCost}");
         }
     }
 }

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Meniscus.Core;
 using Meniscus.Items;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Meniscus.UI
 {
@@ -18,8 +19,10 @@ namespace Meniscus.UI
         [SerializeField] PlayerInventory inventory;
         [SerializeField] Transform deskItemsAnchor;
         [SerializeField] string deskObjectName = "Saloon Table";
+        [SerializeField] Camera worldCamera;
+        [SerializeField, Min(0f)] float clickRaycastDistance = 100f;
 
-        const float BoxSpacing = 0.07f;
+        const float BoxSpacing = 0.3f;
         const float DeskClearance = 0.01f;
 
         readonly List<DeskItemBox> boxes = new();
@@ -45,6 +48,34 @@ namespace Meniscus.UI
         }
 
         void OnDisable() => Unsubscribe();
+
+        // Boxes are clicked via an Input System raycast (legacy OnMouse* messages don't fire under this
+        // project's input backend — same reason the book polls its own raycast).
+        void Update()
+        {
+            var mouse = Mouse.current;
+
+            if (mouse == null || !mouse.leftButton.wasPressedThisFrame || boxes.Count == 0)
+                return;
+
+            // Don't let clicks fall through the book menu (or any uGUI) onto a box behind it.
+            var events = UnityEngine.EventSystems.EventSystem.current;
+            if (events != null && events.IsPointerOverGameObject())
+                return;
+
+            var cam = worldCamera != null ? worldCamera : Camera.main;
+
+            if (cam == null)
+                return;
+
+            var ray = cam.ScreenPointToRay(mouse.position.ReadValue());
+
+            if (!Physics.Raycast(ray, out var hit, clickRaycastDistance))
+                return;
+
+            var relay = hit.collider.GetComponentInParent<DeskItemTileRelay>();
+            relay?.Trigger();
+        }
 
         public void Configure(GameManager manager, PlayerInventory playerInventory)
         {

@@ -10,8 +10,9 @@ namespace Meniscus.UI
     /// </summary>
     public static class DeskItemTrayBuilder
     {
-        public const float BoxSize = 0.05f;
-        const float TileSize = 0.025f;
+        // Sized for the saloon's scale (the book spread is ~0.6 wide). Tune alongside DeskItemTray.BoxSpacing.
+        public const float BoxSize = 0.22f;
+        const float TileSize = 0.11f;
 
         public static void ApplyColor(Renderer renderer, Color color)
         {

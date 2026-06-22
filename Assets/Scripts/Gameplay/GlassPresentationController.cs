@@ -32,9 +32,12 @@ namespace Meniscus.Gameplay
         [SerializeField] string authoredGlassTypeId = "standard";
 
         [Header("Liquid Auto-Fit")]
-        [Tooltip("Measure the spawned glass model's bounds and fit the liquid body to its interior, instead " +
-                 "of the glass-type's authored radius/floor (which can't know the real model size).")]
-        [SerializeField] bool autoFitLiquidToGlass = true;
+        [Tooltip("Measure the spawned glass model's bounds and fit the liquid body to its interior. NOTE: this " +
+                 "measures the model's OUTER AABB, so for a glass with a solid base/stem (like the authored " +
+                 "Standard glass) it drops the floor to the exterior base and widens the rim to the outer wall " +
+                 "— the liquid balloons and dropped coins rest below/outside the real cup. Leave OFF and use the " +
+                 "glass-type's hand-authored radius/floor unless a model's interior genuinely matches its AABB.")]
+        [SerializeField] bool autoFitLiquidToGlass;
         [Tooltip("Liquid rim radius as a fraction of the measured glass radius, to sit just inside the wall.")]
         [SerializeField, Range(0.5f, 1f)] float glassInteriorRadiusFactor = 0.9f;
         [Tooltip("Liquid floor raised above the measured glass base by this fraction of the glass height.")]

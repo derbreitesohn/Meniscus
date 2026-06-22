@@ -49,10 +49,10 @@ namespace Meniscus.Gameplay
         [SerializeField] float ambientAmplitude = 0.0035f;
         [SerializeField] float ambientSpatialScale = 2.4f;
         [SerializeField] float ambientSpeed = 0.35f;
-        [SerializeField] float rippleAmplitude = 0.02f;
-        [SerializeField] float rippleWavelength = 26f;
-        [SerializeField] float rippleSpeed = 7f;
-        [SerializeField] float rippleDecay = 2.6f;
+        [SerializeField] float rippleAmplitude = 0.04f;
+        [SerializeField] float rippleWavelength = 22f;
+        [SerializeField] float rippleSpeed = 8f;
+        [SerializeField] float rippleDecay = 1.6f;
         [SerializeField] float sloshAmplitude = 0.02f;
         [SerializeField] float sloshFrequency = 7.5f;
         [SerializeField] float sloshDecay = 1.8f;
@@ -90,6 +90,18 @@ namespace Meniscus.Gameplay
         float sloshStartTime;
         Vector2 sloshDirection = Vector2.right;
         bool needsRebuild;
+
+        /// <summary>Local-space height of the calm liquid surface (top of the whiskey column).</summary>
+        public float StableSurfaceLocalY => stableSurfaceLocalY;
+
+        /// <summary>Local-space height of the interior floor the liquid - and dropped coins - rest on.</summary>
+        public float FloorLocalY => fillBottomLocalY;
+
+        /// <summary>Local radius of the liquid surface disc.</summary>
+        public float SurfaceLocalRadius => surfaceRadius;
+
+        /// <summary>Fraction of <see cref="SurfaceLocalRadius"/> the interior floor spans.</summary>
+        public float FloorRadiusScale => fillBottomRadiusScale;
 
         void OnEnable()
         {
@@ -340,7 +352,7 @@ namespace Meniscus.Gameplay
             waterMesh.RecalculateBounds();
         }
 
-        void KickRipple(float strength)
+        public void KickRipple(float strength)
         {
             rippleKick = rippleAmplitude * Mathf.Max(0f, strength);
             rippleStartTime = Time.time;

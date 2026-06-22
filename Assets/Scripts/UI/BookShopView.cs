@@ -23,7 +23,7 @@ namespace Meniscus.UI
 
         [Header("Held Placement (relative to the camera)")]
         [Tooltip("Metres in front of the camera the open book is held.")]
-        [SerializeField] float holdDistance = 0.95f;
+        [SerializeField] float holdDistance = 0.62f;
         [Tooltip("Vertical offset of the held book from screen centre (negative = below centre).")]
         [SerializeField] float holdVerticalOffset = 0f;
         [Tooltip("Horizontal offset of the held book from screen centre.")]
@@ -69,7 +69,9 @@ namespace Meniscus.UI
         [SerializeField] float pageWidth = 0.30f;
         [SerializeField] float pageDepth = 0.38f;
         [SerializeField] float coverThickness = 0.02f;
-        [SerializeField] float openAngle = 100f;
+        // 180° lays the hinged front cover flat (tucked beneath the back cover on the left) so the open book
+        // is just the back cover + two pages. A smaller angle leaves the cover standing up at the spine.
+        [SerializeField] float openAngle = 180f;
         [SerializeField, Min(0.05f)] float openSeconds = 0.55f;
 
         [Header("Menu")]
@@ -113,6 +115,9 @@ namespace Meniscus.UI
         Text browseHint;
         ShopManager shopManager;
         float menuScaleBase = 1f;
+        // Vertical squash applied to the menu's pixel layout so the (otherwise portrait) content matches the
+        // landscape page aspect and the canvas fills the full spread width. 1 = the original 1280px design.
+        float menuVy = 1f;
         bool built;
         bool isOpen;
 
@@ -408,7 +413,13 @@ namespace Meniscus.UI
             // page and a right paginated item list. Sizes are in canvas pixels; the whole canvas is
             // scaled to world via menuScaleBase so it fits within both the page width and depth.
             const float pixelWidth = 1040f;
-            const float pixelHeight = 1280f;
+
+            // Match the canvas aspect to the page rectangle so ComputeScale fills the full spread width
+            // instead of being letter-boxed by the page depth (which left the menu a narrow centre strip).
+            // The content was designed against a 1280px-tall canvas, so menuVy squashes those vertical
+            // metrics into the shorter landscape canvas while the higher fill scale keeps their world size.
+            var pixelHeight = Mathf.Max(1f, pixelWidth * menuWorldDepth / menuWorldWidth);
+            menuVy = pixelHeight / 1280f;
             var pixelSize = new Vector2(pixelWidth, pixelHeight);
 
             var canvas = RuntimeUiFactory.CreateWorldCanvas(root, "Book Menu Canvas", pixelSize, ActiveCamera());
@@ -451,38 +462,43 @@ namespace Meniscus.UI
         /// </summary>
         void BuildLeftTicket(Transform canvas, float leftCenter, float pageTextWidth, float top)
         {
+            // Vertical offsets, heights and fonts are squashed by menuVy so the portrait design fits the
+            // landscape page; the higher fill scale restores their on-page world size. Horizontal stays.
+            var v = menuVy;
+            int F(float design) => Mathf.Max(1, Mathf.RoundToInt(design * v));
+
             // Title.
             RuntimeUiFactory.CreateText(
                 canvas, "Menu Title", "Saloon Menu",
-                new Vector2(leftCenter, top - 110f), new Vector2(pageTextWidth, 110f), 64, InkColor,
+                new Vector2(leftCenter, top - 110f * v), new Vector2(pageTextWidth, 110f * v), F(64), InkColor,
                 TextAnchor.MiddleCenter, bold: true);
 
             RuntimeUiFactory.CreateImage(
-                canvas, "Title Rule", new Vector2(pageTextWidth, 3f),
-                new Vector2(leftCenter, top - 180f), RuleColor);
+                canvas, "Title Rule", new Vector2(pageTextWidth, 3f * v),
+                new Vector2(leftCenter, top - 180f * v), RuleColor);
 
             // Selected item name.
             ticketName = RuntimeUiFactory.CreateText(
                 canvas, "Ticket Name", "",
-                new Vector2(leftCenter, top - 270f), new Vector2(pageTextWidth, 100f), 48, InkColor,
+                new Vector2(leftCenter, top - 270f * v), new Vector2(pageTextWidth, 100f * v), F(48), InkColor,
                 TextAnchor.UpperLeft, bold: true);
 
             // Description body.
             ticketDesc = RuntimeUiFactory.CreateText(
                 canvas, "Ticket Desc", "",
-                new Vector2(leftCenter, 40f), new Vector2(pageTextWidth, 360f), 32, InkSoftColor,
+                new Vector2(leftCenter, 40f * v), new Vector2(pageTextWidth, 360f * v), F(32), InkSoftColor,
                 TextAnchor.UpperLeft);
 
             // Cost / owned line.
             ticketCostOwn = RuntimeUiFactory.CreateText(
                 canvas, "Ticket Cost/Own", "",
-                new Vector2(leftCenter, -top + 320f), new Vector2(pageTextWidth, 60f), 34, InkColor,
+                new Vector2(leftCenter, -top + 320f * v), new Vector2(pageTextWidth, 60f * v), F(34), InkColor,
                 TextAnchor.MiddleLeft, bold: true);
 
             // Buy then Finish Drink, stacked near the bottom of the page.
             buyButton = RuntimeUiFactory.CreateButton(
-                canvas, "Buy Button", "", new Vector2(pageTextWidth * 0.9f, 96f),
-                new Vector2(leftCenter, -top + 210f), 38, OnBuyClicked, boldLabel: true,
+                canvas, "Buy Button", "", new Vector2(pageTextWidth * 0.9f, 96f * v),
+                new Vector2(leftCenter, -top + 210f * v), F(38), OnBuyClicked, boldLabel: true,
                 normalColor: StampColor,
                 highlightedColor: StampHover,
                 pressedColor: StampPressed,
@@ -491,8 +507,8 @@ namespace Meniscus.UI
 
             finishButtonObject = RuntimeUiFactory.CreateButton(
                 canvas, "Finish Drink Button", "Finish Drink",
-                new Vector2(pageTextWidth * 0.9f, 96f),
-                new Vector2(leftCenter, -top + 90f), 36, OnFinish, boldLabel: true,
+                new Vector2(pageTextWidth * 0.9f, 96f * v),
+                new Vector2(leftCenter, -top + 90f * v), F(36), OnFinish, boldLabel: true,
                 normalColor: StampColor,
                 highlightedColor: StampHover,
                 pressedColor: StampPressed,
@@ -501,7 +517,7 @@ namespace Meniscus.UI
             // Shown only while previewing mid-round (purchasing disabled); hidden during the shop phase.
             browseHint = RuntimeUiFactory.CreateText(
                 canvas, "Browse Hint", "— Just looking · click the book to close —",
-                new Vector2(leftCenter, -top + 90f), new Vector2(pageTextWidth, 60f), 26, InkSoftColor);
+                new Vector2(leftCenter, -top + 90f * v), new Vector2(pageTextWidth, 60f * v), F(26), InkSoftColor);
             browseHint.enabled = false;
         }
 
@@ -512,9 +528,13 @@ namespace Meniscus.UI
         /// </summary>
         void BuildRightList(Canvas canvas, IReadOnlyList<ItemDefinition> catalog, float rightCenter, float pageTextWidth, float top)
         {
-            const float headerPad = 130f;   // space at the top of the page for the arrows + indicator
-            const float footerPad = 110f;   // space at the bottom for the page indicator
-            const float rowHeight = 150f;   // readable rows; ≈ 5 rows fit the list area
+            var v = menuVy;
+            int F(float design) => Mathf.Max(1, Mathf.RoundToInt(design * v));
+
+            var headerPad = 130f * v;   // space at the top of the page for the arrows + indicator
+            var footerPad = 110f * v;   // space at the bottom for the page indicator
+            var rowHeight = 150f * v;   // readable rows; ≈ 5 rows fit the list area
+            var arrow = 70f * v;
 
             var listDepthPx = (top * 2f) - headerPad - footerPad;
             var itemsPerPage = MenuLayout.ItemsPerPage(listDepthPx, rowHeight);
@@ -525,8 +545,8 @@ namespace Meniscus.UI
 
             // Corner arrows.
             prevArrow = RuntimeUiFactory.CreateButton(
-                canvas.transform, "Prev Arrow", "‹", new Vector2(70f, 70f),
-                new Vector2(rightCenter - pageTextWidth * 0.5f + 24f, top - 70f), 56, () => OnTurn(-1),
+                canvas.transform, "Prev Arrow", "‹", new Vector2(arrow, arrow),
+                new Vector2(rightCenter - pageTextWidth * 0.5f + 24f, top - arrow), F(56), () => OnTurn(-1),
                 boldLabel: true,
                 normalColor: RowTransparent,
                 highlightedColor: RowHover,
@@ -534,8 +554,8 @@ namespace Meniscus.UI
                 labelColor: InkColor);
 
             nextArrow = RuntimeUiFactory.CreateButton(
-                canvas.transform, "Next Arrow", "›", new Vector2(70f, 70f),
-                new Vector2(rightCenter + pageTextWidth * 0.5f - 24f, top - 70f), 56, () => OnTurn(1),
+                canvas.transform, "Next Arrow", "›", new Vector2(arrow, arrow),
+                new Vector2(rightCenter + pageTextWidth * 0.5f - 24f, top - arrow), F(56), () => OnTurn(1),
                 boldLabel: true,
                 normalColor: RowTransparent,
                 highlightedColor: RowHover,
@@ -544,7 +564,7 @@ namespace Meniscus.UI
 
             pageIndicator = RuntimeUiFactory.CreateText(
                 canvas.transform, "Page Indicator", "",
-                new Vector2(rightCenter, -top + 60f), new Vector2(pageTextWidth, 50f), 30, InkSoftColor);
+                new Vector2(rightCenter, -top + 60f * v), new Vector2(pageTextWidth, 50f * v), F(30), InkSoftColor);
 
             // The rows live under a dedicated container so a page rebuild only clears the list.
             var containerObject = RuntimeUiFactory.CreateImage(
@@ -572,8 +592,11 @@ namespace Meniscus.UI
             rowPointers.Clear();
             rowBadges.Clear();
 
+            var v = menuVy;
+            int F(float design) => Mathf.Max(1, Mathf.RoundToInt(design * v));
+
             var pageItems = model.CurrentPageItems();
-            var rowSize = new Vector2(rowWidthPx, rowHeightPx - 16f);
+            var rowSize = new Vector2(rowWidthPx, rowHeightPx - 16f * v);
 
             // Rows are positioned relative to the list container's centre.
             var halfList = ((RectTransform)rightListContainer).sizeDelta.y * 0.5f;
@@ -595,7 +618,7 @@ namespace Meniscus.UI
 
                 var row = RuntimeUiFactory.CreateButton(
                     background.transform, $"{item.Id} Order", item.DisplayName, rowSize,
-                    Vector2.zero, 38, () => OnSelect(captured),
+                    Vector2.zero, F(38), () => OnSelect(captured),
                     normalColor: RowTransparent,
                     highlightedColor: RowHover,
                     pressedColor: RowPressed,
@@ -606,7 +629,7 @@ namespace Meniscus.UI
                 // ▸ selection pointer in the left margin (hidden until selected).
                 var pointer = RuntimeUiFactory.CreateText(
                     row.transform, "Pointer", "▸",
-                    new Vector2(-rowWidthPx * 0.5f + 24f, 0f), new Vector2(40f, rowSize.y), 40, InkColor,
+                    new Vector2(-rowWidthPx * 0.5f + 24f, 0f), new Vector2(40f, rowSize.y), F(40), InkColor,
                     TextAnchor.MiddleCenter, bold: true);
                 pointer.gameObject.SetActive(false);
                 rowPointers[item] = pointer.gameObject;
@@ -614,18 +637,18 @@ namespace Meniscus.UI
                 // Price.
                 RuntimeUiFactory.CreateText(
                     row.transform, "Price", $"${item.Cost}",
-                    new Vector2(-24f, 18f), rowSize, 34, InkSoftColor, TextAnchor.MiddleRight);
+                    new Vector2(-24f, 18f * v), rowSize, F(34), InkSoftColor, TextAnchor.MiddleRight);
 
                 // Owned badge ✓×N (only shown when owned > 0).
                 var badge = RuntimeUiFactory.CreateText(
                     row.transform, "Owned Badge", "",
-                    new Vector2(-24f, -28f), rowSize, 26, InkSoftColor, TextAnchor.MiddleRight);
+                    new Vector2(-24f, -28f * v), rowSize, F(26), InkSoftColor, TextAnchor.MiddleRight);
                 rowBadges[item] = badge;
 
                 // Ruled line under each order.
                 RuntimeUiFactory.CreateImage(
                     row.transform, "Rule", new Vector2(rowWidthPx, 2f),
-                    new Vector2(0f, -rowHeightPx * 0.5f + 8f), RuleColor);
+                    new Vector2(0f, -rowHeightPx * 0.5f + 8f * v), RuleColor);
 
                 rowY -= rowHeightPx;
             }
@@ -650,25 +673,41 @@ namespace Meniscus.UI
             ApplySelectionVisual();
         }
 
-        /// <summary>Row click: select the item (read its detail), never purchase.</summary>
+        /// <summary>Row click: focus the item for its detail and toggle it in the buy cart (multi-select).</summary>
         void OnSelect(ItemDefinition item)
         {
-            model.Select(item);
+            model.ToggleCart(item);
             RefreshTicket();
             ApplySelectionVisual();
         }
 
-        /// <summary>Buy button: purchase the selected item if affordable; the book is the only buyer.</summary>
+        /// <summary>Buy button: purchase every item in the cart that is still affordable; the book is the
+        /// only buyer. Bought items leave the cart; unaffordable ones (or once the desk fills) stay.</summary>
         void OnBuyClicked()
         {
-            if (model.Selected == null || shopManager == null)
+            if (shopManager == null || model.CartCount == 0)
                 return;
 
-            if (shopManager.TryBuyItem(model.Selected))
+            // Snapshot the cart so we can mutate the model's cart while iterating.
+            var pending = new List<ItemDefinition>(model.Cart);
+            var boughtAny = false;
+
+            foreach (var item in pending)
             {
-                RefreshTicket();
-                RefreshOwnedBadges();
+                if (shopManager.TryBuyItem(item))
+                {
+                    model.RemoveFromCart(item);
+                    boughtAny = true;
+                }
             }
+
+            if (boughtAny)
+            {
+                RefreshOwnedBadges();
+                ApplySelectionVisual();
+            }
+
+            RefreshTicket();
         }
 
         /// <summary>
@@ -782,11 +821,14 @@ namespace Meniscus.UI
             ticketDesc.text = item.Description;
 
             var owned = shopManager != null ? shopManager.OwnedCount(item) : 0;
-            ticketCostOwn.text = $"Cost: ${item.Cost}    Own: {owned}";
+            var inCart = model.IsInCart(item);
+            var cartNote = model.CartCount > 0 ? $"     ·  Cart {model.CartCount} (${model.CartTotalCost})" : "";
+            ticketCostOwn.text = $"Cost: ${item.Cost}    Own: {owned}    {(inCart ? "[in cart]" : "[tap to add]")}{cartNote}";
 
+            // The Buy button purchases the whole cart, not just the focused item.
             var bankedCash = shopManager != null ? shopManager.BankedCash : 0;
             var deskFull = shopManager != null && shopManager.IsDeskFull;
-            var state = model.EvaluateBuy(bankedCash, deskFull);
+            var state = model.EvaluateCart(bankedCash, deskFull);
 
             if (buyButton != null)
             {
@@ -809,14 +851,14 @@ namespace Meniscus.UI
         }
 
         /// <summary>
-        /// Paints the selected row as a solid bar with its ▸ pointer shown and clears the others, so the
-        /// current selection reads strongly against the page.
+        /// Paints every row that is in the buy cart as a solid bar with its ▸ pointer shown, so the
+        /// multi-selection reads strongly against the page.
         /// </summary>
         void ApplySelectionVisual()
         {
             foreach (var pair in rowBackgrounds)
             {
-                var selected = pair.Key == model.Selected;
+                var selected = model.IsInCart(pair.Key);
                 pair.Value.color = selected ? RowSelected : RowTransparent;
 
                 if (rowPointers.TryGetValue(pair.Key, out var pointer))

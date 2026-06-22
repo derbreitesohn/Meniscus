@@ -1,0 +1,21 @@
+{
+    "name": "Meniscus.Tests.PlayMode",
+    "rootNamespace": "Meniscus.Tests.PlayMode",
+    "references": [
+        "Meniscus.Runtime",
+        "Unity.InputSystem",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "noEngineReferences": false
+}

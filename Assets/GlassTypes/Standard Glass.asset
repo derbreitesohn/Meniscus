@@ -20,6 +20,6 @@ MonoBehaviour:
   modelLocalEuler: {x: 0, y: 0, z: 0}
   modelLocalScale: {x: 1, y: 1, z: 1}
   waterSurfaceLocalY: 0.62
-  waterSurfaceRadius: 0.39
-  fillBottomLocalY: 0.06
+  waterSurfaceRadius: 0.9
+  fillBottomLocalY: -1.2
   fillBottomRadiusScale: 0.82

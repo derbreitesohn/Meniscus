@@ -37,10 +37,13 @@ namespace Meniscus.UI
             hingePivot.SetParent(root, false);
             hingePivot.localPosition = Vector3.zero;
 
+            // Full-width cover centred over the spine: closed (hinge at 0°) it covers BOTH pages so the
+            // resting book reads as shut; opening flips it about the spine to lie tucked under the back
+            // cover (180°), revealing the spread. A half-width cover left one page showing — a half-open look.
             CreateCoverCube(
                 hingePivot, "Book Front Cover", p.coverColor,
-                new Vector3(p.pageWidth, p.coverThickness, p.pageDepth),
-                new Vector3(p.pageWidth * 0.5f, p.coverThickness, 0f));
+                new Vector3(p.pageWidth * 2f, p.coverThickness, p.pageDepth),
+                new Vector3(0f, p.coverThickness, 0f));
 
             var clickCollider = root.gameObject.AddComponent<BoxCollider>();
             clickCollider.center = new Vector3(0f, p.coverThickness, 0f);

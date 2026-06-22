@@ -135,12 +135,17 @@ namespace Meniscus.Editor
             // class is deleted; purge it so re-authoring leaves a clean component set.
             var removed = GameObjectUtility.RemoveMonoBehavioursWithMissingScript(manager.gameObject);
 
+            // The tray lives on its OWN positionable object (like the Book Shop), so dragging it in the
+            // scene moves only the desk boxes — not the manager stack. A tray already authored onto the
+            // Managers object (legacy) is left alone; we only create a standalone one when none exists.
             var tray = Object.FindAnyObjectByType<DeskItemTray>();
 
             if (tray == null)
             {
-                Undo.RegisterCompleteObjectUndo(manager.gameObject, "Author Desk Item Tray");
-                tray = manager.gameObject.AddComponent<DeskItemTray>();
+                var go = new GameObject("Desk Item Tray");
+                Undo.RegisterCreatedObjectUndo(go, "Author Desk Item Tray");
+                tray = go.AddComponent<DeskItemTray>();
+                PlaceOnDeskFront(go.transform);
             }
 
             var inventory = Object.FindAnyObjectByType<PlayerInventory>();
@@ -154,9 +159,44 @@ namespace Meniscus.Editor
             managerSerialized.FindProperty("deskItemTray").objectReferenceValue = tray;
             managerSerialized.ApplyModifiedProperties();
 
-            Debug.Log($"[RuntimeObjectAuthoring] DeskItemTray authored and wired " +
-                      $"(removed {removed} missing script(s); position via deskItemsAnchor or the desk auto-fit).");
+            Debug.Log($"[RuntimeObjectAuthoring] DeskItemTray authored on a standalone 'Desk Item Tray' object " +
+                      $"and wired (removed {removed} missing script(s)). Drag it (or set deskItemsAnchor) to place the boxes.");
             return true;
+        }
+
+        // Seats a freshly-authored object on the desk surface toward the player, clear of the glass, so it
+        // starts somewhere sensible the designer can then nudge. The desk surface height is taken from the
+        // glass's base (it rests on the desk) rather than the table's bounds — the table's bounds enclose
+        // its child props (the tall glass), so their top is up at the rim, not the surface.
+        static void PlaceOnDeskFront(Transform t)
+        {
+            var glass = GameObject.FindWithTag("Glass") ?? Object.FindAnyObjectByType<GlassVisualController>()?.gameObject;
+            var cam = Camera.main;
+
+            if (glass == null || cam == null)
+                return;
+
+            var renderers = glass.GetComponentsInChildren<Renderer>();
+
+            if (renderers.Length == 0)
+                return;
+
+            var glassBounds = renderers[0].bounds;
+
+            for (var i = 1; i < renderers.Length; i++)
+                glassBounds.Encapsulate(renderers[i].bounds);
+
+            var deskSurfaceY = glassBounds.min.y;             // glass base sits on the desk
+            var toCamera = Vector3.ProjectOnPlane(cam.transform.position - glassBounds.center, Vector3.up);
+            toCamera = toCamera.sqrMagnitude > 1e-4f ? toCamera.normalized : -Vector3.forward;
+            var right = Vector3.Cross(Vector3.up, toCamera).normalized;
+
+            // In front of the glass (toward the player) and off to one side, on the desk surface.
+            var pos = new Vector3(glassBounds.center.x, deskSurfaceY, glassBounds.center.z)
+                      + toCamera * (glassBounds.size.magnitude * 0.6f)
+                      + right * (glassBounds.size.x * 0.6f);
+
+            t.SetPositionAndRotation(pos, Quaternion.LookRotation(toCamera, Vector3.up));
         }
 
         [MenuItem(MenuRoot + "Author Book Shop")]

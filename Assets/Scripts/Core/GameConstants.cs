@@ -52,9 +52,9 @@ namespace Meniscus.Core
         public const float EnemyTellDelaySeconds = 0.35f;
         public const float EnemyConservativeSpillChanceThreshold = 50f;
 
-        public static readonly Vector3 CopperCoinVisualScale = new(0.27f, 0.045f, 0.27f);
-        public static readonly Vector3 SilverCoinVisualScale = new(0.34f, 0.052f, 0.34f);
-        public static readonly Vector3 GoldCoinVisualScale = new(0.43f, 0.064f, 0.43f);
+        public static readonly Vector3 CopperCoinVisualScale = new(0.16f, 0.027f, 0.16f);
+        public static readonly Vector3 SilverCoinVisualScale = new(0.20f, 0.031f, 0.20f);
+        public static readonly Vector3 GoldCoinVisualScale = new(0.23f, 0.035f, 0.23f);
 
         public static readonly Color CopperCoinColor = new(0.72f, 0.32f, 0.13f, 1f);
         public static readonly Color SilverCoinColor = new(0.74f, 0.76f, 0.74f, 1f);

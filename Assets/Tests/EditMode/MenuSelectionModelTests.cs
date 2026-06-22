@@ -114,5 +114,107 @@ namespace Meniscus.Tests.EditMode
             Assert.IsTrue(state.CanBuy);
             Assert.AreEqual("Buy — $20", state.Label);
         }
+
+        // --- Multi-select cart ---
+
+        [Test]
+        public void ToggleCart_AddsRemovesAndFocusesSelection()
+        {
+            var model = new MenuSelectionModel();
+            var list = Catalog(3);
+            model.SetCatalog(list, 5);
+
+            model.ToggleCart(list[0]);
+            Assert.IsTrue(model.IsInCart(list[0]));
+            Assert.AreSame(list[0], model.Selected);   // tapping also focuses the detail view
+            Assert.AreEqual(1, model.CartCount);
+
+            model.ToggleCart(list[2]);
+            Assert.AreEqual(2, model.CartCount);
+
+            model.ToggleCart(list[0]);                  // toggling again removes it
+            Assert.IsFalse(model.IsInCart(list[0]));
+            Assert.AreEqual(1, model.CartCount);
+        }
+
+        [Test]
+        public void ToggleCart_IgnoresItemsNotInCatalog()
+        {
+            var model = new MenuSelectionModel();
+            model.SetCatalog(Catalog(2), 5);
+            var stranger = ItemDefinition.Create("x", "X", "", 5, ItemEffectKind.PayoutMultiplier, 0f);
+            model.ToggleCart(stranger);
+            Assert.AreEqual(0, model.CartCount);
+        }
+
+        [Test]
+        public void CartTotalCost_SumsSelectedCosts()
+        {
+            var model = new MenuSelectionModel();
+            var list = Catalog(3); // costs 10, 20, 30
+            model.SetCatalog(list, 5);
+            model.ToggleCart(list[0]);
+            model.ToggleCart(list[2]);
+            Assert.AreEqual(40, model.CartTotalCost);
+        }
+
+        [Test]
+        public void SetCatalog_ClearsTheCart()
+        {
+            var model = new MenuSelectionModel();
+            var list = Catalog(3);
+            model.SetCatalog(list, 5);
+            model.ToggleCart(list[0]);
+            model.SetCatalog(Catalog(2), 5);
+            Assert.AreEqual(0, model.CartCount);
+        }
+
+        [Test]
+        public void EvaluateCart_EmptyCart_NotBuyable()
+        {
+            var model = new MenuSelectionModel();
+            model.SetCatalog(Catalog(3), 5);
+            var state = model.EvaluateCart(1000, deskFull: false);
+            Assert.IsFalse(state.CanBuy);
+            Assert.AreEqual("Tap items to add", state.Label);
+        }
+
+        [Test]
+        public void EvaluateCart_DeskFull_BeatsAffordability()
+        {
+            var model = new MenuSelectionModel();
+            var list = Catalog(3);
+            model.SetCatalog(list, 5);
+            model.ToggleCart(list[0]);
+            var state = model.EvaluateCart(1000, deskFull: true);
+            Assert.IsFalse(state.CanBuy);
+            Assert.AreEqual("Desk full", state.Label);
+        }
+
+        [Test]
+        public void EvaluateCart_CannotAffordCheapest_ShowsNeed()
+        {
+            var model = new MenuSelectionModel();
+            var list = Catalog(3); // 10, 20, 30
+            model.SetCatalog(list, 5);
+            model.ToggleCart(list[1]);
+            model.ToggleCart(list[2]);
+            var state = model.EvaluateCart(5, deskFull: false); // cheapest selected is 20
+            Assert.IsFalse(state.CanBuy);
+            Assert.AreEqual("Need $20", state.Label);
+        }
+
+        [Test]
+        public void EvaluateCart_Affordable_ShowsCountAndTotal()
+        {
+            var model = new MenuSelectionModel();
+            var list = Catalog(3); // 10, 20, 30
+            model.SetCatalog(list, 5);
+            model.ToggleCart(list[0]);
+            model.ToggleCart(list[1]);
+            var state = model.EvaluateCart(100, deskFull: false);
+            Assert.IsTrue(state.CanBuy);
+            Assert.AreEqual("Buy 2 — $30", state.Label);
+        }
     }
 }
