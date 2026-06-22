@@ -1,4 +1,6 @@
+using Meniscus.Core;
 using Meniscus.Gameplay;
+using Meniscus.Items;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -66,6 +68,43 @@ namespace Meniscus.Editor
             serialized.ApplyModifiedProperties();
 
             Debug.Log("[RuntimeObjectAuthoring] Water surface authored ('Liquid') and wired (waterTransform + Water_Surface.mat).");
+            return true;
+        }
+
+        [MenuItem(MenuRoot + "Author Player Inventory")]
+        static void AuthorPlayerInventoryMenu()
+        {
+            if (!TryOpenScene(out var scene))
+                return;
+
+            if (AuthorPlayerInventory())
+                SaveScene(scene);
+        }
+
+        public static bool AuthorPlayerInventory()
+        {
+            var manager = Object.FindAnyObjectByType<GameManager>();
+
+            if (manager == null)
+            {
+                Debug.LogError("[RuntimeObjectAuthoring] No GameManager in the scene. Aborting.");
+                return false;
+            }
+
+            // The managers all live on the GameManager's GameObject (same object GameManager.AddComponent uses).
+            var inventory = Object.FindAnyObjectByType<PlayerInventory>();
+
+            if (inventory == null)
+            {
+                Undo.RegisterCompleteObjectUndo(manager.gameObject, "Author Player Inventory");
+                inventory = manager.gameObject.AddComponent<PlayerInventory>();
+            }
+
+            var serialized = new SerializedObject(manager);
+            serialized.FindProperty("playerInventory").objectReferenceValue = inventory;
+            serialized.ApplyModifiedProperties();
+
+            Debug.Log("[RuntimeObjectAuthoring] PlayerInventory authored on the Managers object and wired.");
             return true;
         }
 
