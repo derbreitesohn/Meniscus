@@ -76,11 +76,8 @@ namespace Meniscus.UI
         [SerializeField] float menuWorldWidth = 0.56f;
         [Tooltip("World depth bound for the printed menu so it stays within the page depth.")]
         [SerializeField] float menuWorldDepth = 0.34f;
-        // Declared here per the menu spec but consumed by the page-turn animation in a later task.
-#pragma warning disable CS0414
         [Tooltip("Seconds for a page-turn animation.")]
         [SerializeField, Min(0.05f)] float pageTurnSeconds = 0.35f;
-#pragma warning restore CS0414
 
         static readonly Color CoverColor = new(0.34f, 0.16f, 0.08f);
         static readonly Color PageColor = new(0.86f, 0.78f, 0.6f);
@@ -104,6 +101,7 @@ namespace Meniscus.UI
 
         Transform root;
         Transform hingePivot;
+        Transform turningPivot;
         Transform menuCanvasTransform;
         CanvasGroup menuGroup;
         GameObject finishButtonObject;
@@ -144,6 +142,13 @@ namespace Meniscus.UI
         // purchasing is disabled and the only action is to close it again.
         bool previewMode;
         float animT;
+
+        // Page-flip animation state. A flip sweeps the turning sheet across the spine and, at the
+        // halfway point, swaps the right-page content to the next/prev page exactly once.
+        bool isTurning;
+        float turnT;
+        float prevTurnT;
+        int pendingDir;
 
         void Awake()
         {
@@ -235,6 +240,8 @@ namespace Meniscus.UI
             if (!built)
                 return;
 
+            UpdatePageTurn();
+
             var target = isOpen ? 1f : 0f;
             animT = Mathf.MoveTowards(animT, target, Time.deltaTime / Mathf.Max(0.05f, openSeconds));
 
@@ -291,6 +298,17 @@ namespace Meniscus.UI
                 ResolveAuthoredProp();
             else
                 BuildProp();
+
+            // A page-sized sheet hung on the spine, swept across the spread during a flip. Built over
+            // the prop (so it pivots on the spine, X = 0) and kept inactive until a turn starts.
+            turningPivot = BookShopBuilder.BuildTurningSheet(root, new BookShopBuilder.BookPropParams
+            {
+                pageWidth = pageWidth,
+                pageDepth = pageDepth,
+                coverThickness = coverThickness,
+                coverColor = CoverColor,
+                pageColor = PageColor,
+            });
 
             BuildMenuCanvas(catalog);
 
@@ -600,15 +618,86 @@ namespace Meniscus.UI
             }
         }
 
-        /// <summary>Corner arrow: change page then rebuild the right-page rows (no animation yet).</summary>
+        /// <summary>
+        /// Corner arrow: start an animated page flip. Input is ignored while a flip is already running,
+        /// and a flip only starts if the model can turn that way. The actual page swap happens at the
+        /// flip's midpoint (see <see cref="Update"/>); here we only kick off the sheet sweep.
+        /// </summary>
         void OnTurn(int dir)
         {
-            if (dir < 0)
-                model.TurnPrev();
-            else
-                model.TurnNext();
+            if (isTurning)
+                return;
 
-            RebuildRightPage();
+            var canTurn = dir < 0 ? model.CanTurnPrev : model.CanTurnNext;
+
+            if (!canTurn)
+                return;
+
+            isTurning = true;
+            turnT = 0f;
+            prevTurnT = 0f;
+            pendingDir = dir;
+
+            if (turningPivot != null)
+            {
+                turningPivot.gameObject.SetActive(true);
+                turningPivot.localRotation = TurnRotation(dir, 0f);
+            }
+        }
+
+        /// <summary>
+        /// Sheet rotation about the spine (Z) for a flip in <paramref name="dir"/> at eased progress
+        /// <paramref name="eased"/> in [0,1]. A "next" turn sweeps the sheet from the right page (0°)
+        /// across to the left (180°); a "prev" turn sweeps back from the left (180°) to the right (0°).
+        /// </summary>
+        static Quaternion TurnRotation(int dir, float eased)
+        {
+            var angle = dir < 0
+                ? Mathf.Lerp(180f, 0f, eased)
+                : Mathf.Lerp(0f, 180f, eased);
+
+            return Quaternion.Euler(0f, 0f, angle);
+        }
+
+        /// <summary>
+        /// Drives the in-progress page flip: advances the timer, sweeps the turning sheet across the
+        /// spine with the same eased curve as the cover open, swaps the right-page content exactly once
+        /// as the flip passes its midpoint, and parks the sheet (inactive) when the flip completes.
+        /// </summary>
+        void UpdatePageTurn()
+        {
+            if (!isTurning)
+                return;
+
+            turnT += Time.deltaTime / Mathf.Max(0.05f, pageTurnSeconds);
+
+            var clamped = Mathf.Clamp01(turnT);
+            var eased = Mathf.SmoothStep(0f, 1f, clamped);
+
+            if (turningPivot != null)
+                turningPivot.localRotation = TurnRotation(pendingDir, eased);
+
+            // Swap the underlying page once, as the sheet crosses the spread's midpoint, so the new
+            // page is revealed behind the sheet for the second half of the sweep.
+            if (MenuLayout.CrossedMidpoint(prevTurnT, turnT))
+            {
+                if (pendingDir < 0)
+                    model.TurnPrev();
+                else
+                    model.TurnNext();
+
+                RebuildRightPage();
+            }
+
+            prevTurnT = turnT;
+
+            if (turnT >= 1f)
+            {
+                isTurning = false;
+
+                if (turningPivot != null)
+                    turningPivot.gameObject.SetActive(false);
+            }
         }
 
         /// <summary>

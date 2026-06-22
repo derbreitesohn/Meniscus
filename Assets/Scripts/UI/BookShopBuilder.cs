@@ -51,6 +51,30 @@ namespace Meniscus.UI
             return root;
         }
 
+        /// <summary>
+        /// Builds a single page-sized, paper-coloured sheet hung off a pivot at the spine (local X = 0)
+        /// so the view can sweep it across the spread to sell a page turn. The pivot is parented under
+        /// <paramref name="parent"/> at the spine; the sheet itself is offset outward by half a page so
+        /// it lies over a page rather than on the spine. Returned INACTIVE — the view activates it for
+        /// the duration of a flip and rotates the pivot around its Z axis (the spine). The sheet carries
+        /// no live UI; it only carries the motion. Matches <see cref="BuildProp"/>'s page geometry/units.
+        /// </summary>
+        public static Transform BuildTurningSheet(Transform parent, BookPropParams p)
+        {
+            var pivot = new GameObject("Book Turning Pivot").transform;
+            pivot.SetParent(parent, false);
+            pivot.localPosition = Vector3.zero;
+
+            // Same thin page slab as BuildProp's pages, sat just above them so it reads over the spread.
+            var pageSize = new Vector3(p.pageWidth * 0.94f, p.coverThickness * 0.5f, p.pageDepth * 0.92f);
+            CreateCoverCube(
+                pivot, "Book Turning Sheet", p.pageColor, pageSize,
+                new Vector3(p.pageWidth * 0.5f, p.coverThickness * 1.1f, 0f));
+
+            pivot.gameObject.SetActive(false);
+            return pivot;
+        }
+
         static Transform CreateCoverCube(Transform parent, string name, Color color, Vector3 size, Vector3 localPosition)
         {
             var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);

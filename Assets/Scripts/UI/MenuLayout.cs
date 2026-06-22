@@ -37,5 +37,8 @@ namespace Meniscus.UI
 
         public static int ClampPage(int page, int pageCount) =>
             Mathf.Clamp(page, 0, Mathf.Max(0, pageCount - 1));
+
+        /// <summary>True when an animation parameter steps from before to at-or-after the halfway point.</summary>
+        public static bool CrossedMidpoint(float prevT, float t) => prevT < 0.5f && t >= 0.5f;
     }
 }

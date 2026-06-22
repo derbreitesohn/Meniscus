@@ -51,5 +51,14 @@ namespace Meniscus.Tests.EditMode
             Assert.AreEqual(0, MenuLayout.ClampPage(-3, 2));
             Assert.AreEqual(1, MenuLayout.ClampPage(9, 2));
         }
+
+        [Test]
+        public void CrossedMidpoint_TrueOnlyWhenPassingHalf()
+        {
+            Assert.IsFalse(MenuLayout.CrossedMidpoint(0.1f, 0.4f));
+            Assert.IsTrue(MenuLayout.CrossedMidpoint(0.4f, 0.5f));
+            Assert.IsTrue(MenuLayout.CrossedMidpoint(0.49f, 0.8f));
+            Assert.IsFalse(MenuLayout.CrossedMidpoint(0.6f, 0.9f));
+        }
     }
 }
