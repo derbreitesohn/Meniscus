@@ -19,6 +19,8 @@ namespace Meniscus.Editor
     {
         const string ScenePath = "Assets/Scenes/Saloon.unity";
         const string WaterMaterialPath = "Assets/Art/Materials/Water_Surface.mat";
+        const string PrefabsDir = "Assets/Prefabs";
+        const string SpillPrefabPath = "Assets/Prefabs/SpillEffect.prefab";
         const string MenuRoot = "Tools/Meniscus/Author Runtime Objects/";
 
         [MenuItem(MenuRoot + "Author Glass Water Surface")]
@@ -220,6 +222,58 @@ namespace Meniscus.Editor
 
             Debug.Log("[RuntimeObjectAuthoring] Book Shop authored (prop) and wired (BookShopView.authoredBook + ShopManager.bookShop). " +
                       "Position the 'Book Shop' object / set its deskAnchor in the Inspector.");
+            return true;
+        }
+
+        [MenuItem(MenuRoot + "Author Spill Effect Prefab")]
+        static void AuthorSpillPrefabMenu()
+        {
+            if (!TryOpenScene(out var scene))
+                return;
+
+            if (AuthorSpillPrefab())
+                SaveScene(scene);
+        }
+
+        public static bool AuthorSpillPrefab()
+        {
+            var glass = Object.FindAnyObjectByType<GlassVisualController>();
+
+            if (glass == null)
+            {
+                Debug.LogError("[RuntimeObjectAuthoring] No GlassVisualController in the scene. Aborting.");
+                return false;
+            }
+
+            if (!AssetDatabase.IsValidFolder(PrefabsDir))
+                AssetDatabase.CreateFolder("Assets", "Prefabs");
+
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(SpillPrefabPath);
+
+            if (existing == null)
+            {
+                // Build a transient host carrying the component + authored material, save it as a prefab, discard the host.
+                var temp = new GameObject("SpillEffect");
+                temp.AddComponent<GlassSpillEffect>();
+
+                var material = AssetDatabase.LoadAssetAtPath<Material>(WaterMaterialPath);
+
+                if (material != null)
+                {
+                    var tempSerialized = new SerializedObject(temp.GetComponent<GlassSpillEffect>());
+                    tempSerialized.FindProperty("overspillMaterial").objectReferenceValue = material;
+                    tempSerialized.ApplyModifiedProperties();
+                }
+
+                existing = PrefabUtility.SaveAsPrefabAsset(temp, SpillPrefabPath);
+                Object.DestroyImmediate(temp);
+            }
+
+            var glassSerialized = new SerializedObject(glass);
+            glassSerialized.FindProperty("spillPrefab").objectReferenceValue = existing.GetComponent<GlassSpillEffect>();
+            glassSerialized.ApplyModifiedProperties();
+
+            Debug.Log($"[RuntimeObjectAuthoring] Spill prefab authored at '{SpillPrefabPath}' and wired to GlassVisualController.spillPrefab.");
             return true;
         }
 
