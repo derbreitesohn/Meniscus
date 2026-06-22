@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using Meniscus.Core;
 using Meniscus.Items;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace Meniscus.UI
@@ -79,6 +81,9 @@ namespace Meniscus.UI
         [Tooltip("Seconds for a page-turn animation.")]
         [SerializeField, Min(0.05f)] float pageTurnSeconds = 0.35f;
 
+        [Tooltip("Max distance for the click raycast that opens/closes the book during a round.")]
+        [SerializeField] float clickRaycastDistance = 100f;
+
         static readonly Color CoverColor = new(0.34f, 0.16f, 0.08f);
         static readonly Color PageColor = new(0.86f, 0.78f, 0.6f);
 
@@ -141,6 +146,10 @@ namespace Meniscus.UI
         // True while the book was opened by clicking it mid-round: the catalog is shown to read, but
         // purchasing is disabled and the only action is to close it again.
         bool previewMode;
+
+        // Supplied by ShopManager: returns true while the player may open the book to browse
+        // (during a round) and false otherwise (shop phase / game over). Null means "allowed".
+        Func<bool> canBrowse;
         float animT;
 
         // Page-flip animation state. A flip sweeps the turning sheet across the spine and, at the
@@ -206,6 +215,11 @@ namespace Meniscus.UI
             ResetPageTurn();
         }
 
+        /// <summary>
+        /// Sets the predicate deciding whether a book-prop click may open a browse preview.
+        /// </summary>
+        public void SetBrowseGate(Func<bool> gate) => canBrowse = gate;
+
         void ResetPageTurn()
         {
             isTurning = false;
@@ -253,6 +267,7 @@ namespace Meniscus.UI
             if (!built)
                 return;
 
+            PollBrowseClick();
             UpdatePageTurn();
 
             var target = isOpen ? 1f : 0f;
@@ -303,6 +318,40 @@ namespace Meniscus.UI
 
             // When closed the book is left resting on the desk (not deactivated) so it stays a physical
             // object the player can see it lift from next time, rather than respawning each shop phase.
+        }
+
+        /// <summary>
+        /// Detects a click on the book prop using the Input System (the project's input backend
+        /// does not deliver legacy OnMouse* messages) and toggles the read-only browse preview,
+        /// provided the gate currently allows browsing.
+        /// </summary>
+        void PollBrowseClick()
+        {
+            var mouse = Mouse.current;
+
+            if (mouse == null || !mouse.leftButton.wasPressedThisFrame)
+                return;
+
+            if (canBrowse != null && !canBrowse())
+                return;
+
+            var cam = ActiveCamera();
+
+            if (cam == null)
+                return;
+
+            var ray = cam.ScreenPointToRay(mouse.position.ReadValue());
+
+            if (!Physics.Raycast(ray, out var hit, clickRaycastDistance))
+                return;
+
+            // Only our own book counts: the marker sits on the click collider's root.
+            var marker = hit.collider.GetComponentInParent<BookClickTarget>();
+
+            if (marker == null || marker.transform != root)
+                return;
+
+            OnBookClicked();
         }
 
         void Build(IReadOnlyList<ItemDefinition> catalog)

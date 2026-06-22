@@ -66,6 +66,7 @@ namespace Meniscus.UI
                 return;
 
             EnsureBookShop();
+            WireBrowseGate();
 
             if (bookShop != null)
                 bookShop.PrepareOnDesk(Catalog, this);
@@ -89,6 +90,7 @@ namespace Meniscus.UI
             if (useDiegeticBookShop)
             {
                 EnsureBookShop();
+                WireBrowseGate();
 
                 if (bookShop != null)
                 {
@@ -257,6 +259,12 @@ namespace Meniscus.UI
 
             if (bookShop == null)
                 bookShop = new GameObject("Runtime Book Shop").AddComponent<BookShopView>();
+        }
+
+        void WireBrowseGate()
+        {
+            if (bookShop != null)
+                bookShop.SetBrowseGate(() => gameManager == null || BrowsingAllowed(gameManager.CurrentState));
         }
 
         void EnsureFallbackShopCanvas()
