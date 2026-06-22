@@ -3,6 +3,7 @@ using Meniscus.Gameplay;
 using Meniscus.Items;
 using Meniscus.UI;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 
 namespace Meniscus.Tests.EditMode
@@ -21,6 +22,13 @@ namespace Meniscus.Tests.EditMode
             economy = host.AddComponent<EconomyManager>();
             inventory = host.AddComponent<PlayerInventory>();
             shop = host.AddComponent<ShopManager>();
+
+            // Pin the shop's dependencies so ResolveReferences does not bind a stray manager left in the
+            // shared EditMode test scene by another fixture (its FindAnyObjectByType is order-sensitive).
+            var so = new SerializedObject(shop);
+            so.FindProperty("economyManager").objectReferenceValue = economy;
+            so.FindProperty("playerInventory").objectReferenceValue = inventory;
+            so.ApplyModifiedProperties();
         }
 
         [TearDown]
