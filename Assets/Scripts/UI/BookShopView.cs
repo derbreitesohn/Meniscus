@@ -43,6 +43,11 @@ namespace Meniscus.UI
                  "and +Y is up; keep its scale at 1.")]
         [SerializeField] Transform deskAnchor;
 
+        [Tooltip("Pre-authored physical book prop (built by Tools > Meniscus > Author Book Shop). When " +
+                 "set, the runtime uses it and only builds the menu canvas on top; left empty, the prop is " +
+                 "built at runtime.")]
+        [SerializeField] Transform authoredBook;
+
         [Header("Desk Rest Fallback")]
         [Tooltip("Used only when no anchor is placed: the desk/table the book is auto-rested on.")]
         [SerializeField] string deskObjectName = "Saloon Table";
@@ -247,50 +252,48 @@ namespace Meniscus.UI
 
         void Build(IReadOnlyList<ItemDefinition> catalog)
         {
-            root = new GameObject("Diegetic Book Shop").transform;
-            root.SetParent(transform, false);
-
-            // An open book lying as a spread: the spine sits at the local origin with a page either side.
-            CreateCoverCube(
-                root, "Book Back Cover", CoverColor,
-                new Vector3(pageWidth * 2f + coverThickness * 2f, coverThickness, pageDepth + coverThickness * 2f),
-                Vector3.zero);
-
-            var pageSize = new Vector3(pageWidth * 0.94f, coverThickness * 0.5f, pageDepth * 0.92f);
-
-            CreatePageSheet(
-                root, "Book Left Page", pageSize,
-                new Vector3(-pageWidth * 0.5f, coverThickness * 0.75f, 0f));
-            CreatePageSheet(
-                root, "Book Right Page", pageSize,
-                new Vector3(pageWidth * 0.5f, coverThickness * 0.75f, 0f));
-
-            hingePivot = new GameObject("Book Hinge").transform;
-            hingePivot.SetParent(root, false);
-            hingePivot.localPosition = Vector3.zero;
-
-            // Front cover starts over the right page and flips open across the spine as the book opens.
-            CreateCoverCube(
-                hingePivot, "Book Front Cover", CoverColor,
-                new Vector3(pageWidth, coverThickness, pageDepth),
-                new Vector3(pageWidth * 0.5f, coverThickness, 0f));
+            if (authoredBook != null)
+                ResolveAuthoredProp();
+            else
+                BuildProp();
 
             BuildMenuCanvas(catalog);
 
-            // A click target over the whole book so it can be picked up off the desk to preview the
-            // catalog mid-round (and clicked again to close). Sized to the closed spread footprint.
-            var clickCollider = root.gameObject.AddComponent<BoxCollider>();
-            clickCollider.center = new Vector3(0f, coverThickness, 0f);
-            clickCollider.size = new Vector3(pageWidth * 2.1f, coverThickness * 3f, pageDepth * 1.05f);
-            // A trigger so it never blocks the coins on the desk; it still receives mouse clicks.
-            clickCollider.isTrigger = true;
-
-            var clickTarget = root.gameObject.AddComponent<BookClickTarget>();
-            clickTarget.Clicked = OnBookClicked;
-            clickTarget.LogDiagnostics = logDiagnostics;
-
             built = true;
             root.gameObject.SetActive(false);
+        }
+
+        void BuildProp()
+        {
+            root = BookShopBuilder.BuildProp(transform, new BookShopBuilder.BookPropParams
+            {
+                pageWidth = pageWidth,
+                pageDepth = pageDepth,
+                coverThickness = coverThickness,
+                coverColor = CoverColor,
+                pageColor = PageColor,
+            });
+
+            hingePivot = root.Find("Book Hinge");
+
+            var clickTarget = root.GetComponent<BookClickTarget>();
+            clickTarget.Clicked = OnBookClicked;
+            clickTarget.LogDiagnostics = logDiagnostics;
+        }
+
+        void ResolveAuthoredProp()
+        {
+            root = authoredBook;
+            hingePivot = root.Find("Book Hinge");
+
+            // onClick/Clicked delegates are not serialized, so re-wire the authored prop's click target.
+            var clickTarget = root.GetComponent<BookClickTarget>();
+
+            if (clickTarget == null)
+                clickTarget = root.gameObject.AddComponent<BookClickTarget>();
+
+            clickTarget.Clicked = OnBookClicked;
+            clickTarget.LogDiagnostics = logDiagnostics;
         }
 
         void BuildMenuCanvas(IReadOnlyList<ItemDefinition> catalog)
@@ -533,40 +536,6 @@ namespace Meniscus.UI
         {
             if (worldCamera == null)
                 worldCamera = Camera.main;
-        }
-
-        Transform CreateCoverCube(Transform parent, string name, Color color, Vector3 size, Vector3 localPosition)
-        {
-            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            cube.name = name;
-            cube.transform.SetParent(parent, false);
-            cube.transform.localPosition = localPosition;
-            cube.transform.localScale = size;
-
-            var collider = cube.GetComponent<Collider>();
-
-            if (collider != null)
-                Destroy(collider);
-
-            var renderer = cube.GetComponent<Renderer>();
-
-            if (renderer != null)
-                renderer.sharedMaterial = CreateOpaqueMaterial($"{name} Material", color);
-
-            return cube.transform;
-        }
-
-        void CreatePageSheet(Transform parent, string name, Vector3 size, Vector3 localPosition) =>
-            CreateCoverCube(parent, name, PageColor, size, localPosition);
-
-        static Material CreateOpaqueMaterial(string materialName, Color color)
-        {
-            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-            return new Material(shader)
-            {
-                name = materialName,
-                color = color
-            };
         }
     }
 

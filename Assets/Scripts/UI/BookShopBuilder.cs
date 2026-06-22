@@ -1,0 +1,86 @@
+using UnityEngine;
+
+namespace Meniscus.UI
+{
+    /// <summary>
+    /// Builds the physical book prop (covers, hinged front cover, pages, click collider) for
+    /// <see cref="BookShopView"/>. The data-driven menu canvas is NOT built here — it stays runtime
+    /// (its buttons' onClick handlers are wired per-catalog at runtime and are not serializable).
+    /// Shared by the runtime fallback and the editor authoring tool.
+    /// </summary>
+    public static class BookShopBuilder
+    {
+        public struct BookPropParams
+        {
+            public float pageWidth;
+            public float pageDepth;
+            public float coverThickness;
+            public Color coverColor;
+            public Color pageColor;
+        }
+
+        public static Transform BuildProp(Transform parent, BookPropParams p)
+        {
+            var root = new GameObject("Diegetic Book Shop").transform;
+            root.SetParent(parent, false);
+
+            CreateCoverCube(
+                root, "Book Back Cover", p.coverColor,
+                new Vector3(p.pageWidth * 2f + p.coverThickness * 2f, p.coverThickness, p.pageDepth + p.coverThickness * 2f),
+                Vector3.zero);
+
+            var pageSize = new Vector3(p.pageWidth * 0.94f, p.coverThickness * 0.5f, p.pageDepth * 0.92f);
+            CreateCoverCube(root, "Book Left Page", p.pageColor, pageSize, new Vector3(-p.pageWidth * 0.5f, p.coverThickness * 0.75f, 0f));
+            CreateCoverCube(root, "Book Right Page", p.pageColor, pageSize, new Vector3(p.pageWidth * 0.5f, p.coverThickness * 0.75f, 0f));
+
+            var hingePivot = new GameObject("Book Hinge").transform;
+            hingePivot.SetParent(root, false);
+            hingePivot.localPosition = Vector3.zero;
+
+            CreateCoverCube(
+                hingePivot, "Book Front Cover", p.coverColor,
+                new Vector3(p.pageWidth, p.coverThickness, p.pageDepth),
+                new Vector3(p.pageWidth * 0.5f, p.coverThickness, 0f));
+
+            var clickCollider = root.gameObject.AddComponent<BoxCollider>();
+            clickCollider.center = new Vector3(0f, p.coverThickness, 0f);
+            clickCollider.size = new Vector3(p.pageWidth * 2.1f, p.coverThickness * 3f, p.pageDepth * 1.05f);
+            clickCollider.isTrigger = true;
+
+            root.gameObject.AddComponent<BookClickTarget>();
+            return root;
+        }
+
+        static Transform CreateCoverCube(Transform parent, string name, Color color, Vector3 size, Vector3 localPosition)
+        {
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.name = name;
+            cube.transform.SetParent(parent, false);
+            cube.transform.localPosition = localPosition;
+            cube.transform.localScale = size;
+
+            var collider = cube.GetComponent<Collider>();
+
+            if (collider != null)
+            {
+                if (Application.isPlaying)
+                    Object.Destroy(collider);
+                else
+                    Object.DestroyImmediate(collider);
+            }
+
+            var renderer = cube.GetComponent<Renderer>();
+
+            if (renderer != null)
+                renderer.sharedMaterial = CreateOpaqueMaterial($"{name} Material", color);
+
+            return cube.transform;
+        }
+
+        static Material CreateOpaqueMaterial(string materialName, Color color)
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            return new Material(shader) { name = materialName, color = color };
+        }
+    }
+}
