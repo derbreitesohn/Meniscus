@@ -7,6 +7,9 @@ namespace Meniscus.Gameplay
     [DisallowMultipleComponent]
     public class Coin : MonoBehaviour
     {
+        /// <summary>Name given to the instantiated model child by <see cref="ApplyModel"/>.</summary>
+        const string ModelChildName = "Coin Model";
+
         [Header("Coin Definition")]
         public CoinSize size = CoinSize.Medium;
         public float riskContribution = GameConstants.MediumCoinRisk;
@@ -28,6 +31,13 @@ namespace Meniscus.Gameplay
         public bool IsSelected => isSelected;
         public bool IsSpent => isSpent;
 
+        /// <summary>
+        /// The instantiated coin model currently shown, or null when the placeholder cylinder is showing.
+        /// Lets presentation code (e.g. the drop animation) mirror the coin's real visible mesh without
+        /// reaching into its child hierarchy by name.
+        /// </summary>
+        public GameObject ActiveModel => activeModelInstance;
+
         void Awake()
         {
             CacheOriginalPosition();
@@ -48,6 +58,7 @@ namespace Meniscus.Gameplay
             isPlayerCoin = belongsToPlayer;
             isSpent = false;
             ApplyVisualsForSize();
+            EnsureClickCollider();
             ResetVisualSelection();
         }
 
@@ -96,12 +107,18 @@ namespace Meniscus.Gameplay
         {
             if (activeModelInstance != null)
             {
-                if (Application.isPlaying)
-                    Destroy(activeModelInstance);
-                else
-                    DestroyImmediate(activeModelInstance);
-
+                DestroySafely(activeModelInstance);
                 activeModelInstance = null;
+            }
+
+            // Also clear any model child left by an editor preview (or a reloaded domain) so a coin never
+            // shows two stacked models when ApplyModel runs at the start of a round.
+            for (var i = transform.childCount - 1; i >= 0; i--)
+            {
+                var child = transform.GetChild(i);
+
+                if (child.name == ModelChildName)
+                    DestroySafely(child.gameObject);
             }
 
             var ownRenderer = GetComponent<MeshRenderer>();
@@ -129,7 +146,7 @@ namespace Meniscus.Gameplay
             if (ownRenderer != null)
                 ownRenderer.enabled = false;
 
-            activeModelInstance.name = "Coin Model";
+            activeModelInstance.name = ModelChildName;
             activeModelInstance.transform.localPosition = Vector3.zero;
             activeModelInstance.transform.localRotation = Quaternion.identity;
 
@@ -168,6 +185,13 @@ namespace Meniscus.Gameplay
                 SafeDivide(fitWorldScale, rootScale.x),
                 SafeDivide(fitWorldScale, rootScale.y),
                 SafeDivide(fitWorldScale, rootScale.z));
+
+            // Re-centre the model on the coin. An FBX whose pivot isn't at its geometric centre would
+            // otherwise render offset from the coin's transform — and from its click collider — so the coin
+            // looks mis-placed and clicking the visible model selects a neighbour. Shifting by the measured
+            // bounds offset puts the model's centre exactly on the coin's position (and collider centre).
+            var centeredBounds = CalculateWorldRendererBounds(model);
+            model.transform.position += transform.position - centeredBounds.center;
         }
 
         static Bounds CalculateWorldRendererBounds(GameObject root)
@@ -204,6 +228,38 @@ namespace Meniscus.Gameplay
                     this);
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Guarantees the coin's click target is a thin <see cref="BoxCollider"/> sized to the unit cube, so
+        /// it tracks the coin's real footprint via the root scale. A <see cref="CapsuleCollider"/> (the
+        /// default on a primitive cylinder, and what the scene coins were authored with) collapses into an
+        /// oversized *sphere* once the flat per-size scale squashes its height below its diameter — it bulges
+        /// above the coin and into its neighbours, so an angled-camera raycast selects the wrong coin.
+        /// </summary>
+        public void EnsureClickCollider()
+        {
+            var colliders = GetComponents<Collider>();
+
+            for (var i = 0; i < colliders.Length; i++)
+            {
+                if (colliders[i] is not BoxCollider)
+                    DestroySafely(colliders[i]);
+            }
+
+            if (!TryGetComponent<BoxCollider>(out var box))
+                box = gameObject.AddComponent<BoxCollider>();
+
+            box.center = Vector3.zero;
+            box.size = Vector3.one;
+        }
+
+        static void DestroySafely(UnityEngine.Object target)
+        {
+            if (Application.isPlaying)
+                Destroy(target);
+            else
+                DestroyImmediate(target);
         }
 
         static float SafeDivide(float numerator, float denominator) =>

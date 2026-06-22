@@ -65,32 +65,44 @@ namespace Meniscus.Gameplay
 
         GameObject CreateCoinProxy(Coin sourceCoin, TurnActor actor, int index)
         {
-            // Mirror the coin's *visible* mesh, not the logical root, so a model coin flies as itself and
-            // a placeholder coin still flies as its cylinder.
-            var sourceRenderer = sourceCoin.GetComponentInChildren<Renderer>();
-            var sourceFilter = sourceCoin.GetComponentInChildren<MeshFilter>();
-            var visualTransform = sourceRenderer != null ? sourceRenderer.transform : sourceCoin.transform;
+            // Fly the coin's *visible* mesh so a model coin flies as itself and a placeholder coin still
+            // flies as its cylinder. When a model is showing, the root cylinder renderer is disabled, so we
+            // clone the coin's actual model (preserving multi-part meshes and materials) and only fall back
+            // to mirroring the cylinder body when no model is present.
+            var visibleModel = sourceCoin.ActiveModel;
+            GameObject proxy;
+            Transform visualTransform;
 
-            var proxy = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            if (visibleModel != null)
+            {
+                proxy = Instantiate(visibleModel);
+                visualTransform = visibleModel.transform;
+            }
+            else
+            {
+                var bodyRenderer = sourceCoin.GetComponentInChildren<Renderer>();
+                var bodyFilter = sourceCoin.GetComponentInChildren<MeshFilter>();
+                visualTransform = bodyRenderer != null ? bodyRenderer.transform : sourceCoin.transform;
+
+                proxy = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+                var proxyFilter = proxy.GetComponent<MeshFilter>();
+                if (bodyFilter != null && bodyFilter.sharedMesh != null && proxyFilter != null)
+                    proxyFilter.sharedMesh = bodyFilter.sharedMesh;
+
+                var proxyRenderer = proxy.GetComponent<Renderer>();
+                if (bodyRenderer != null && proxyRenderer != null)
+                    proxyRenderer.sharedMaterial = bodyRenderer.sharedMaterial;
+            }
+
             proxy.name = $"{actor} Drop Proxy {sourceCoin.name}";
             proxy.transform.position = visualTransform.position;
             proxy.transform.rotation = visualTransform.rotation;
             proxy.transform.localScale = visualTransform.lossyScale;
 
-            var collider = proxy.GetComponent<Collider>();
-
-            if (collider != null)
-                Destroy(collider);
-
-            var proxyFilter = proxy.GetComponent<MeshFilter>();
-
-            if (sourceFilter != null && sourceFilter.sharedMesh != null && proxyFilter != null)
-                proxyFilter.sharedMesh = sourceFilter.sharedMesh;
-
-            var proxyRenderer = proxy.GetComponent<Renderer>();
-
-            if (sourceRenderer != null && proxyRenderer != null)
-                proxyRenderer.sharedMaterial = sourceRenderer.sharedMaterial;
+            // A proxy is purely visual; strip any colliders the primitive or model brought along.
+            foreach (var proxyCollider in proxy.GetComponentsInChildren<Collider>())
+                Destroy(proxyCollider);
 
             proxy.transform.position += new Vector3(index * 0.03f, 0.02f, -index * 0.02f);
             return proxy;

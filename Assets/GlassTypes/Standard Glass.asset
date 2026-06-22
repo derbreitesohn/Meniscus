@@ -11,10 +11,10 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 422dd48cffdab474897a1cb6770785f0, type: 3}
   m_Name: Standard Glass
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   id: standard
   displayName: Standard Glass
-  modelPrefab: {fileID: 100100000, guid: 359d88fc9e1aa95479ad9455774a4c76, type: 3}
+  modelPrefab: {fileID: 919132149155446097, guid: 359d88fc9e1aa95479ad9455774a4c76, type: 3}
   modelChildName: Standard_Glas
   modelLocalPosition: {x: 0, y: 0, z: 0}
   modelLocalEuler: {x: 0, y: 0, z: 0}

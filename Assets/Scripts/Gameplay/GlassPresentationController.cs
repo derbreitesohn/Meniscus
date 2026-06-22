@@ -25,6 +25,12 @@ namespace Meniscus.Gameplay
         [Tooltip("Hide the anchor's own MeshRenderer (the placeholder cup) while a real glass model is shown.")]
         [SerializeField] bool hidePlaceholderRenderer = true;
 
+        [Tooltip("A real glass already placed in the scene. When the matching type is selected it is just " +
+                 "shown and driven by code (no runtime instantiation); other types still spawn their model.")]
+        [SerializeField] Transform authoredGlass;
+        [Tooltip("Which glass-type id the in-scene authored glass represents.")]
+        [SerializeField] string authoredGlassTypeId = "standard";
+
         [Header("Liquid Auto-Fit")]
         [Tooltip("Measure the spawned glass model's bounds and fit the liquid body to its interior, instead " +
                  "of the glass-type's authored radius/floor (which can't know the real model size).")]
@@ -121,12 +127,29 @@ namespace Meniscus.Gameplay
             activeType = type;
 
             if (activeModel != null)
+            {
                 Destroy(activeModel);
+                activeModel = null;
+            }
 
             Transform glassForFit = null;
 
-            if (type.ModelPrefab != null)
+            // Prefer a glass already authored in the scene for its type: just show it and drive it via code,
+            // instead of spawning a model at runtime. Other types still instantiate their prefab on demand.
+            var useAuthored = authoredGlass != null
+                              && !string.IsNullOrEmpty(authoredGlassTypeId)
+                              && type.Id == authoredGlassTypeId;
+
+            if (useAuthored)
             {
+                authoredGlass.gameObject.SetActive(true);
+                glassForFit = authoredGlass;
+            }
+            else if (type.ModelPrefab != null)
+            {
+                if (authoredGlass != null)
+                    authoredGlass.gameObject.SetActive(false);
+
                 // Instantiating a model slot wired to a non-GameObject sub-asset (e.g. an FBX's Mesh instead
                 // of its GameObject root) throws; that must never bubble out of Start and leave the table
                 // glass-less. On failure, drop back to the placeholder cup instead of crashing.
@@ -162,15 +185,19 @@ namespace Meniscus.Gameplay
                         Destroy(activeModel);
                         activeModel = null;
                     }
+
+                    if (authoredGlass != null)
+                        authoredGlass.gameObject.SetActive(true);
                 }
             }
 
-            // Only hide the placeholder cup once a real model is actually showing, so a missing/empty model
-            // never leaves the table glass-less.
+            // Hide the anchor's own placeholder renderer whenever a real glass (authored or model) is showing,
+            // so a missing/empty model never leaves the table glass-less.
             var placeholder = glassAnchor != null ? glassAnchor.GetComponent<MeshRenderer>() : null;
+            var showingRealGlass = useAuthored || activeModel != null;
 
             if (placeholder != null)
-                placeholder.enabled = !(hidePlaceholderRenderer && activeModel != null);
+                placeholder.enabled = !(hidePlaceholderRenderer && showingRealGlass);
 
             if (waterController != null)
             {

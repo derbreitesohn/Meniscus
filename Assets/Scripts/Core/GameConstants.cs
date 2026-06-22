@@ -7,6 +7,7 @@ namespace Meniscus.Core
         public const int TotalRounds = 3;
         public const int MinCoinsPerActor = 8;
         public const int MaxCoinsPerActor = 12;
+        public const int CoinsPerActor = 10;
         public const int MaxEnemyCoinsPerTurn = 2;
         public const int DeskCapacity = 8;
 
@@ -77,14 +78,9 @@ namespace Meniscus.Core
                 _ => MediumCoinBasePayout
             };
 
-        public static int GetCoinCountForRound(int round)
-        {
-            var clampedRound = Mathf.Clamp(round, 1, TotalRounds);
-            return Mathf.Clamp(
-                MinCoinsPerActor + (clampedRound - 1) * 2,
-                MinCoinsPerActor,
-                MaxCoinsPerActor);
-        }
+        // Each actor gets exactly the same number of coins every round. The per-round parameter is kept so
+        // callers (and a future scaling rule) need not change.
+        public static int GetCoinCountForRound(int round) => CoinsPerActor;
 
         public static Vector3 GetVisualScaleForSize(CoinSize size) =>
             size switch

@@ -68,6 +68,7 @@ namespace Meniscus.Core
         public MatchOutcome LastMatchOutcome => lastMatchOutcome;
         public IReadOnlyList<Coin> PlayerCoins => playerCoins;
         public IReadOnlyList<Coin> EnemyCoins => enemyCoins;
+        public CoinModelLibrary CoinModels => coinModels;
         public GlassManager GlassManager => glassManager;
         public EconomyManager EconomyManager => economyManager;
         public PlayerInventory Inventory => playerInventory;
@@ -391,21 +392,23 @@ namespace Meniscus.Core
 
         void PopulateSceneCoinListsIfEmpty()
         {
-            if (handAuthoredPlayerCoins.Count > 0 || handAuthoredEnemyCoins.Count > 0)
+            // Safety net for a scene whose coin lists were left unwired. In the normal, fully-wired case
+            // both actors already have a usable coin, so skip the scene scan entirely. Otherwise each actor
+            // is filled independently — a wired enemy list never suppresses discovery of an empty player
+            // list — and inactive coins are included so a list still recovers after a previous round
+            // deactivated spare coins.
+            if (CoinPoolBuilder.HasUsableCoin(handAuthoredPlayerCoins) &&
+                CoinPoolBuilder.HasUsableCoin(handAuthoredEnemyCoins))
                 return;
 
-            var sceneCoins = FindObjectsByType<Coin>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            var sceneCoins = FindObjectsByType<Coin>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            CoinPoolBuilder.FillMissingAuthoredCoinLists(handAuthoredPlayerCoins, handAuthoredEnemyCoins, sceneCoins);
 
-            for (var i = 0; i < sceneCoins.Length; i++)
-            {
-                if (sceneCoins[i] == null)
-                    continue;
-
-                if (sceneCoins[i].isPlayerCoin)
-                    handAuthoredPlayerCoins.Add(sceneCoins[i]);
-                else
-                    handAuthoredEnemyCoins.Add(sceneCoins[i]);
-            }
+            // Reaching here means a list was left unwired in the scene. Auto-discovery recovers gracefully,
+            // but surface it so the misconfiguration is fixed rather than silently relied upon.
+            Debug.LogWarning(
+                "[GameManager] A coin list was unwired in the scene; auto-discovered coins as a fallback. " +
+                "Run Tools ▸ Meniscus ▸ Set Up Coin References to wire them explicitly.");
         }
 
         void PopulatePool(TurnActor actor, List<Coin> sourceCoins, List<Coin> targetPool)
@@ -463,7 +466,7 @@ namespace Meniscus.Core
 
         Coin CreateRuntimeCoin(TurnActor actor, int index)
         {
-            var spawnRoot = actor == TurnActor.Player ? playerCoinSpawnRoot : enemyCoinSpawnRoot;
+            var spawnRoot = ResolveSpawnRoot(actor);
             var localPosition = GetFallbackCoinLocalPosition(actor, index);
             var worldPosition = spawnRoot == null ? localPosition : spawnRoot.TransformPoint(localPosition);
             var rotation = Quaternion.identity;
@@ -486,6 +489,20 @@ namespace Meniscus.Core
             }
 
             return coin;
+        }
+
+        Transform ResolveSpawnRoot(TurnActor actor)
+        {
+            var assignedRoot = actor == TurnActor.Player ? playerCoinSpawnRoot : enemyCoinSpawnRoot;
+
+            if (assignedRoot != null)
+                return assignedRoot;
+
+            // No explicit spawn root wired: drop runtime top-up coins under the same container as the
+            // authored coins so they share the table-local origin (authored coins live at container-local
+            // y ~1.09) instead of floating at raw world fallback coordinates.
+            var authored = actor == TurnActor.Player ? handAuthoredPlayerCoins : handAuthoredEnemyCoins;
+            return CoinPoolBuilder.ResolveAuthoredParent(authored);
         }
 
         Vector3 GetFallbackCoinLocalPosition(TurnActor actor, int index)

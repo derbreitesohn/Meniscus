@@ -96,6 +96,25 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
+        public void CreateTransparentLiquidMaterial_RendersAsSolidVolumeNotHollowShell()
+        {
+            // A closed liquid body (cap + walls + bottom) must read as a solid amber column, not a
+            // see-through "cup". Two-sided culling with ZWrite off shows the back/inner faces through
+            // the front, so the body looks hollow. The fix: write depth and cull back faces so only
+            // the nearest front surface shows.
+            var amber = new Color(0.55f, 0.27f, 0.05f, 0.82f);
+            var material = GlassVisualController.CreateTransparentLiquidMaterial("Test Liquid", amber);
+
+            Assert.AreEqual(1f, material.GetFloat("_ZWrite"), "Liquid must write depth so back faces don't show through.");
+            Assert.AreEqual(
+                (float)UnityEngine.Rendering.CullMode.Back,
+                material.GetFloat("_Cull"),
+                "Liquid must cull back faces so the interior walls aren't visible through the front.");
+
+            Object.DestroyImmediate(material);
+        }
+
+        [Test]
         public void RunDownProgress_RisesFromZeroToOneAndClamps()
         {
             Assert.AreEqual(0f, GlassSpillEffect.RunDownProgress(0f, 0.4f), 1e-4f);

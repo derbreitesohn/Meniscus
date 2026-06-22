@@ -31,6 +31,19 @@ namespace Meniscus.UI
             HideShop();
         }
 
+        void Start()
+        {
+            // Seat the diegetic book on the desk from the start of the match so it is a visible prop
+            // during the rounds and is lifted from there when the shop opens, rather than spawning.
+            if (!useDiegeticBookShop)
+                return;
+
+            EnsureBookShop();
+
+            if (bookShop != null)
+                bookShop.PrepareOnDesk(Catalog, this);
+        }
+
         public void Configure(
             Canvas canvas,
             EconomyManager economy,

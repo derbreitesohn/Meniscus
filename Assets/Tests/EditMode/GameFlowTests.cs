@@ -33,12 +33,12 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void GetCoinCountForRound_GivesPlayerAtLeastEightCoinsAndScalesUp()
+        public void GetCoinCountForRound_GivesEachActorTenCoinsEveryRound()
         {
-            Assert.AreEqual(8, GameConstants.GetCoinCountForRound(1));
+            Assert.AreEqual(10, GameConstants.GetCoinCountForRound(1));
             Assert.AreEqual(10, GameConstants.GetCoinCountForRound(2));
-            Assert.AreEqual(12, GameConstants.GetCoinCountForRound(3));
-            Assert.GreaterOrEqual(GameConstants.MinCoinsPerActor, 8);
+            Assert.AreEqual(10, GameConstants.GetCoinCountForRound(3));
+            Assert.AreEqual(10, GameConstants.CoinsPerActor);
         }
 
         [Test]

@@ -13,6 +13,7 @@ namespace Meniscus.Gameplay
     /// telegraphs whether the next pour overflows. On overflow it spawns a
     /// <see cref="GlassSpillEffect"/> that runs down the glass exterior.
     /// </summary>
+    [ExecuteAlways]
     public class GlassVisualController : MonoBehaviour
     {
         [SerializeField] GlassManager glassManager;
@@ -32,6 +33,10 @@ namespace Meniscus.Gameplay
         [SerializeField] float fillBottomLocalY = 0.06f;
         [SerializeField, Range(0.1f, 1f)] float fillBottomRadiusScale = 0.82f;
         [SerializeField, Range(1, 16)] int wallLevels = 5;
+        [Tooltip("Authored liquid material (e.g. Water_Surface.mat). When set it is used directly so the look " +
+                 "is editor-tunable; left empty, a transparent material is built from Liquid Color at runtime.")]
+        [SerializeField] Material liquidMaterial;
+        [Tooltip("Fallback tint used when no Liquid Material is assigned, and for the run-down spill rivulets.")]
         [SerializeField] Color liquidColor = new Color(0.55f, 0.27f, 0.05f, 0.82f);
 
         [Header("Meniscus")]
@@ -81,6 +86,7 @@ namespace Meniscus.Gameplay
         float sloshKick;
         float sloshStartTime;
         Vector2 sloshDirection = Vector2.right;
+        bool needsRebuild;
 
         void OnEnable()
         {
@@ -95,7 +101,11 @@ namespace Meniscus.Gameplay
             currentSurfaceLocalY = stableSurfaceLocalY;
             targetSurfaceLocalY = stableSurfaceLocalY;
 
-            if (glassManager != null)
+            // Lay out the rest pose immediately so the liquid is visible in the editor (not just at runtime).
+            UpdateSurfaceVertices();
+
+            // Game-only wiring: don't hook gameplay events while editing.
+            if (Application.isPlaying && glassManager != null)
             {
                 glassManager.ProbabilityChanged += OnProbabilityChanged;
                 glassManager.DropResolved += OnDropResolved;
@@ -111,15 +121,31 @@ namespace Meniscus.Gameplay
                 glassManager.DropResolved -= OnDropResolved;
             }
 
-            if (waterMesh != null)
-            {
-                Destroy(waterMesh);
-                waterMesh = null;
-            }
+            SafeDestroy(waterMesh);
+            waterMesh = null;
+        }
+
+        // Inspector tweak while editing -> rebuild the rest pose so changes show live (handled in Update,
+        // since OnValidate must not create/destroy objects directly).
+        void OnValidate()
+        {
+            if (!Application.isPlaying)
+                needsRebuild = true;
         }
 
         void Update()
         {
+            if (!Application.isPlaying)
+            {
+                if (needsRebuild || waterMesh == null)
+                {
+                    needsRebuild = false;
+                    RebuildLiquid();
+                }
+
+                return; // edit mode shows a static rest pose; no per-frame animation
+            }
+
             if (waterTransform == null || waterMesh == null)
                 return;
 
@@ -135,6 +161,34 @@ namespace Meniscus.Gameplay
                 spillFlashTimer = Mathf.Max(0f, spillFlashTimer - Time.deltaTime);
 
             UpdateSurfaceVertices();
+        }
+
+        // Rebuild the liquid body from the current serialized parameters and re-lay the rest pose. Used in the
+        // editor so adjusting fields updates the visible mesh.
+        void RebuildLiquid()
+        {
+            if (waterTransform == null)
+                return;
+
+            SafeDestroy(waterMesh);
+            waterMesh = null;
+
+            SetupSurfaceRendererAndMesh();
+            PinWaterTransform();
+            currentSurfaceLocalY = stableSurfaceLocalY;
+            targetSurfaceLocalY = stableSurfaceLocalY;
+            UpdateSurfaceVertices();
+        }
+
+        static void SafeDestroy(Object obj)
+        {
+            if (obj == null)
+                return;
+
+            if (Application.isPlaying)
+                Destroy(obj);
+            else
+                DestroyImmediate(obj);
         }
 
         /// <summary>
@@ -153,17 +207,17 @@ namespace Meniscus.Gameplay
             if (!isActiveAndEnabled || waterTransform == null)
                 return;
 
-            if (waterMesh != null)
-            {
-                Destroy(waterMesh);
-                waterMesh = null;
-            }
+            SafeDestroy(waterMesh);
+            waterMesh = null;
 
             SetupSurfaceRendererAndMesh();
             PinWaterTransform();
 
             currentSurfaceLocalY = stableSurfaceLocalY;
             targetSurfaceLocalY = CalculateWaterSurfaceLocalY(currentRisk, stableSurfaceLocalY, maxRiskSurfaceRise);
+
+            // Reflect the new fit immediately (matters in the editor, where Update doesn't animate).
+            UpdateSurfaceVertices();
         }
 
         void OnProbabilityChanged(float probability)
@@ -199,10 +253,15 @@ namespace Meniscus.Gameplay
 
         void UpdateSurfaceVertices()
         {
-            var t = Time.time;
-            var danger = glassManager == null
-                ? Mathf.Clamp01(currentRisk / GameConstants.MaxOverflowProbability)
-                : Mathf.Clamp01(glassManager.CurrentTrueSpillChance / GameConstants.MaxOverflowProbability);
+            // In the editor (not playing) show a calm, static rest pose so the shape is easy to judge and tweak;
+            // the time-driven motion (ambient/ripple/slosh/dome/spill) only runs at runtime.
+            var playing = Application.isPlaying;
+            var t = playing ? Time.time : 0f;
+            var danger = !playing
+                ? 0f
+                : glassManager == null
+                    ? Mathf.Clamp01(currentRisk / GameConstants.MaxOverflowProbability)
+                    : Mathf.Clamp01(glassManager.CurrentTrueSpillChance / GameConstants.MaxOverflowProbability);
 
             var rippleElapsed = t - rippleStartTime;
             var rippleEnvelope = rippleKick > 0f ? rippleKick * Mathf.Exp(-rippleElapsed * rippleDecay) : 0f;
@@ -247,9 +306,11 @@ namespace Meniscus.Gameplay
                                 * (dangerTrembleAmplitude + dangerWobbleAmplitude) * danger
                             : 0f;
 
-                        var ambient = (Mathf.PerlinNoise(
-                            nx * ambientSpatialScale + t * ambientSpeed,
-                            nz * ambientSpatialScale - t * ambientSpeed) - 0.5f) * ambientAmplitude;
+                        var ambient = playing
+                            ? (Mathf.PerlinNoise(
+                                nx * ambientSpatialScale + t * ambientSpeed,
+                                nz * ambientSpatialScale - t * ambientSpeed) - 0.5f) * ambientAmplitude
+                            : 0f;
 
                         var ripple = rippleEnvelope != 0f
                             ? Mathf.Sin(r * rippleWavelength - rippleElapsed * rippleSpeed)
@@ -298,7 +359,7 @@ namespace Meniscus.Gameplay
             var collider = waterTransform.GetComponent<Collider>();
 
             if (collider != null)
-                Destroy(collider);
+                SafeDestroy(collider);
 
             var meshFilter = waterTransform.GetComponent<MeshFilter>();
 
@@ -312,8 +373,11 @@ namespace Meniscus.Gameplay
             if (meshRenderer == null)
                 meshRenderer = waterTransform.gameObject.AddComponent<MeshRenderer>();
 
-            meshRenderer.sharedMaterial = CreateTransparentLiquidMaterial(
-                "Runtime Whiskey Liquid Material", liquidColor);
+            // Prefer the authored material asset (editor-tunable, no per-play allocation). Only build one in
+            // code when none is assigned — e.g. the fully runtime-created water object.
+            meshRenderer.sharedMaterial = liquidMaterial != null
+                ? liquidMaterial
+                : CreateTransparentLiquidMaterial("Runtime Whiskey Liquid Material", liquidColor);
             meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
             // Vertex heights carry the surface detail, so the authored y-squash must not flatten them.
@@ -384,9 +448,15 @@ namespace Meniscus.Gameplay
             material.SetFloat("_Blend", 0f);
             material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
             material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            material.SetFloat("_ZWrite", 0f);
+
+            // The liquid body is a closed solid (cap + walls + bottom). Rendering it two-sided with
+            // ZWrite off lets the back/inner faces blend through the front, so the amber reads as a
+            // hollow "cup" sitting inside the glass. Writing depth and culling back faces keeps only
+            // the nearest front surface, so it reads as a solid whiskey column.
+            material.SetFloat("_ZWrite", 1f);
+            material.SetFloat("_ZWriteControl", 1f); // URP: 1 = ForceEnabled (don't let auto override it)
+            material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Back);
             material.SetFloat("_Smoothness", 0.9f);
-            material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
             return material;
