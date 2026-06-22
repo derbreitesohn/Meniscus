@@ -10,6 +10,13 @@
 
 ## Global Constraints
 
+- **Line numbers in this plan are indicative only.** A concurrent session rewrote
+  `BookShopView.cs` (+458 lines: select-to-buy ticket, paginated list, animated page-flip)
+  after this plan was written, so cited line ranges have shifted. Every quoted "before"
+  code block was re-verified against the current file and still matches verbatim — make
+  each edit by matching the quoted code, not the line number. Place newly added members
+  sensibly among their peers; exact position does not affect compilation.
+
 - Input: **Input System Package (New) only** (`activeInputHandler: 1`). Use `UnityEngine.InputSystem` (`Mouse.current`); never legacy `Input` / `OnMouse*` messages.
 - Offline compile-check is the documented "before done" bar (full EditMode test runs + visual checks happen in-engine, run by the user). Compile-check commands:
   ```bash
@@ -297,10 +304,24 @@ Add the setter as a public method (e.g. just after `Close()` at `Assets/Scripts/
 
 - [ ] **Step 3: Poll for the click in `Update()`**
 
-Add a call at the top of `Update()`, right after the existing `if (!built) return;` guard (`Assets/Scripts/UI/BookShopView.cs:200-201`):
+Add the call at the top of `Update()`. In the current file the guard is immediately
+followed by `UpdatePageTurn();` — insert the poll between them. Match this exact block:
 
 ```csharp
+            if (!built)
+                return;
+
+            UpdatePageTurn();
+```
+
+and replace it with:
+
+```csharp
+            if (!built)
+                return;
+
             PollBrowseClick();
+            UpdatePageTurn();
 ```
 
 Then add the `PollBrowseClick` method (e.g. just below `Update()`):
