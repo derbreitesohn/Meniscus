@@ -42,7 +42,7 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void EnemyOverflowBeforeFinalRound_EntersShopPhaseThenFinishDrinkStartsNextRound()
+        public void EnemyOverflowBeforeFinalRound_PausesOnRoundWonBannerThenContinueOpensShop()
         {
             var fixture = CreateGameFixture();
 
@@ -52,10 +52,16 @@ namespace Meniscus.Tests.EditMode
             ForceNextEnemyDropToOverflow(fixture);
             fixture.GameManager.ExecuteEnemyDrop(new[] { fixture.GameManager.EnemyCoins[0] });
 
+            // The win pauses on the round-won banner: the shop has not opened yet.
             Assert.AreEqual(1, fixture.GameManager.CurrentRound);
-            Assert.AreEqual(GameState.ShopPhase, fixture.GameManager.CurrentState);
+            Assert.AreEqual(GameState.RoundWon, fixture.GameManager.CurrentState);
             Assert.AreEqual(MatchOutcome.None, fixture.GameManager.LastMatchOutcome);
             Assert.IsFalse(fixture.EndCanvas.enabled);
+
+            // Pressing Continue opens the shop (the book).
+            fixture.GameManager.ContinueAfterRoundWon();
+
+            Assert.AreEqual(GameState.ShopPhase, fixture.GameManager.CurrentState);
 
             fixture.GameManager.FinishShopPhase();
 
@@ -149,8 +155,10 @@ namespace Meniscus.Tests.EditMode
 
             fixture.GameManager.StartMatch();
             WinRoundByEnemyOverflow(fixture);
+            fixture.GameManager.ContinueAfterRoundWon();
             fixture.GameManager.FinishShopPhase();
             WinRoundByEnemyOverflow(fixture);
+            fixture.GameManager.ContinueAfterRoundWon();
             fixture.GameManager.FinishShopPhase();
             WinRoundByEnemyOverflow(fixture);
 

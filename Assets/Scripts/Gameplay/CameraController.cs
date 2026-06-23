@@ -5,16 +5,18 @@ using UnityEngine;
 namespace Meniscus.Gameplay
 {
     /// <summary>
-    /// Frames the table. A smoothed rig holds the resting framing (an authored anchor for the current
-    /// <see cref="CameraState"/> if one exists, otherwise the scene camera's own pose). On top of that
-    /// the camera snaps to a close-up of the glass while a drop resolves, always carries a gentle
-    /// handheld sway, and shakes when the glass spills. (The between-rounds shop no longer moves the
+    /// Frames the table. A smoothed rig holds the resting framing for the current <see cref="CameraState"/>.
+    /// On top of that the camera snaps to a close-up of the glass while a drop resolves, always carries a
+    /// gentle handheld sway, and shakes when the glass spills. (The between-rounds shop no longer moves the
     /// camera — the book lifts itself into a held pose in front of whatever the camera is framing.)
     ///
-    /// Setting angles is meant to be easy: drop an empty GameObject where you want a shot and assign it
-    /// to <see cref="glassCloseUpAnchor"/> (or to the
-    /// <see cref="viewpoints"/> list for the resting shots). With no anchor, the close-up is generated
-    /// procedurally from the side via <see cref="sideAngle"/> / <see cref="pitchAngle"/>.
+    /// Tuning each angle is meant to be easy and live: add a row to <see cref="viewpoints"/>, pick a state,
+    /// and dial in a position / rotation offset from the resting (overview) pose right in the inspector —
+    /// e.g. give <see cref="CameraState.PlayerFocus"/> a downward pitch so the player's turn tips toward the
+    /// table. For pixel-exact shots assign an empty GameObject as the row's anchor instead; that overrides
+    /// the offsets. The base/overview pose is the <see cref="CameraState.TableOverview"/> anchor if one is
+    /// assigned, otherwise the scene camera's own starting pose. The glass close-up is generated procedurally
+    /// from <see cref="sideAngle"/> / <see cref="pitchAngle"/> unless <see cref="glassCloseUpAnchor"/> is set.
     /// </summary>
     [DisallowMultipleComponent]
     public class CameraController : MonoBehaviour
@@ -23,11 +25,23 @@ namespace Meniscus.Gameplay
         public struct CameraViewpoint
         {
             public CameraState state;
+
+            [Tooltip("Optional pixel-exact shot: assign an empty GameObject. If set it fully defines this " +
+                     "angle and the offsets below are ignored.")]
             public Transform anchor;
+
+            [Tooltip("Position offset from the resting/overview pose, in that pose's local space: " +
+                     "+x right, +y up, +z forward (toward the table).")]
+            public Vector3 positionOffset;
+
+            [Tooltip("Rotation offset from the resting pose, in degrees, in the camera's own space: " +
+                     "+x pitches the view DOWN toward the table, +y yaws right, +z rolls.")]
+            public Vector3 rotationOffset;
         }
 
         [SerializeField] Camera targetCamera;
-        [Tooltip("Resting framings. Add a row, pick a state, and assign an empty GameObject as the anchor.")]
+        [Tooltip("Per-state resting framings. Add a row, pick a state, and dial in a position / rotation " +
+                 "offset from the overview pose (or assign an anchor for a pixel-exact shot).")]
         [SerializeField] CameraViewpoint[] viewpoints = Array.Empty<CameraViewpoint>();
         [SerializeField, Min(0f)] float blendSpeed = 5f;
         [SerializeField] CameraState currentState = CameraState.TableOverview;
@@ -45,7 +59,9 @@ namespace Meniscus.Gameplay
         [SerializeField] Transform glassCloseUpAnchor;
         [Tooltip("How high up the glass the close-up aims. 0 = base, 1 = top / rim.")]
         [SerializeField, Range(0f, 1.2f)] float rimHeightFraction = 0.72f;
-        [Tooltip("Degrees around the glass the procedural close-up swings to. 0 = straight on, 90 = full side.")]
+        [Tooltip("Default drop framing: degrees around the glass for the straight-on front close-up. 0 = dead front.")]
+        [SerializeField, Range(-180f, 180f)] float frontAngle = 0f;
+        [Tooltip("Bait / overflow framing: degrees around the glass the close-up swings to. 0 = straight on, 90 = full side.")]
         [SerializeField, Range(-180f, 180f)] float sideAngle = 60f;
         [Tooltip("Degrees the procedural close-up rides above the rim, looking down at the meniscus.")]
         [SerializeField, Range(-30f, 80f)] float pitchAngle = 12f;
@@ -64,10 +80,12 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0f)] float shakeAmplitude = 0.12f;
         [SerializeField, Min(0f)] float shakeDuration = 0.5f;
 
-        Transform activeAnchor;
+        float activeGlassYaw;   // live yaw for the glass close-up: front by default, side to bait / on overflow
         Vector3 rigPosition;
         Quaternion rigRotation = Quaternion.identity;
-        bool rigInitialized;
+        Vector3 basePosition;
+        Quaternion baseRotation = Quaternion.identity;
+        bool baseCaptured;
         float currentPush;
         float shakeTimer;
 
@@ -84,23 +102,12 @@ namespace Meniscus.Gameplay
         {
             if (targetCamera == null)
                 targetCamera = Camera.main;
-
-            activeAnchor = FindAnchor(currentState);
-            SnapToActiveAnchor();
         }
 
         void OnEnable()
         {
             ResolveReferences();
-
-            if (glassManager != null)
-                glassManager.DropResolved += OnDropResolved;
-        }
-
-        void OnDisable()
-        {
-            if (glassManager != null)
-                glassManager.DropResolved -= OnDropResolved;
+            activeGlassYaw = frontAngle;
         }
 
         void LateUpdate()
@@ -125,38 +132,90 @@ namespace Meniscus.Gameplay
         public void SwitchCamera(CameraState newState)
         {
             currentState = newState;
-
-            var anchor = FindAnchor(newState);
-
-            // Keep the previous framing if this state has no authored anchor.
-            if (anchor != null)
-                activeAnchor = anchor;
         }
 
         void UpdateRig(Transform cameraTransform)
         {
-            if (activeAnchor != null)
+            if (!baseCaptured)
             {
-                if (!rigInitialized)
+                // The resting reference pose: an authored TableOverview anchor if present, else wherever
+                // the scene camera starts. Every offset-based viewpoint is measured from here.
+                var overview = FindAnchor(CameraState.TableOverview);
+
+                if (overview != null)
                 {
-                    rigPosition = activeAnchor.position;
-                    rigRotation = activeAnchor.rotation;
-                    rigInitialized = true;
+                    basePosition = overview.position;
+                    baseRotation = overview.rotation;
+                }
+                else
+                {
+                    basePosition = cameraTransform.position;
+                    baseRotation = cameraTransform.rotation;
                 }
 
-                var t = blendSpeed <= 0f ? 1f : 1f - Mathf.Exp(-blendSpeed * Time.deltaTime);
-                rigPosition = Vector3.Lerp(rigPosition, activeAnchor.position, t);
-                rigRotation = Quaternion.Slerp(rigRotation, activeAnchor.rotation, t);
-                return;
+                rigPosition = basePosition;
+                rigRotation = baseRotation;
+                baseCaptured = true;
             }
 
-            // No authored anchor: hold the rig at wherever the scene camera starts.
-            if (!rigInitialized)
+            if (!TryGetRestingPose(out var targetPosition, out var targetRotation))
+                return; // Hold the current rig pose (glass close-ups blend on top of wherever we are).
+
+            var t = blendSpeed <= 0f ? 1f : 1f - Mathf.Exp(-blendSpeed * Time.deltaTime);
+            rigPosition = Vector3.Lerp(rigPosition, targetPosition, t);
+            rigRotation = Quaternion.Slerp(rigRotation, targetRotation, t);
+        }
+
+        bool TryGetRestingPose(out Vector3 position, out Quaternion rotation)
+        {
+            // An assigned anchor is a pixel-exact override and wins outright.
+            var anchor = FindAnchor(currentState);
+
+            if (anchor != null)
             {
-                rigPosition = cameraTransform.position;
-                rigRotation = cameraTransform.rotation;
-                rigInitialized = true;
+                position = anchor.position;
+                rotation = anchor.rotation;
+                return true;
             }
+
+            // Otherwise apply the per-state offset from the base pose. Rotation is post-multiplied so the
+            // offset reads in the camera's own space (+x pitches the view down); position is offset along
+            // the base orientation's axes (+z toward the table).
+            if (TryGetViewpoint(currentState, out var viewpoint))
+            {
+                rotation = baseRotation * Quaternion.Euler(viewpoint.rotationOffset);
+                position = basePosition + baseRotation * viewpoint.positionOffset;
+                return true;
+            }
+
+            // Glass close-ups are framed procedurally on top of the rig (see ApplyFocusFraming); hold the
+            // current resting pose so the push-in / pull-out blends smoothly from wherever we already are.
+            if (currentState == CameraState.GlassZoom || currentState == CameraState.GlassInspect)
+            {
+                position = rigPosition;
+                rotation = rigRotation;
+                return false;
+            }
+
+            // Any unconfigured state simply rests at the base/overview pose.
+            position = basePosition;
+            rotation = baseRotation;
+            return true;
+        }
+
+        bool TryGetViewpoint(CameraState state, out CameraViewpoint viewpoint)
+        {
+            for (var i = 0; i < viewpoints.Length; i++)
+            {
+                if (viewpoints[i].state == state)
+                {
+                    viewpoint = viewpoints[i];
+                    return true;
+                }
+            }
+
+            viewpoint = default;
+            return false;
         }
 
         void ApplyFocusFraming(ref Vector3 position, ref Quaternion rotation)
@@ -225,7 +284,7 @@ namespace Meniscus.Gameplay
                     ? Mathf.Clamp01(glassManager.CurrentTrueSpillChance / GameConstants.MaxOverflowProbability)
                     : 0f;
                 var standoff = subjectRadius * Mathf.Lerp(inspectFraming, rimFraming, danger);
-                var direction = ComputeOrbitDirection(focusPoint, fromPosition, sideAngle, pitchAngle);
+                var direction = ComputeOrbitDirection(focusPoint, fromPosition, activeGlassYaw, pitchAngle);
 
                 focusPosition = focusPoint + direction * standoff;
                 focusRotation = Quaternion.LookRotation((focusPoint - focusPosition).normalized, Vector3.up);
@@ -317,22 +376,19 @@ namespace Meniscus.Gameplay
             position += UnityEngine.Random.insideUnitSphere * (shakeAmplitude * envelope * envelope);
         }
 
-        void OnDropResolved(GlassDropResult result)
+        /// <summary>
+        /// Push into the glass close-up for a drop. <paramref name="fromSide"/> swings to the dramatic side
+        /// angle (used to bait, and always on a real overflow); otherwise it frames the glass straight-on
+        /// from the front. Driven by the drop presentation conductor.
+        /// </summary>
+        public void FocusGlass(bool fromSide)
         {
-            if (result.Overflowed)
-                shakeTimer = shakeDuration;
+            activeGlassYaw = fromSide ? sideAngle : frontAngle;
+            SwitchCamera(CameraState.GlassZoom);
         }
 
-        void SnapToActiveAnchor()
-        {
-            if (targetCamera == null || activeAnchor == null)
-                return;
-
-            targetCamera.transform.SetPositionAndRotation(activeAnchor.position, activeAnchor.rotation);
-            rigPosition = activeAnchor.position;
-            rigRotation = activeAnchor.rotation;
-            rigInitialized = true;
-        }
+        /// <summary>Kick the overflow camera shake. Called at the dramatic spill reveal.</summary>
+        public void Shake() => shakeTimer = shakeDuration;
 
         Transform FindAnchor(CameraState state)
         {

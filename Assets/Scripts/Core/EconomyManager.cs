@@ -20,6 +20,12 @@ namespace Meniscus.Core
         public int CurrentRoundEarnings => currentRoundEarnings;
         public float NextSafeDropPayoutMultiplier => nextSafeDropPayoutMultiplier;
 
+        // The effective payout multiplier (final ÷ raw coin value) the last safe drop earned, plus
+        // whether a multi-coin combo was part of it. Set just before MoneyAwarded fires, so the HUD
+        // can show "×2.4" / "COMBO" on the money pop-up. 1 = no bonus.
+        public float LastSafeDropMultiplier { get; private set; } = 1f;
+        public bool LastSafeDropComboApplied { get; private set; }
+
         public void ResetRoundEarnings()
         {
             currentRoundEarnings = 0;
@@ -57,9 +63,29 @@ namespace Meniscus.Core
                 nextSafeDropPayoutMultiplier = 1f;
             }
 
+            RecordLastSafeDropMultiplier(coins, payout);
             currentRoundEarnings += payout;
             MoneyAwarded?.Invoke(payout, currentRoundEarnings);
             return payout;
+        }
+
+        // Folds greed (risk), combo, and any shop multiplier into one figure — how many times the raw
+        // coin value the player actually banked — for the money pop-up to celebrate.
+        void RecordLastSafeDropMultiplier(IReadOnlyList<Coin> coins, int payout)
+        {
+            var baseTotal = 0;
+
+            if (coins != null)
+            {
+                for (var i = 0; i < coins.Count; i++)
+                {
+                    if (coins[i] != null)
+                        baseTotal += coins[i].basePayout;
+                }
+            }
+
+            LastSafeDropMultiplier = baseTotal > 0 ? (float)payout / baseTotal : 1f;
+            LastSafeDropComboApplied = (coins?.Count ?? 0) > 1;
         }
 
         public void QueueNextSafeDropPayoutMultiplier(float multiplier)

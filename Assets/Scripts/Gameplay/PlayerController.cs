@@ -16,6 +16,9 @@ namespace Meniscus.Gameplay
 
         readonly List<Coin> selectedCoins = new();
 
+        /// <summary>True when the player has coins lifted/selected, ready to pour.</summary>
+        public bool HasSelectedCoins => selectedCoins.Count > 0;
+
         void OnEnable()
         {
             ResolveReferences();
@@ -41,6 +44,12 @@ namespace Meniscus.Gameplay
 
             if (!mouse.leftButton.wasPressedThisFrame)
                 return;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // DEV: swallow clicks that land on the dev settings overlay. Remove with Assets/Scripts/Dev.
+            if (Meniscus.Dev.DevSettingsPanel.IsPointerOverPanel)
+                return;
+#endif
 
             ResolveReferences();
 
@@ -103,6 +112,12 @@ namespace Meniscus.Gameplay
             selectedCoins.Add(coin);
             coin.SetSelected(true);
         }
+
+        /// <summary>
+        /// Pours the player's selected coins. The shared desk USE button calls this, and clicking the
+        /// glass still routes here too. No-op when nothing is selected.
+        /// </summary>
+        public void CommitSelection() => SubmitSelectedCoins();
 
         void SubmitSelectedCoins()
         {

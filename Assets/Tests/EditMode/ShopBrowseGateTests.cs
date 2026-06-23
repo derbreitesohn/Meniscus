@@ -46,8 +46,9 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void BrowsingAllowed_InShopPhaseOrGameOver_IsFalse()
+        public void BrowsingAllowed_InRoundWonShopPhaseOrGameOver_IsFalse()
         {
+            Assert.IsFalse(ShopManager.BrowsingAllowed(GameState.RoundWon));
             Assert.IsFalse(ShopManager.BrowsingAllowed(GameState.ShopPhase));
             Assert.IsFalse(ShopManager.BrowsingAllowed(GameState.GameOver));
         }

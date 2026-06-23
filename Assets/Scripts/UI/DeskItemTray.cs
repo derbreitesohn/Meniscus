@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Meniscus.Core;
+using Meniscus.Gameplay;
 using Meniscus.Items;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -20,6 +21,7 @@ namespace Meniscus.UI
         [SerializeField] Transform deskItemsAnchor;
         [SerializeField] string deskObjectName = "Saloon Table";
         [SerializeField] Camera worldCamera;
+        [SerializeField] PlayerController playerController;
         [SerializeField, Min(0f)] float clickRaycastDistance = 100f;
 
         [Tooltip("Pre-authored desk item box prefab (built by Tools > Meniscus > Author Desk Item Box " +
@@ -33,6 +35,7 @@ namespace Meniscus.UI
 
         readonly List<DeskItemBox> boxes = new();
         DeskItemBox selected;
+        DeskUseButton useButton;
 
         bool subscribedManager;
         bool subscribedInventory;
@@ -59,9 +62,13 @@ namespace Meniscus.UI
         // project's input backend — same reason the book polls its own raycast).
         void Update()
         {
+            // Keep the shared USE button bright when there's something to commit (a held item or coins).
+            if (useButton != null)
+                useButton.SetReady(selected != null || (playerController != null && playerController.HasSelectedCoins));
+
             var mouse = Mouse.current;
 
-            if (mouse == null || !mouse.leftButton.wasPressedThisFrame || boxes.Count == 0)
+            if (mouse == null || !mouse.leftButton.wasPressedThisFrame)
                 return;
 
             // Don't let clicks fall through the book menu (or any uGUI) onto a box behind it.
@@ -78,6 +85,15 @@ namespace Meniscus.UI
 
             if (!Physics.Raycast(ray, out var hit, clickRaycastDistance))
                 return;
+
+            // The shared USE button commits the whole selection (item, then coins).
+            var pressedUseButton = hit.collider.GetComponentInParent<DeskUseButton>();
+            if (pressedUseButton != null)
+            {
+                pressedUseButton.PlayPress();
+                CommitSelection();
+                return;
+            }
 
             var relay = hit.collider.GetComponentInParent<DeskItemTileRelay>();
             relay?.Trigger();
@@ -126,6 +142,11 @@ namespace Meniscus.UI
             // Leaving the player's turn cancels any pending selection (mirrors PlayerController).
             if (state != GameState.PlayerTurn)
                 Deselect();
+
+            // The shared USE button is only live on the player's turn (built on demand so it appears the
+            // first time it's the player's turn, even before the first inventory rebuild).
+            EnsureUseButton();
+            useButton.gameObject.SetActive(state == GameState.PlayerTurn);
         }
 
         public void Rebuild()
@@ -136,6 +157,7 @@ namespace Meniscus.UI
                 return;
 
             PositionTrayOnDesk();
+            EnsureUseButton();
 
             var contents = inventory.Contents();
 
@@ -213,8 +235,15 @@ namespace Meniscus.UI
 
         public void OnBoxClicked(DeskItemBox box)
         {
-            if (box == null || selected == box)
+            if (box == null)
                 return;
+
+            // Click a raised box again to set it back down.
+            if (selected == box)
+            {
+                Deselect();
+                return;
+            }
 
             Deselect();
             selected = box;
@@ -232,6 +261,24 @@ namespace Meniscus.UI
                 Deselect();         // box may already be gone (stack emptied); Deselect is null-safe
             else
                 box.FlashUnavailable();   // not the player's turn — keep selected, show the cue
+        }
+
+        /// <summary>
+        /// Commits the player's whole selection in one press (the shared desk USE button): apply the
+        /// selected item, then pour the selected coins. Both are gated to the player's turn inside the
+        /// manager, so an off-turn press just shows the unavailable cue.
+        /// </summary>
+        public void CommitSelection()
+        {
+            if (selected != null && gameManager != null)
+            {
+                if (gameManager.TryUseItem(selected.Item))
+                    Deselect();              // stack may have emptied; Deselect is null-safe
+                else
+                    selected.FlashUnavailable();
+            }
+
+            playerController?.CommitSelection();
         }
 
         public void OnCancelClicked(DeskItemBox box)
@@ -279,6 +326,17 @@ namespace Meniscus.UI
         }
 
         // --- Placement (mirrors BookShopView's anchor -> own-transform -> desk-bounds fallback) ---
+
+        // Build the single shared USE control once, parked in the tray's clear centre gap; visible only
+        // on the player's turn.
+        void EnsureUseButton()
+        {
+            if (useButton != null)
+                return;
+
+            useButton = DeskItemTrayBuilder.BuildUseButton(transform);
+            useButton.gameObject.SetActive(gameManager != null && gameManager.CurrentState == GameState.PlayerTurn);
+        }
 
         void PositionTrayOnDesk()
         {
@@ -356,6 +414,9 @@ namespace Meniscus.UI
 
             if (inventory == null)
                 inventory = FindAnyObjectByType<PlayerInventory>();
+
+            if (playerController == null)
+                playerController = FindAnyObjectByType<PlayerController>();
         }
     }
 }

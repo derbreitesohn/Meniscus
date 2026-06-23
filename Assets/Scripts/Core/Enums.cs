@@ -14,6 +14,7 @@ namespace Meniscus.Core
         EnemyTurn,
         Resolution,
         RestockPhase,
+        RoundWon,
         ShopPhase,
         GameOver
     }

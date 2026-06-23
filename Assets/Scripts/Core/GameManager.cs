@@ -16,8 +16,7 @@ namespace Meniscus.Core
         [Header("Lifecycle")]
         [SerializeField] bool autoStart = true;
         [SerializeField] bool shopBetweenRoundsEnabled = true;
-        [SerializeField] float endScreenDelay = 1.5f; 
-        [SerializeField] float resolveDelayAfterDrop = 1.0f;   // ~ dropAnimationSeconds (coin flight time)
+        [SerializeField] float endScreenDelay = 1.5f;
 
 
         [Header("Managers")]
@@ -27,6 +26,8 @@ namespace Meniscus.Core
         [SerializeField] CameraController cameraController;
         [SerializeField] ShopManager shopManager;
         [SerializeField] EndScreenManager endScreenManager;
+        [SerializeField] RoundWonBanner roundWonBanner;
+        [SerializeField] RoundIntroCard roundIntroCard;
         [SerializeField] CoinDropPresentationController dropPresentationController;
         [SerializeField] SaloonHudController saloonHudController;
         [SerializeField] MoneyHudWidget moneyHudWidget;
@@ -47,6 +48,15 @@ namespace Meniscus.Core
         [SerializeField] Vector3 enemyFallbackStart = new(-0.62f, 1.09f, 0.88f);
         [SerializeField] Vector3 coinSpacing = new(0.38f, 0f, 0f);
         [SerializeField] Vector3 primitiveCoinScale = new(0.42f, 0.05f, 0.42f);
+
+        [Header("Coin Row Layout")]
+        [Tooltip("Each round the coins are re-rolled (size and count), so they are re-packed into one compact, " +
+                 "centred row after configuration. Gap is the world spacing between neighbouring coins; Y is " +
+                 "the table-resting height; the two Z values place each actor's row (container-local).")]
+        [SerializeField, Min(0f)] float coinRowGap = 0.015f;
+        [SerializeField] float coinRowLocalY = 1.09f;
+        [SerializeField] float coinRowLocalZPlayer = -0.78f;
+        [SerializeField] float coinRowLocalZEnemy = 1.12f;
 
         readonly List<Coin> playerCoins = new();
         readonly List<Coin> enemyCoins = new();
@@ -98,6 +108,8 @@ namespace Meniscus.Core
             playerInventory?.Clear();
             shopManager?.HideShop();
             endScreenManager?.Hide();
+            roundWonBanner?.Hide();
+            roundIntroCard?.Hide();
             StartRound();
         }
 
@@ -117,6 +129,7 @@ namespace Meniscus.Core
             economyManager?.ResetRoundEarnings();
             GenerateRoundCoinPools();
             RoundStarted?.Invoke(currentRound);
+            roundIntroCard?.Show(currentRound, GameConstants.TotalRounds);
 
             BeginPlayerTurn();
         }
@@ -194,31 +207,43 @@ namespace Meniscus.Core
             BeginEnemyTurn();
         }
 
-       void ResolveDrop(TurnActor actor, IReadOnlyList<Coin> coins)
+        void ResolveDrop(TurnActor actor, IReadOnlyList<Coin> coins)
         {
-            cameraController?.SwitchCamera(CameraState.GlassZoom);
             TransitionTo(GameState.Resolution);
-            DropCommitted?.Invoke(actor, coins);   
 
+            // The outcome (accumulated risk + RNG roll) is decided up front; the presentation stages every
+            // visual/audio beat so the spill reveal lands at the dramatic moment, not the instant of commit.
             var result = glassManager != null
                 ? glassManager.DropCoins(coins, actor)
                 : new GlassDropResult(actor, 0f, 0f, 0f, 0f, false, coins.Count);
 
-            MarkCoinsSpent(actor, coins);          
+            DropCommitted?.Invoke(actor, coins);
 
-            StartCoroutine(ResolveDropAfterAnimation(result, coins));
+            // In play mode the drop presentation conducts the whole sequence (close book, camera framing,
+            // pick up, hold over the water, plunge, suspense, overflow reveal) and calls back when it
+            // finishes, so the turn resolves on the reveal rather than a fixed timer. PlayDropSequence clones
+            // the coin proxies synchronously, so it is safe to hide the source coins right after. Without a
+            // presentation (or in edit-mode tests) the outcome resolves immediately.
+            if (Application.isPlaying && dropPresentationController != null)
+            {
+                dropPresentationController.PlayDropSequence(actor, coins, result, () => FinishDrop(result, coins));
+                MarkCoinsSpent(actor, coins);
+            }
+            else
+            {
+                MarkCoinsSpent(actor, coins);
+                FinishDrop(result, coins);
+            }
         }
 
-        IEnumerator ResolveDropAfterAnimation(GlassDropResult result, IReadOnlyList<Coin> coins)
+        void FinishDrop(GlassDropResult result, IReadOnlyList<Coin> coins)
         {
-            yield return new WaitForSeconds(resolveDelayAfterDrop); 
-
-            DropResolved?.Invoke(result);          
+            DropResolved?.Invoke(result);
 
             if (result.Overflowed)
             {
                 ResolveOverflow(result);
-                yield break;
+                return;
             }
 
             ResolveSafeDrop(result, coins);
@@ -321,19 +346,44 @@ namespace Meniscus.Core
 
         void CompleteWonRound(string reason)
         {
+            // The final round wraps straight into the match end screen (which already reads "YOU WON").
             if (currentRound >= GameConstants.TotalRounds)
             {
                 EnterGameOver(reason, MatchOutcome.PlayerWon);
                 return;
             }
 
-            if (shopBetweenRoundsEnabled)
+            // Mid-match wins pause on a "round won" banner; the shop (or next round) only begins once
+            // the player presses Continue via ContinueAfterRoundWon.
+            EnterRoundWon(reason);
+        }
+
+        void EnterRoundWon(string reason)
+        {
+            TransitionTo(GameState.RoundWon);
+            cameraController?.SwitchCamera(CameraState.TableOverview);
+
+            var bankedCash = economyManager == null ? 0 : economyManager.PlayerTotalBankedCash;
+            roundWonBanner?.Show(
+                "ROUND WON",
+                $"{reason}\nBank: ${bankedCash}",
+                ContinueAfterRoundWon);
+        }
+
+        public void ContinueAfterRoundWon()
+        {
+            if (currentState != GameState.RoundWon)
             {
-                EnterShopPhase();
+                Debug.LogWarning($"[GameManager] ContinueAfterRoundWon ignored while state={currentState}.");
                 return;
             }
 
-            StartRound();
+            roundWonBanner?.Hide();
+
+            if (shopBetweenRoundsEnabled)
+                EnterShopPhase();
+            else
+                StartRound();
         }
 
         void EnterShopPhase()
@@ -383,6 +433,11 @@ namespace Meniscus.Core
 
             EnsurePoolHasTargetCoinCount(TurnActor.Player, playerCoins);
             EnsurePoolHasTargetCoinCount(TurnActor.Enemy, enemyCoins);
+
+            // Coins were just (re)sized to this round's rolled sizes, so the authored row no longer fits;
+            // re-pack each actor's active coins edge-to-edge into one compact, centred row.
+            ArrangeCoinRow(TurnActor.Player, playerCoins);
+            ArrangeCoinRow(TurnActor.Enemy, enemyCoins);
 
             if (playerCoins.Count == 0)
                 Debug.LogWarning("[GameManager] Player coin pool is empty after generation.");
@@ -504,6 +559,50 @@ namespace Meniscus.Core
             // y ~1.09) instead of floating at raw world fallback coordinates.
             var authored = actor == TurnActor.Player ? handAuthoredPlayerCoins : handAuthoredEnemyCoins;
             return CoinPoolBuilder.ResolveAuthoredParent(authored);
+        }
+
+        /// <summary>
+        /// Packs an actor's active coins into a single straight row, centred on the container origin and
+        /// resting on the table. Coins are ordered small→large and spaced edge-to-edge from their actual
+        /// (post-configure) footprint plus a fixed gap, so whatever sizes this round rolled, the coins sit
+        /// flush next to each other with no overlaps and no holes. Runs every round because both the sizes
+        /// and the active count change. Each coin's resting position is recorded so selection lifts/returns
+        /// to the new spot rather than the stale authored slot.
+        /// </summary>
+        void ArrangeCoinRow(TurnActor actor, List<Coin> pool)
+        {
+            if (pool == null || pool.Count == 0)
+                return;
+
+            var ordered = new List<Coin>(pool);
+            ordered.Sort((a, b) =>
+            {
+                var bySize = ((int)a.size).CompareTo((int)b.size);
+                return bySize != 0 ? bySize : string.CompareOrdinal(a.name, b.name);
+            });
+
+            var rowZ = actor == TurnActor.Player ? coinRowLocalZPlayer : coinRowLocalZEnemy;
+
+            var totalWidth = coinRowGap * (ordered.Count - 1);
+
+            for (var i = 0; i < ordered.Count; i++)
+                totalWidth += CoinFootprintWidth(ordered[i]);
+
+            var x = -totalWidth * 0.5f;
+
+            for (var i = 0; i < ordered.Count; i++)
+            {
+                var width = CoinFootprintWidth(ordered[i]);
+                x += width * 0.5f;
+                ordered[i].SetRestingLocalPosition(new Vector3(x, coinRowLocalY, rowZ));
+                x += width * 0.5f + coinRowGap;
+            }
+        }
+
+        static float CoinFootprintWidth(Coin coin)
+        {
+            var scale = coin.transform.localScale;
+            return Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
         }
 
         Vector3 GetFallbackCoinLocalPosition(TurnActor actor, int index)
@@ -670,6 +769,9 @@ namespace Meniscus.Core
             if (cameraController == null)
                 cameraController = FindAnyObjectByType<CameraController>();
 
+            if (dropPresentationController == null)
+                dropPresentationController = FindAnyObjectByType<CoinDropPresentationController>();
+
             if (shopManager == null)
                 shopManager = FindAnyObjectByType<ShopManager>();
 
@@ -684,6 +786,23 @@ namespace Meniscus.Core
 
             if (endScreenManager == null)
                 endScreenManager = EndScreenManager.CreateRuntimeFallback();
+
+            if (roundWonBanner == null)
+                roundWonBanner = FindAnyObjectByType<RoundWonBanner>();
+
+            // Build the runtime fallback only in play mode: the banner is a play-mode-only gate, and
+            // EnterRoundWon never auto-continues, so EditMode tests drive ContinueAfterRoundWon directly
+            // without leaking a banner GameObject into the shared test scene.
+            if (roundWonBanner == null && Application.isPlaying)
+                roundWonBanner = RoundWonBanner.CreateRuntimeFallback();
+
+            if (roundIntroCard == null)
+                roundIntroCard = FindAnyObjectByType<RoundIntroCard>();
+
+            // Play-mode-only, same as the round-won banner: the card is pure presentation, so EditMode
+            // tests (no Update/coroutine tick) never spawn a stray canvas into the shared test scene.
+            if (roundIntroCard == null && Application.isPlaying)
+                roundIntroCard = RoundIntroCard.CreateRuntimeFallback();
 
             if (dropPresentationController == null)
                 dropPresentationController = FindAnyObjectByType<CoinDropPresentationController>();

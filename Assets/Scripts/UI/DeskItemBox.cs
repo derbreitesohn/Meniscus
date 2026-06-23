@@ -1,4 +1,5 @@
 using System.Collections;
+using Meniscus.Gameplay;
 using Meniscus.Items;
 using UnityEngine;
 
@@ -18,7 +19,12 @@ namespace Meniscus.UI
     [DisallowMultipleComponent]
     public class DeskItemBox : MonoBehaviour
     {
-        const float RaiseHeight = 0.02f;
+        // How far a selected box lifts above its row slot. Sits just above the coin's own selection
+        // lift so a held item reads as clearly "picked up", not nudged.
+        const float RaiseHeight = 0.14f;
+        // Exponential ease rate toward the raised/rest height; higher = snappier. The lift glides in
+        // Update instead of popping.
+        const float RaiseLerpSpeed = 14f;
         const float FlashSeconds = 0.3f;
 
         [SerializeField] TextMesh label;
@@ -30,6 +36,7 @@ namespace Meniscus.UI
         DeskItemTray tray;
         Vector3 restLocalPos;
         Coroutine flash;
+        SelectionGlow glow;
 
         public ItemDefinition Item { get; private set; }
         public int Count { get; private set; }
@@ -74,21 +81,54 @@ namespace Meniscus.UI
                 label.text = $"{Item.DisplayName.ToUpperInvariant()}\nx{count}";
         }
 
+        // The slot the box eases toward: its row position, lifted by RaiseHeight while selected.
+        Vector3 TargetLocalPos => IsSelected ? restLocalPos + Vector3.up * RaiseHeight : restLocalPos;
+
         /// <summary>Sets the box's resting local position (its row slot); preserves the raised offset.</summary>
         public void SetRestPosition(Vector3 localPos)
         {
             restLocalPos = localPos;
-            transform.localPosition = IsSelected ? localPos + Vector3.up * RaiseHeight : localPos;
+            // Snap to the slot: this is a structural (re)placement, not a selection change, so it should
+            // not slide in from a stale position.
+            transform.localPosition = TargetLocalPos;
         }
 
         public void SetSelected(bool selected)
         {
             IsSelected = selected;
 
-            if (useTile != null) useTile.SetActive(selected);
-            if (cancelTile != null) cancelTile.SetActive(selected);
+            // The shared desk USE button replaces per-box Use/Cancel; keep any tiles a prefab still
+            // carries hidden, and show the lift + glow instead.
+            if (useTile != null) useTile.SetActive(false);
+            if (cancelTile != null) cancelTile.SetActive(false);
 
-            transform.localPosition = selected ? restLocalPos + Vector3.up * RaiseHeight : restLocalPos;
+            // In play mode Update eases the lift for a smooth pick-up; outside play mode (edit-mode
+            // tests, no Update tick) set the height immediately so the box is positioned correctly.
+            if (!Application.isPlaying)
+                transform.localPosition = TargetLocalPos;
+
+            EnsureGlow();
+            glow?.SetActive(selected);
+        }
+
+        void Update()
+        {
+            // Ease toward the selected/rest height. Unscaled so the lift still glides during the
+            // slow-motion verdict, matching the selection glow's pulse.
+            var t = 1f - Mathf.Exp(-RaiseLerpSpeed * Time.unscaledDeltaTime);
+            transform.localPosition = Vector3.Lerp(transform.localPosition, TargetLocalPos, t);
+        }
+
+        // The glow is a standalone follower object built on first use (see SelectionGlow), so the box's
+        // own transform never distorts it.
+        void EnsureGlow()
+        {
+            if (glow == null)
+                glow = SelectionGlow.Attach(
+                    transform,
+                    DeskItemTrayBuilder.BoxSize * 1.45f,
+                    new Color(1f, 0.82f, 0.35f, 1f),
+                    outline: true);
         }
 
         /// <summary>Brief red blink when Use is pressed off-turn (placeholder "not your turn" cue).</summary>

@@ -10,8 +10,10 @@ namespace Meniscus.Gameplay
     /// wall visible through the transparent glass, and a bottom. Fill height is baked into the mesh
     /// vertices — not a moving transform — so the whole amber column visibly grows with overflow
     /// risk. The dome is driven by the same spill chance the camera and HUD use, so the liquid
-    /// telegraphs whether the next pour overflows. On overflow it spawns a
-    /// <see cref="GlassSpillEffect"/> that runs down the glass exterior.
+    /// telegraphs whether the next pour overflows. As overflow nears the whiskey also deepens from
+    /// its near-clear calm state into a hot, throbbing amber — a colour tell pushed through a
+    /// <see cref="MaterialPropertyBlock"/> so the authored material is never mutated. On overflow it
+    /// spawns a <see cref="GlassSpillEffect"/> that runs down the glass exterior.
     /// </summary>
     [ExecuteAlways]
     public class GlassVisualController : MonoBehaviour
@@ -39,9 +41,23 @@ namespace Meniscus.Gameplay
         [Tooltip("Fallback tint used when no Liquid Material is assigned, and for the run-down spill rivulets.")]
         [SerializeField] Color liquidColor = new Color(0.55f, 0.27f, 0.05f, 0.82f);
 
+        [Header("Danger Tint")]
+        [Tooltip("Hot, saturated colour the whiskey shifts toward as overflow nears. Pushed through a " +
+                 "MaterialPropertyBlock, so the authored liquid material is never edited at runtime.")]
+        [SerializeField] Color dangerTint = new Color(0.92f, 0.30f, 0.05f, 1f);
+        [Tooltip("Surface opacity at full danger. The calm glass keeps its authored (near-clear) alpha; as " +
+                 "overflow nears the whiskey deepens toward this, so a brimming glass reads as a heavy amber.")]
+        [SerializeField, Range(0f, 1f)] float dangerAlpha = 0.82f;
+        [Tooltip("Danger fraction below which the liquid keeps its calm colour. The hot tint ramps in above this.")]
+        [SerializeField, Range(0f, 0.95f)] float dangerTintOnset = 0.2f;
+        [Tooltip("Throb speed of the hot tint when the glass is near overflow.")]
+        [SerializeField, Min(0f)] float dangerPulseSpeed = 8f;
+        [Tooltip("How hard the hot tint throbs at full danger (0 = steady glow, 1 = strong pulse).")]
+        [SerializeField, Range(0f, 1f)] float dangerPulseStrength = 0.35f;
+
         [Header("Meniscus")]
-        [SerializeField] float meniscusRimClimb = 0.012f;
-        [SerializeField, Range(0f, 0.99f)] float meniscusRimStart = 0.62f;
+        [SerializeField] float meniscusRimClimb = 0.05f;
+        [SerializeField, Range(0f, 0.99f)] float meniscusRimStart = 0.5f;
         [SerializeField] float dangerDomeHeight = 0.05f;
         [SerializeField] float dangerTrembleAmplitude = 0.006f;
 
@@ -49,13 +65,13 @@ namespace Meniscus.Gameplay
         [SerializeField] float ambientAmplitude = 0.0035f;
         [SerializeField] float ambientSpatialScale = 2.4f;
         [SerializeField] float ambientSpeed = 0.35f;
-        [SerializeField] float rippleAmplitude = 0.04f;
+        [SerializeField] float rippleAmplitude = 0.035f;
         [SerializeField] float rippleWavelength = 22f;
-        [SerializeField] float rippleSpeed = 8f;
-        [SerializeField] float rippleDecay = 1.6f;
-        [SerializeField] float sloshAmplitude = 0.02f;
-        [SerializeField] float sloshFrequency = 7.5f;
-        [SerializeField] float sloshDecay = 1.8f;
+        [SerializeField] float rippleSpeed = 9f;
+        [SerializeField] float rippleDecay = 1.9f;
+        [SerializeField] float sloshAmplitude = 0.035f;
+        [SerializeField] float sloshFrequency = 9.5f;
+        [SerializeField] float sloshDecay = 1.3f;
 
         [Header("Overspill")]
         [SerializeField, Range(1, 12)] int spillRivuletCount = 4;
@@ -91,6 +107,12 @@ namespace Meniscus.Gameplay
         Vector2 sloshDirection = Vector2.right;
         bool needsRebuild;
 
+        MeshRenderer waterRenderer;
+        MaterialPropertyBlock liquidMpb;
+        Color calmBaseColor = new Color(0.55f, 0.27f, 0.05f, 0f);
+        static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        static readonly int ColorId = Shader.PropertyToID("_Color");
+
         /// <summary>Local-space height of the calm liquid surface (top of the whiskey column).</summary>
         public float StableSurfaceLocalY => stableSurfaceLocalY;
 
@@ -119,11 +141,12 @@ namespace Meniscus.Gameplay
             // Lay out the rest pose immediately so the liquid is visible in the editor (not just at runtime).
             UpdateSurfaceVertices();
 
-            // Game-only wiring: don't hook gameplay events while editing.
+            // Game-only wiring: don't hook gameplay events while editing. The surface-rise telegraph follows
+            // ProbabilityChanged; the reactive beats (ripple/slosh/spill) are driven explicitly by the drop
+            // presentation conductor so they fire when the coin actually hits the water, not at commit time.
             if (Application.isPlaying && glassManager != null)
             {
                 glassManager.ProbabilityChanged += OnProbabilityChanged;
-                glassManager.DropResolved += OnDropResolved;
                 OnProbabilityChanged(glassManager.CurrentOverflowProbability);
             }
         }
@@ -131,10 +154,7 @@ namespace Meniscus.Gameplay
         void OnDisable()
         {
             if (glassManager != null)
-            {
                 glassManager.ProbabilityChanged -= OnProbabilityChanged;
-                glassManager.DropResolved -= OnDropResolved;
-            }
 
             SafeDestroy(waterMesh);
             waterMesh = null;
@@ -176,6 +196,7 @@ namespace Meniscus.Gameplay
                 spillFlashTimer = Mathf.Max(0f, spillFlashTimer - Time.deltaTime);
 
             UpdateSurfaceVertices();
+            ApplyDangerTint(CurrentDangerNormalized());
         }
 
         // Rebuild the liquid body from the current serialized parameters and re-lay the rest pose. Used in the
@@ -244,26 +265,17 @@ namespace Meniscus.Gameplay
                 currentSurfaceLocalY = targetSurfaceLocalY;
         }
 
-        void OnDropResolved(GlassDropResult result)
+        /// <summary>
+        /// Overflow reveal: flash the surface, dip the level, run the spill rivulets down the glass and play
+        /// the spill sound. Called by the drop presentation conductor at the dramatic reveal beat (after the
+        /// suspense), not the instant coins are committed.
+        /// </summary>
+        public void PlaySpill()
         {
-            KickRipple(result.Overflowed ? 1.6f : 1f);
-            KickSlosh(result.Overflowed ? 1.5f : 1f);
-
-            if (result.Overflowed)
-            {
-                spillFlashTimer = 1f;
-                currentSurfaceLocalY = Mathf.Max(fillBottomLocalY, currentSurfaceLocalY - spillSurfaceDip);
-                SpawnSpillEffect();
-                waterSpill?.Post(gameObject);
-                return;
-            }
-
-            var trueSpillChance = glassManager == null
-                ? result.TrueSpillChance
-                : glassManager.CurrentTrueSpillChance;
-
-            if (trueSpillChance > 0f)
-                spillFlashTimer = 0.25f;
+            spillFlashTimer = 1f;
+            currentSurfaceLocalY = Mathf.Max(fillBottomLocalY, currentSurfaceLocalY - spillSurfaceDip);
+            SpawnSpillEffect();
+            waterSpill?.Post(gameObject);
         }
 
         void UpdateSurfaceVertices()
@@ -358,13 +370,69 @@ namespace Meniscus.Gameplay
             rippleStartTime = Time.time;
         }
 
-        void KickSlosh(float strength)
+        public void KickSlosh(float strength)
         {
             sloshKick = sloshAmplitude * Mathf.Max(0f, strength);
             sloshStartTime = Time.time;
 
             var angle = Random.Range(0f, Mathf.PI * 2f);
             sloshDirection = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+        }
+
+        // Danger normalised 0..1. Unlike the dome/tremble (which scale against the fill meter and so
+        // top out around half), the colour tell scales against the spill-chance ceiling, so it spans
+        // its full range as the real overflow odds climb to the asymptote.
+        float CurrentDangerNormalized()
+        {
+            if (!Application.isPlaying)
+                return 0f;
+
+            return glassManager == null
+                ? Mathf.Clamp01(currentRisk / GameConstants.MaxOverflowProbability)
+                : Mathf.Clamp01(glassManager.CurrentTrueSpillChance / GameConstants.MaxSpillChance);
+        }
+
+        void CaptureCalmBaseColor()
+        {
+            var material = waterRenderer != null ? waterRenderer.sharedMaterial : null;
+
+            if (material == null)
+                return;
+
+            if (material.HasProperty(BaseColorId))
+                calmBaseColor = material.GetColor(BaseColorId);
+            else if (material.HasProperty(ColorId))
+                calmBaseColor = material.GetColor(ColorId);
+            else
+                calmBaseColor = liquidColor;
+        }
+
+        // Shift the whiskey from its authored calm colour toward the hot danger tint as overflow nears,
+        // raising opacity (the calm glass is near-clear) and throbbing near the brim. Driven entirely
+        // through a MaterialPropertyBlock so the shared authored material is never mutated.
+        void ApplyDangerTint(float danger01)
+        {
+            if (waterRenderer == null)
+                return;
+
+            var tintT = dangerTintOnset >= 1f
+                ? 0f
+                : Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((danger01 - dangerTintOnset) / (1f - dangerTintOnset)));
+
+            // Throb only once in the danger band, and only at runtime (the editor shows a steady rest pose).
+            var pulse = Application.isPlaying && tintT > 0f
+                ? 1f + dangerPulseStrength * tintT * Mathf.Sin(Time.time * dangerPulseSpeed)
+                : 1f;
+
+            var rgb = Color.Lerp(calmBaseColor, dangerTint, tintT);
+            var alpha = Mathf.Clamp01(Mathf.Lerp(calmBaseColor.a, dangerAlpha, tintT) * pulse);
+            var tinted = new Color(rgb.r, rgb.g, rgb.b, alpha);
+
+            liquidMpb ??= new MaterialPropertyBlock();
+            waterRenderer.GetPropertyBlock(liquidMpb);
+            liquidMpb.SetColor(BaseColorId, tinted);
+            liquidMpb.SetColor(ColorId, tinted);
+            waterRenderer.SetPropertyBlock(liquidMpb);
         }
 
         void SetupSurfaceRendererAndMesh()
@@ -397,6 +465,12 @@ namespace Meniscus.Gameplay
 
             // Vertex heights carry the surface detail, so the authored y-squash must not flatten them.
             waterTransform.localScale = Vector3.one;
+
+            // Cache the renderer and the authored calm colour, then lay down the calm tint so the rest
+            // pose matches the material exactly (no visible change until overflow risk climbs).
+            waterRenderer = meshRenderer;
+            CaptureCalmBaseColor();
+            ApplyDangerTint(0f);
         }
 
         void BuildLiquidMesh()

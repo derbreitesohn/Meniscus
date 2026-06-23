@@ -401,6 +401,7 @@ namespace Meniscus.UI
                 coverThickness = coverThickness,
                 coverColor = CoverColor,
                 pageColor = PageColor,
+                closedHingeAngle = openAngle,
             });
 
             hingePivot = root.Find("Book Hinge");
@@ -715,6 +716,8 @@ namespace Meniscus.UI
             {
                 RefreshOwnedBadges();
                 ApplySelectionVisual();
+                // Confirm flourish: pop the Buy stamp so a purchase lands with a beat instead of silently.
+                buyButton.GetComponent<UiPressPunch>()?.Punch();
             }
 
             RefreshTicket();

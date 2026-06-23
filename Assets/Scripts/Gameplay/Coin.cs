@@ -22,11 +22,18 @@ namespace Meniscus.Gameplay
         [Header("Audio")]
         [SerializeField] AK.Wwise.Event coinOnWood;
 
+        // Under-damped spring for the selection lift: snappy with a small overshoot ("pop") instead of a
+        // hard snap. Stepped with unscaled time in Update so it keeps gliding during the slow-mo verdict.
+        const float LiftStiffness = 260f;
+        const float LiftDamping = 20f;
+        Spring liftSpring = new Spring(0f, LiftStiffness, LiftDamping);
+
         Vector3 originalLocalPosition;
         bool hasCachedOriginalPosition;
         bool isSelected;
         bool isSpent;
         GameObject activeModelInstance;
+        SelectionGlow glow;
 
         public bool IsSelected => isSelected;
         public bool IsSpent => isSpent;
@@ -48,6 +55,24 @@ namespace Meniscus.Gameplay
             riskContribution = Mathf.Max(0f, riskContribution);
             basePayout = Mathf.Max(0, basePayout);
             selectedYOffset = Mathf.Max(0f, selectedYOffset);
+        }
+
+        void Update()
+        {
+            // Spring the selection lift toward its target (play mode only — edit-mode tests have no tick,
+            // and SetSelected places the coin directly there). Unscaled time so the lift keeps gliding
+            // during the slow-motion verdict, matching the selection glow and the desk-item raise. Idle
+            // when already settled, so a resting coin never fights layout that re-homes it.
+            if (!Application.isPlaying || !hasCachedOriginalPosition)
+                return;
+
+            var target = isSelected ? selectedYOffset : 0f;
+
+            if (Mathf.Approximately(liftSpring.Value, target) && Mathf.Approximately(liftSpring.Velocity, 0f))
+                return;
+
+            liftSpring.Step(target, Time.unscaledDeltaTime);
+            transform.localPosition = originalLocalPosition + Vector3.up * liftSpring.Value;
         }
 
         public void Configure(CoinSize newSize, float newRiskContribution, int newBasePayout, bool belongsToPlayer)
@@ -76,9 +101,17 @@ namespace Meniscus.Gameplay
 
             CacheOriginalPosition();
             isSelected = selected;
-            transform.localPosition = selected
-                ? originalLocalPosition + Vector3.up * selectedYOffset
-                : originalLocalPosition;
+
+            // In play mode Update springs the lift in/out for a "pop"; outside play mode (edit-mode tests,
+            // no Update tick) place it at the target immediately so logic and tests see the final position.
+            if (!Application.isPlaying)
+            {
+                liftSpring.Snap(selected ? selectedYOffset : 0f);
+                transform.localPosition = originalLocalPosition + Vector3.up * liftSpring.Value;
+            }
+
+            EnsureGlow();
+            glow?.SetActive(selected);
 
             if (selected)
                 coinOnWood?.Post(gameObject);
@@ -88,7 +121,24 @@ namespace Meniscus.Gameplay
         {
             CacheOriginalPosition();
             isSelected = false;
+            liftSpring.Snap(0f);
             transform.localPosition = originalLocalPosition;
+            glow?.SetActive(false);
+        }
+
+        /// <summary>
+        /// Re-homes the coin to <paramref name="localPosition"/> and records it as the resting position that
+        /// selection lifts from and returns to. Used when layout code repositions coins after configuring a
+        /// round (each round re-rolls sizes and the active count, so the authored slot no longer fits), so a
+        /// later select/deselect can't snap the coin back to its stale authored position.
+        /// </summary>
+        public void SetRestingLocalPosition(Vector3 localPosition)
+        {
+            transform.localPosition = localPosition;
+            originalLocalPosition = localPosition;
+            hasCachedOriginalPosition = true;
+            isSelected = false;
+            liftSpring.Snap(0f);
         }
 
         public void MarkSpent()
@@ -264,6 +314,16 @@ namespace Meniscus.Gameplay
 
         static float SafeDivide(float numerator, float denominator) =>
             Mathf.Approximately(denominator, 0f) ? numerator : numerator / denominator;
+
+        // A warm halo that follows the coin and fades in while selected. Built lazily as a standalone
+        // follower (see SelectionGlow) so the coin's squashed scale never distorts it.
+        void EnsureGlow()
+        {
+            if (glow == null)
+                glow = SelectionGlow.Attach(transform, GlowWorldSize(), new Color(1f, 0.86f, 0.4f, 1f));
+        }
+
+        float GlowWorldSize() => Mathf.Max(transform.localScale.x, transform.localScale.z) * 1.45f;
 
         void CacheOriginalPosition()
         {

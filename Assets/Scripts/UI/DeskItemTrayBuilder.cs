@@ -14,7 +14,6 @@ namespace Meniscus.UI
     {
         // Sized for the saloon's scale (the book spread is ~0.6 wide). Tune alongside DeskItemTray.BoxSpacing.
         public const float BoxSize = 0.22f;
-        const float TileSize = 0.11f;
 
         public static void ApplyColor(Renderer renderer, Color color)
         {
@@ -50,19 +49,46 @@ namespace Meniscus.UI
             body.AddComponent<DeskItemTileRelay>(); // wired below
 
             var label = CreateLabel(container.transform, new Vector3(0f, BoxSize * 0.9f, 0f));
-            var use = CreateTile(container.transform, "USE",
-                new Vector3(-BoxSize, BoxSize * 0.6f, 0f), new Color(0.2f, 0.55f, 0.25f));
-            var cancel = CreateTile(container.transform, "CANCEL",
-                new Vector3(BoxSize, BoxSize * 0.6f, 0f), new Color(0.6f, 0.25f, 0.2f));
 
             var box = container.AddComponent<DeskItemBox>();
 
+            // Selecting the body is the only per-box interaction now; committing is the shared desk USE
+            // button (DeskUseButton), so no per-box Use/Cancel tiles are built.
             body.GetComponent<DeskItemTileRelay>().Initialize(box, DeskItemTileRelay.Kind.Body);
-            use.GetComponent<DeskItemTileRelay>().Initialize(box, DeskItemTileRelay.Kind.Use);
-            cancel.GetComponent<DeskItemTileRelay>().Initialize(box, DeskItemTileRelay.Kind.Cancel);
 
-            box.Bind(label, use, cancel, bodyRenderer, bodyColor);
+            box.Bind(label, null, null, bodyRenderer, bodyColor);
             return box;
+        }
+
+        /// <summary>
+        /// Builds the single shared "USE" control — 2D text on the desk with a click collider — that
+        /// commits the player's current selection (see <see cref="DeskUseButton"/> and DeskItemTray).
+        /// </summary>
+        public static DeskUseButton BuildUseButton(Transform parent)
+        {
+            var go = new GameObject("Use Button");
+            go.transform.SetParent(parent, false);
+            // The tray faces the player (local +Z toward the camera), so place the text in the clear
+            // centre gap, a touch above the desk and toward the player.
+            go.transform.localPosition = new Vector3(0f, 0.015f, 0.05f);
+            // A TextMesh reads from its -Z side, but the tray's +Z faces the camera, so flip 180° about
+            // up — otherwise the text renders mirrored.
+            go.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+
+            var text = go.AddComponent<TextMesh>();
+            text.text = "USE";
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.fontSize = 64;
+            text.characterSize = 0.012f;
+            text.fontStyle = FontStyle.Bold;
+
+            var collider = go.AddComponent<BoxCollider>();
+            collider.size = new Vector3(0.34f, 0.14f, 0.04f);
+
+            var button = go.AddComponent<DeskUseButton>();
+            button.Initialize(text);
+            return button;
         }
 
         /// <summary>
@@ -82,6 +108,9 @@ namespace Meniscus.UI
             var go = new GameObject("Label");
             go.transform.SetParent(parent, false);
             go.transform.localPosition = localPos;
+            // Same orientation fix as the USE text: a TextMesh reads from its -Z side and the tray's +Z
+            // faces the camera, so flip 180° about up or the label renders mirrored.
+            go.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
             // Scale the text with the box so it stays readable (a fixed scale looked tiny on a bigger box).
             go.transform.localScale = Vector3.one * (BoxSize * 0.2f);
 
@@ -94,30 +123,5 @@ namespace Meniscus.UI
             return text;
         }
 
-        static GameObject CreateTile(Transform parent, string text, Vector3 localPos, Color color)
-        {
-            var tile = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            tile.name = text;
-            tile.transform.SetParent(parent, false);
-            tile.transform.localPosition = localPos;
-            tile.transform.localScale = new Vector3(TileSize * 1.6f, TileSize, TileSize * 0.4f);
-            ApplyColor(tile.GetComponent<Renderer>(), color);
-            tile.AddComponent<DeskItemTileRelay>();
-
-            var labelGo = new GameObject("Caption");
-            labelGo.transform.SetParent(tile.transform, false);
-            labelGo.transform.localPosition = new Vector3(0f, 0f, -0.6f);
-            labelGo.transform.localScale = Vector3.one * 0.6f;
-            var caption = labelGo.AddComponent<TextMesh>();
-            caption.text = text;
-            caption.anchor = TextAnchor.MiddleCenter;
-            caption.alignment = TextAlignment.Center;
-            caption.fontSize = 48;
-            caption.characterSize = 0.02f;
-            caption.color = Color.white;
-
-            tile.SetActive(false); // hidden until the box is selected
-            return tile;
-        }
     }
 }

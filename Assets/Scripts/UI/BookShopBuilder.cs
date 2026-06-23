@@ -17,6 +17,10 @@ namespace Meniscus.UI
             public float coverThickness;
             public Color coverColor;
             public Color pageColor;
+            // Z-rotation (degrees) the hinge is authored at so the static prop reads as a *closed* book
+            // (right leaf folded flat onto the left). Match BookShopView.openAngle (180 = laid flat). At
+            // runtime the view animates the hinge between this (closed) and 0° (open spread).
+            public float closedHingeAngle;
         }
 
         public static Transform BuildProp(Transform parent, BookPropParams p)
@@ -41,10 +45,13 @@ namespace Meniscus.UI
             CreateCoverCube(root, "Book Back Cover Left", p.coverColor, boardSize, new Vector3(-halfPage, boardCenterY, 0f));
             CreateCoverCube(root, "Book Left Page", p.pageColor, pageSize, new Vector3(-halfPage, pageCenterY, 0f));
 
-            // Right leaf folds about the spine (see BookShopView: closed = openAngle, open = 0°).
+            // Right leaf folds about the spine (see BookShopView: closed = openAngle, open = 0°). Author it
+            // already folded shut so the static prop reads as a closed book in the editor; at runtime the
+            // view drives this hinge open/closed.
             var hingePivot = new GameObject("Book Hinge").transform;
             hingePivot.SetParent(root, false);
             hingePivot.localPosition = new Vector3(0f, hingeY, 0f);
+            hingePivot.localRotation = Quaternion.Euler(0f, 0f, p.closedHingeAngle);
 
             CreateCoverCube(hingePivot, "Book Back Cover Right", p.coverColor, boardSize, new Vector3(halfPage, boardCenterY - hingeY, 0f));
             CreateCoverCube(hingePivot, "Book Right Page", p.pageColor, pageSize, new Vector3(halfPage, pageCenterY - hingeY, 0f));

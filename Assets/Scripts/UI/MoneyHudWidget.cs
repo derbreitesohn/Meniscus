@@ -1,10 +1,17 @@
 using System.Collections;
 using Meniscus.Core;
+using Meniscus.Gameplay;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Meniscus.UI
 {
+    /// <summary>
+    /// Top-right wallet HUD: a single counter for the player's money "in general" — the live total
+    /// of banked cash plus the current at-risk hand. Each safe drop's payout rolls the counter up
+    /// and floats a "+$X" up out of the glass water in the centre of the screen; a bust rolls it
+    /// back down to the banked amount.
+    /// </summary>
     [DisallowMultipleComponent]
     public class MoneyHudWidget : MonoBehaviour
     {
@@ -12,26 +19,30 @@ namespace Meniscus.UI
         [SerializeField] EconomyManager economyManager;
 
         Canvas _canvas;
-        RectTransform _panelRect;
-        Text _roundAmount;
-        Text _bankAmount;
+        Text _amount;
 
-        int _displayedRound;
-        int _displayedBank;
+        Transform _glass;
+        GlassVisualController _glassVisual;
+        Camera _camera;
 
-        Coroutine _roundAnim;
-        Coroutine _bankAnim;
+        int _displayedTotal;
+        Coroutine _roll;
 
-        static readonly Color PanelBg     = new Color(0.085f, 0.045f, 0.018f, 0.92f);
-        static readonly Color BorderCol   = new Color(0.72f,  0.54f,  0.17f,  0.78f);
-        static readonly Color GoldBright  = new Color(0.97f,  0.83f,  0.31f,  1f);
-        static readonly Color GoldDim     = new Color(0.55f,  0.41f,  0.13f,  1f);
-        static readonly Color RedFlash    = new Color(0.95f,  0.22f,  0.13f,  1f);
+        static readonly Color PanelBg    = new Color(0.085f, 0.045f, 0.018f, 0.92f);
+        static readonly Color BorderCol  = new Color(0.72f,  0.54f,  0.17f,  0.78f);
+        static readonly Color GoldBright = new Color(0.97f,  0.83f,  0.31f,  1f);
+        static readonly Color GoldDim    = new Color(0.62f,  0.47f,  0.16f,  1f);
+        static readonly Color RedFlash   = new Color(0.95f,  0.22f,  0.13f,  1f);
+        static readonly Color FloatShadow = new Color(0f, 0f, 0f, 0.65f);
+        // Hot amber the "+$X" shifts toward as the multiplier climbs (greed/combo payouts read hotter).
+        static readonly Color MultHot    = new Color(1f,    0.55f,  0.18f,  1f);
 
-        const float PanelW = 280f;
-        const float PanelH = 100f;
-        const float PanelX = 24f;
-        const float PanelY = 24f;
+        const float PanelW = 224f;
+        const float PanelH = 86f;
+        const float Margin = 24f;
+
+        // Fallback anchor (viewport fraction) when the glass/camera can't be resolved.
+        static readonly Vector2 ScreenCentre = new Vector2(0.5f, 0.55f);
 
         // ─── lifecycle ────────────────────────────────────────────────────────────
 
@@ -65,9 +76,9 @@ namespace Meniscus.UI
         {
             if (economyManager != null)
             {
-                economyManager.MoneyAwarded     += OnMoneyAwarded;
+                economyManager.MoneyAwarded       += OnMoneyAwarded;
                 economyManager.RoundEarningsWiped += OnRoundEarningsWiped;
-                economyManager.EarningsBanked   += OnEarningsBanked;
+                economyManager.EarningsBanked     += OnEarningsBanked;
             }
 
             if (gameManager != null)
@@ -78,9 +89,9 @@ namespace Meniscus.UI
         {
             if (economyManager != null)
             {
-                economyManager.MoneyAwarded     -= OnMoneyAwarded;
+                economyManager.MoneyAwarded       -= OnMoneyAwarded;
                 economyManager.RoundEarningsWiped -= OnRoundEarningsWiped;
-                economyManager.EarningsBanked   -= OnEarningsBanked;
+                economyManager.EarningsBanked     -= OnEarningsBanked;
             }
 
             if (gameManager != null)
@@ -89,104 +100,68 @@ namespace Meniscus.UI
 
         void OnRoundStarted(int _)
         {
-            StopCounterAnims();
-            _displayedRound = 0;
-            _displayedBank  = economyManager == null ? 0 : economyManager.PlayerTotalBankedCash;
-            SetAmount(_roundAmount, 0,             GoldBright);
-            SetAmount(_bankAmount,  _displayedBank, GoldBright);
+            // Round earnings have just been reset, so the live total is simply the bank.
+            StopRoll();
+            _displayedTotal = LiveTotal();
+            SetAmount(_displayedTotal, GoldBright);
         }
 
         void OnMoneyAwarded(int payout, int newRoundTotal)
         {
-            if (_roundAnim != null) StopCoroutine(_roundAnim);
-            _roundAnim = StartCoroutine(GainRoutine(payout, newRoundTotal));
+            var multiplier = economyManager != null ? economyManager.LastSafeDropMultiplier : 1f;
+            var combo = economyManager != null && economyManager.LastSafeDropComboApplied;
+            StartCoroutine(FloatGainOverWater(payout, multiplier, combo));
+            StartRoll(LiveTotal(), GoldBright, flashRed: false, punch: true);
         }
 
-        void OnRoundEarningsWiped()
+        // Player busted: the at-risk hand is gone, so the wallet drops back to the banked amount.
+        void OnRoundEarningsWiped() =>
+            StartRoll(LiveTotal(), GoldDim, flashRed: true, punch: false);
+
+        // Banking moves the (already-counted) hand into the bank, so the live total is unchanged.
+        // Pulse to signal the money is now locked in.
+        void OnEarningsBanked(int earned, int newBankTotal) =>
+            StartRoll(LiveTotal(), GoldBright, flashRed: false, punch: true);
+
+        // ─── counter animation ──────────────────────────────────────────────────────
+
+        int LiveTotal() =>
+            economyManager == null
+                ? 0
+                : economyManager.PlayerTotalBankedCash + economyManager.CurrentRoundEarnings;
+
+        void StartRoll(int to, Color endColor, bool flashRed, bool punch)
         {
-            if (_roundAnim != null) StopCoroutine(_roundAnim);
-            _roundAnim = StartCoroutine(BustRoutine());
+            StopRoll();
+            _roll = StartCoroutine(RollRoutine(to, endColor, flashRed, punch));
         }
 
-        void OnEarningsBanked(int earned, int newBankTotal)
+        void StopRoll()
         {
-            StopCounterAnims();
-            _bankAnim = StartCoroutine(BankRoutine(newBankTotal));
+            if (_roll != null) { StopCoroutine(_roll); _roll = null; }
         }
 
-        // ─── animations ───────────────────────────────────────────────────────────
-
-        IEnumerator GainRoutine(int payout, int to)
+        IEnumerator RollRoutine(int to, Color endColor, bool flashRed, bool punch)
         {
-            var from = _displayedRound;
-            StartCoroutine(PunchScale(_roundAmount.rectTransform, 1.38f, 0.40f));
-            StartCoroutine(FloatGain(payout));
+            if (punch)
+                StartCoroutine(PunchScale(_amount.rectTransform, 1.3f, 0.4f));
 
-            const float dur = 0.50f;
+            var from = _displayedTotal;
+            var startColor = flashRed ? RedFlash : endColor;
+            const float dur = 0.5f;
+
             for (var t = 0f; t < dur; t += Time.deltaTime)
             {
                 var p = Mathf.SmoothStep(0f, 1f, t / dur);
-                _displayedRound = Mathf.RoundToInt(Mathf.Lerp(from, to, p));
-                SetAmount(_roundAmount, _displayedRound, GoldBright);
+                _displayedTotal = Mathf.RoundToInt(Mathf.Lerp(from, to, p));
+                _amount.text  = Dollars(_displayedTotal);
+                _amount.color = Color.Lerp(startColor, endColor, p);
                 yield return null;
             }
 
-            _displayedRound = to;
-            SetAmount(_roundAmount, to, GoldBright);
-            _roundAnim = null;
-        }
-
-        IEnumerator BustRoutine()
-        {
-            var from = _displayedRound;
-            _roundAmount.color = RedFlash;
-
-            const float dur = 0.45f;
-            for (var t = 0f; t < dur; t += Time.deltaTime)
-            {
-                var p = Mathf.SmoothStep(0f, 1f, t / dur);
-                _displayedRound = Mathf.RoundToInt(Mathf.Lerp(from, 0, p));
-                _roundAmount.text  = Dollars(_displayedRound);
-                _roundAmount.color = Color.Lerp(RedFlash, GoldDim, p);
-                yield return null;
-            }
-
-            _displayedRound = 0;
-            SetAmount(_roundAmount, 0, GoldDim);
-            _roundAnim = null;
-        }
-
-        IEnumerator BankRoutine(int newBankTotal)
-        {
-            // Round counter drains to zero
-            var fromRound = _displayedRound;
-            const float drainDur = 0.35f;
-            for (var t = 0f; t < drainDur; t += Time.deltaTime)
-            {
-                var p = Mathf.SmoothStep(0f, 1f, t / drainDur);
-                _displayedRound = Mathf.RoundToInt(Mathf.Lerp(fromRound, 0, p));
-                SetAmount(_roundAmount, _displayedRound, Color.Lerp(GoldBright, GoldDim, p));
-                yield return null;
-            }
-
-            _displayedRound = 0;
-            SetAmount(_roundAmount, 0, GoldDim);
-
-            // Bank counter rolls up
-            StartCoroutine(PunchScale(_bankAmount.rectTransform, 1.28f, 0.42f));
-            var fromBank = _displayedBank;
-            const float fillDur = 0.55f;
-            for (var t = 0f; t < fillDur; t += Time.deltaTime)
-            {
-                var p = Mathf.SmoothStep(0f, 1f, t / fillDur);
-                _displayedBank = Mathf.RoundToInt(Mathf.Lerp(fromBank, newBankTotal, p));
-                SetAmount(_bankAmount, _displayedBank, GoldBright);
-                yield return null;
-            }
-
-            _displayedBank = newBankTotal;
-            SetAmount(_bankAmount, newBankTotal, GoldBright);
-            _bankAnim = null;
+            _displayedTotal = to;
+            SetAmount(to, endColor);
+            _roll = null;
         }
 
         IEnumerator PunchScale(RectTransform rt, float peak, float dur)
@@ -204,65 +179,166 @@ namespace Meniscus.UI
             rt.localScale = Vector3.one;
         }
 
-        IEnumerator FloatGain(int amount)
+        // ─── "+$X" floating up out of the water ───────────────────────────────────────
+
+        IEnumerator FloatGainOverWater(int amount, float multiplier, bool combo)
         {
-            var go = new GameObject("FloatGain", typeof(RectTransform), typeof(Text));
+            if (amount == 0)
+                yield break;
+
+            var anchor = ResolveWaterViewportAnchor();
+
+            // A real bonus (greed and/or combo, or a shop multiplier) reads hotter and pops harder, so a
+            // bigger or riskier pour feels earned. A plain ×1 drop keeps the calm gold look.
+            var showMult = multiplier >= 1.1f;
+            var heat = Mathf.Clamp01(Mathf.InverseLerp(1f, 3f, multiplier));
+            var amountColor = showMult ? Color.Lerp(GoldBright, MultHot, heat) : GoldBright;
+            var peak = showMult ? Mathf.Lerp(1.18f, 1.5f, heat) : 1.12f;
+
+            var go = new GameObject("MoneyGain", typeof(RectTransform), typeof(Text), typeof(Outline));
             go.transform.SetParent(_canvas.transform, false);
 
             var rt = go.GetComponent<RectTransform>();
-            rt.anchorMin = rt.anchorMax = Vector2.zero;
-            rt.pivot     = new Vector2(0.5f, 0f);
-            rt.sizeDelta = new Vector2(160f, 44f);
-
-            // Spawn just above the THIS HAND section
-            rt.anchoredPosition = new Vector2(
-                PanelX + PanelW * 0.25f,
-                PanelY + PanelH + 6f);
+            rt.anchorMin = rt.anchorMax = anchor;
+            rt.pivot     = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(380f, 120f);
+            rt.anchoredPosition = Vector2.zero;
 
             var txt = go.GetComponent<Text>();
             txt.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            txt.fontSize  = 30;
+            txt.fontSize  = 62;
             txt.fontStyle = FontStyle.Bold;
             txt.alignment = TextAnchor.MiddleCenter;
             txt.text      = $"+${amount}";
-            txt.color     = GoldBright;
+            txt.color     = amountColor;
 
-            var basePos = rt.anchoredPosition;
-            const float dur = 1.3f;
+            // Dark outline keeps the gold legible over the glass and water behind it.
+            var outline = go.GetComponent<Outline>();
+            outline.effectColor    = FloatShadow;
+            outline.effectDistance = new Vector2(2.5f, -2.5f);
+
+            // "×2.4  COMBO" badge under the amount, shown only when a real multiplier applied, so the
+            // player sees why a greedy or multi-coin pour paid out more.
+            Text badgeTxt = null;
+            Outline badgeOutline = null;
+            if (showMult)
+            {
+                var label = combo ? $"×{multiplier:0.0}  COMBO" : $"×{multiplier:0.0}";
+                var badgeGo = new GameObject("MoneyGainMult", typeof(RectTransform), typeof(Text), typeof(Outline));
+                badgeGo.transform.SetParent(rt, false);
+
+                var brt = badgeGo.GetComponent<RectTransform>();
+                brt.anchorMin = brt.anchorMax = new Vector2(0.5f, 0.5f);
+                brt.pivot = new Vector2(0.5f, 0.5f);
+                brt.sizeDelta = new Vector2(380f, 44f);
+                brt.anchoredPosition = new Vector2(0f, -48f);
+
+                badgeTxt = badgeGo.GetComponent<Text>();
+                badgeTxt.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                badgeTxt.fontSize  = 32;
+                badgeTxt.fontStyle = FontStyle.Bold;
+                badgeTxt.alignment = TextAnchor.MiddleCenter;
+                badgeTxt.text      = label;
+                badgeTxt.color     = amountColor;
+
+                badgeOutline = badgeGo.GetComponent<Outline>();
+                badgeOutline.effectColor    = FloatShadow;
+                badgeOutline.effectDistance = new Vector2(2f, -2f);
+            }
+
+            const float dur  = 1.35f;
+            const float rise = 150f;
 
             for (var t = 0f; t < dur; t += Time.deltaTime)
             {
-                var p     = t / dur;
-                var alpha = p < 0.25f ? 1f : Mathf.SmoothStep(1f, 0f, (p - 0.25f) / 0.75f);
-                rt.anchoredPosition = basePos + new Vector2(0f, Mathf.Lerp(0f, 72f, p));
-                txt.color = new Color(GoldBright.r, GoldBright.g, GoldBright.b, alpha);
+                var p = t / dur;
+
+                // A small overshoot pop on entry, then settle to full size.
+                var s = p < 0.18f
+                    ? Mathf.Lerp(0.55f, peak, p / 0.18f)
+                    : Mathf.Lerp(peak, 1f, Mathf.Min(1f, (p - 0.18f) / 0.30f));
+                rt.localScale = new Vector3(s, s, 1f);
+
+                rt.anchoredPosition = new Vector2(0f, Mathf.SmoothStep(0f, rise, p));
+
+                var alpha = p < 0.55f ? 1f : Mathf.SmoothStep(1f, 0f, (p - 0.55f) / 0.45f);
+                txt.color = new Color(amountColor.r, amountColor.g, amountColor.b, alpha);
+                outline.effectColor = new Color(FloatShadow.r, FloatShadow.g, FloatShadow.b, FloatShadow.a * alpha);
+
+                if (badgeTxt != null)
+                {
+                    badgeTxt.color = new Color(amountColor.r, amountColor.g, amountColor.b, alpha);
+                    badgeOutline.effectColor = new Color(FloatShadow.r, FloatShadow.g, FloatShadow.b, FloatShadow.a * alpha);
+                }
+
                 yield return null;
             }
 
             Destroy(go);
         }
 
-        // ─── helpers ──────────────────────────────────────────────────────────────
-
-        void StopCounterAnims()
+        // Viewport-fraction anchor (0..1) over the glass's liquid surface, so the float reads as
+        // rising out of the water. Falls back to screen centre when the glass/camera is unavailable.
+        Vector2 ResolveWaterViewportAnchor()
         {
-            if (_roundAnim != null) { StopCoroutine(_roundAnim); _roundAnim = null; }
-            if (_bankAnim  != null) { StopCoroutine(_bankAnim);  _bankAnim  = null; }
+            EnsureGlassReferences();
+
+            var cam = ResolveCamera();
+            if (cam != null && _glass != null && _glassVisual != null)
+            {
+                var world = _glass.TransformPoint(new Vector3(0f, _glassVisual.StableSurfaceLocalY, 0f));
+                var vp = cam.WorldToViewportPoint(world);
+
+                if (vp.z > 0f)
+                    return new Vector2(Mathf.Clamp01(vp.x), Mathf.Clamp01(vp.y));
+            }
+
+            return ScreenCentre;
         }
+
+        void EnsureGlassReferences()
+        {
+            if (_glass == null)
+            {
+                var glassObject = GameObject.FindGameObjectWithTag("Glass");
+                if (glassObject != null)
+                    _glass = glassObject.transform;
+            }
+
+            if (_glassVisual == null && _glass != null)
+                _glassVisual = _glass.GetComponent<GlassVisualController>();
+
+            if (_glassVisual == null)
+                _glassVisual = FindAnyObjectByType<GlassVisualController>();
+
+            if (_glass == null && _glassVisual != null)
+                _glass = _glassVisual.transform;
+        }
+
+        Camera ResolveCamera()
+        {
+            if (Camera.main != null)
+                return Camera.main;
+
+            if (_camera == null)
+                _camera = FindAnyObjectByType<Camera>();
+
+            return _camera;
+        }
+
+        // ─── helpers ──────────────────────────────────────────────────────────────
 
         void SnapToEconomy()
         {
-            _displayedRound = economyManager == null ? 0 : economyManager.CurrentRoundEarnings;
-            _displayedBank  = economyManager == null ? 0 : economyManager.PlayerTotalBankedCash;
-            SetAmount(_roundAmount, _displayedRound, GoldBright);
-            SetAmount(_bankAmount,  _displayedBank,  GoldBright);
+            _displayedTotal = LiveTotal();
+            SetAmount(_displayedTotal, GoldBright);
         }
 
-        static void SetAmount(Text label, int amount, Color color)
+        void SetAmount(int amount, Color color)
         {
-            if (label == null) return;
-            label.text  = Dollars(amount);
-            label.color = color;
+            if (_amount == null) return;
+            _amount.text  = Dollars(amount);
+            _amount.color = color;
         }
 
         static string Dollars(int n) => $"${n}";
@@ -274,52 +350,36 @@ namespace Meniscus.UI
             _canvas = RuntimeUiFactory.CreateOverlayCanvas(transform, "Money HUD Canvas");
             _canvas.sortingOrder = 1;
 
-            // 2-px gold border behind the panel
+            // Gold border behind the panel, pinned to the top-right corner.
             var border = MakeRect(_canvas.transform, "Money Border");
-            border.anchorMin = border.anchorMax = Vector2.zero;
-            border.pivot     = Vector2.zero;
-            border.sizeDelta = new Vector2(PanelW + 4f, PanelH + 4f);
-            border.anchoredPosition = new Vector2(PanelX - 2f, PanelY - 2f);
+            AnchorTopRight(border, PanelW + 4f, PanelH + 4f, Margin - 2f);
             border.gameObject.AddComponent<Image>().color = BorderCol;
 
-            // Dark main panel
+            // Dark main panel.
             var panel = MakeRect(_canvas.transform, "Money Panel");
-            _panelRect = panel;
-            panel.anchorMin = panel.anchorMax = Vector2.zero;
-            panel.pivot     = Vector2.zero;
-            panel.sizeDelta = new Vector2(PanelW, PanelH);
-            panel.anchoredPosition = new Vector2(PanelX, PanelY);
+            AnchorTopRight(panel, PanelW, PanelH, Margin);
             panel.gameObject.AddComponent<Image>().color = PanelBg;
 
-            // Section labels — "THIS HAND" (left) and "BANK" (right)
-            AddText(panel, "HandLabel", "THIS HAND",
-                new Vector2(0f,   0.52f), new Vector2(0.5f, 1f),
-                new Vector2(8f,   2f),    new Vector2(-4f, -2f),
-                10, GoldDim, TextAnchor.UpperCenter);
+            // "MONEY" caption across the top.
+            AddText(panel, "MoneyLabel", "MONEY",
+                new Vector2(0f, 0.56f), new Vector2(1f, 1f),
+                new Vector2(10f, 2f),   new Vector2(-10f, -4f),
+                12, GoldDim, TextAnchor.UpperCenter);
 
-            AddText(panel, "BankLabel", "BANK",
-                new Vector2(0.5f, 0.52f), new Vector2(1f, 1f),
-                new Vector2(4f,   2f),    new Vector2(-8f, -2f),
-                10, GoldDim, TextAnchor.UpperCenter);
+            // The single live-total amount.
+            _amount = AddText(panel, "MoneyAmount", "$0",
+                new Vector2(0f, 0f),  new Vector2(1f, 0.62f),
+                new Vector2(10f, 4f), new Vector2(-10f, -2f),
+                40, GoldBright, TextAnchor.MiddleCenter, bold: true);
+        }
 
-            // Dollar amounts
-            _roundAmount = AddText(panel, "HandAmount", "$0",
-                new Vector2(0f,   0f), new Vector2(0.5f, 0.65f),
-                new Vector2(8f,   4f), new Vector2(-4f,  -2f),
-                36, GoldBright, TextAnchor.MiddleCenter, bold: true);
-
-            _bankAmount = AddText(panel, "BankAmount", "$0",
-                new Vector2(0.5f, 0f), new Vector2(1f, 0.65f),
-                new Vector2(4f,   4f), new Vector2(-8f, -2f),
-                24, GoldBright, TextAnchor.MiddleCenter, bold: true);
-
-            // Vertical divider
-            var div = MakeRect(panel, "Divider");
-            div.anchorMin = new Vector2(0.5f, 0.08f);
-            div.anchorMax = new Vector2(0.5f, 0.92f);
-            div.sizeDelta = new Vector2(1f, 0f);
-            div.anchoredPosition = Vector2.zero;
-            div.gameObject.AddComponent<Image>().color = new Color(0.72f, 0.54f, 0.17f, 0.42f);
+        // Pins a rect to the top-right corner, inset by `margin`, with the given size.
+        static void AnchorTopRight(RectTransform rt, float width, float height, float margin)
+        {
+            rt.anchorMin = rt.anchorMax = Vector2.one;
+            rt.pivot     = Vector2.one;
+            rt.sizeDelta = new Vector2(width, height);
+            rt.anchoredPosition = new Vector2(-margin, -margin);
         }
 
         static RectTransform MakeRect(Transform parent, string name)
@@ -339,10 +399,10 @@ namespace Meniscus.UI
             go.transform.SetParent(parent, false);
 
             var rt = go.GetComponent<RectTransform>();
-            rt.anchorMin  = anchorMin;
-            rt.anchorMax  = anchorMax;
-            rt.offsetMin  = offsetMin;
-            rt.offsetMax  = offsetMax;
+            rt.anchorMin = anchorMin;
+            rt.anchorMax = anchorMax;
+            rt.offsetMin = offsetMin;
+            rt.offsetMax = offsetMax;
 
             var txt = go.GetComponent<Text>();
             txt.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");

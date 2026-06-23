@@ -149,6 +149,9 @@ namespace Meniscus.UI
                 labelAlignment,
                 boldLabel);
 
+            // Springy "sink on press, pop on release" feel on every fallback button (play mode only).
+            buttonObject.AddComponent<UiPressPunch>();
+
             return button;
         }
     }
