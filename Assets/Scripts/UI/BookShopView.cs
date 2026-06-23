@@ -279,7 +279,9 @@ namespace Meniscus.UI
             animT = Mathf.MoveTowards(animT, target, Time.deltaTime / Mathf.Max(0.05f, openSeconds));
 
             var openProgress = Mathf.SmoothStep(0f, 1f, animT);
-            hingePivot.localRotation = Quaternion.Euler(0f, 0f, openProgress * openAngle);
+            // Right leaf folds shut (openAngle) when closed and unfolds flat (0°) when open, so the book
+            // genuinely folds open about its spine instead of a cover flipping on top.
+            hingePivot.localRotation = Quaternion.Euler(0f, 0f, (1f - openProgress) * openAngle);
 
             // Lift the book from its stowed pose up into the held pose as the cover opens.
             ApplyHeldPose(openProgress);

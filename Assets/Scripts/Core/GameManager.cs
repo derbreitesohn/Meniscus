@@ -29,6 +29,7 @@ namespace Meniscus.Core
         [SerializeField] EndScreenManager endScreenManager;
         [SerializeField] CoinDropPresentationController dropPresentationController;
         [SerializeField] SaloonHudController saloonHudController;
+        [SerializeField] MoneyHudWidget moneyHudWidget;
         [SerializeField] PlayerInventory playerInventory;
         [SerializeField] DeskItemTray deskItemTray;
 
@@ -716,6 +717,12 @@ namespace Meniscus.Core
                 saloonHudController = gameObject.AddComponent<SaloonHudController>();
                 saloonHudController.Configure(null, null, this, glassManager, economyManager);
             }
+
+            if (moneyHudWidget == null)
+                moneyHudWidget = FindAnyObjectByType<MoneyHudWidget>();
+
+            if (moneyHudWidget == null)
+                moneyHudWidget = gameObject.AddComponent<MoneyHudWidget>();
 
             if (glassManager == null)
                 Debug.LogWarning("[GameManager] GlassManager reference is missing.");

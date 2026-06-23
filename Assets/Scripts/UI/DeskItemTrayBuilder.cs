@@ -62,7 +62,8 @@ namespace Meniscus.UI
             var go = new GameObject("Label");
             go.transform.SetParent(parent, false);
             go.transform.localPosition = localPos;
-            go.transform.localScale = Vector3.one * 0.01f;
+            // Scale the text with the box so it stays readable (a fixed scale looked tiny on a bigger box).
+            go.transform.localScale = Vector3.one * (BoxSize * 0.2f);
 
             var text = go.AddComponent<TextMesh>();
             text.anchor = TextAnchor.LowerCenter;

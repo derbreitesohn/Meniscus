@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Meniscus.Gameplay;
 using UnityEngine;
@@ -10,6 +11,10 @@ namespace Meniscus.Core
         [SerializeField] int playerTotalBankedCash;
         [SerializeField] int currentRoundEarnings;
         [SerializeField, Min(1f)] float nextSafeDropPayoutMultiplier = 1f;
+
+        public event Action<int, int> MoneyAwarded;   // (payout, newRoundTotal)
+        public event Action RoundEarningsWiped;
+        public event Action<int, int> EarningsBanked; // (earned, newBankTotal)
 
         public int PlayerTotalBankedCash => playerTotalBankedCash;
         public int CurrentRoundEarnings => currentRoundEarnings;
@@ -53,6 +58,7 @@ namespace Meniscus.Core
             }
 
             currentRoundEarnings += payout;
+            MoneyAwarded?.Invoke(payout, currentRoundEarnings);
             return payout;
         }
 
@@ -75,13 +81,16 @@ namespace Meniscus.Core
 
         public void BankCurrentRoundEarnings()
         {
-            playerTotalBankedCash += currentRoundEarnings;
+            var earned = currentRoundEarnings;
+            playerTotalBankedCash += earned;
             currentRoundEarnings = 0;
+            EarningsBanked?.Invoke(earned, playerTotalBankedCash);
         }
 
         public void WipeCurrentRoundEarnings()
         {
             currentRoundEarnings = 0;
+            RoundEarningsWiped?.Invoke();
         }
 
         public bool CanAfford(int cost) =>

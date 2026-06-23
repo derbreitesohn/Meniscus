@@ -164,12 +164,28 @@ namespace Meniscus.UI
             Layout();
         }
 
+        // Half the stacks sit to the left of centre and half to the right, with a clear gap in the middle
+        // so the play area / glass stays unobstructed (instead of a single row across the centre).
+        const float CenterGap = 0.6f;
+
         void Layout()
         {
-            var start = -(boxes.Count - 1) * 0.5f * BoxSpacing;
+            var count = boxes.Count;
+            var leftCount = count / 2;   // left gets the smaller half on an odd count
 
-            for (var i = 0; i < boxes.Count; i++)
-                boxes[i].SetRestPosition(new Vector3(start + i * BoxSpacing, 0f, 0f));
+            for (var i = 0; i < count; i++)
+            {
+                float x;
+
+                if (i < leftCount)
+                    // Left cluster grows outward (leftward) from the gap edge.
+                    x = -CenterGap * 0.5f - (leftCount - i) * BoxSpacing;
+                else
+                    // Right cluster grows outward (rightward) from the gap edge.
+                    x = CenterGap * 0.5f + (i - leftCount + 1) * BoxSpacing;
+
+                boxes[i].SetRestPosition(new Vector3(x, 0f, 0f));
+            }
         }
 
         public void OnBoxClicked(DeskItemBox box)

@@ -463,7 +463,7 @@ namespace Meniscus.Gameplay
         static Quaternion CalculateRestRotation(int slotIndex)
         {
             var spin = slotIndex * 47f % 360f;
-            var tilt = slotIndex * 13f % 17f - 8f; // roughly -8..+8 degrees
+            var tilt = slotIndex * 11f % 7f - 3f; // roughly -3..+3 degrees (flatter, so edges don't clip the floor)
             return Quaternion.Euler(tilt, spin, 0f);
         }
 
@@ -515,7 +515,8 @@ namespace Meniscus.Gameplay
 
             // Keep the whole coin inside the wall: its centre can sit at most (interiorRadius - coinRadius) out.
             var availableRadius = Mathf.Max(0f, interiorRadius - coinRadius);
-            var ringRadius = availableRadius * 0.55f;
+            // Tighter ring so the pile reads as a heap clustered near the centre, not a wide spread.
+            var ringRadius = availableRadius * 0.35f;
 
             // Rotate each layer so stacked coins are offset, not perfectly aligned.
             var angle = slotInLayer * (Mathf.PI * 2f / PileSlotsPerLayer) + layer * 0.7f;
@@ -523,9 +524,11 @@ namespace Meniscus.Gameplay
             var z = Mathf.Sin(angle) * ringRadius;
 
             // Each layer rests on top of the previous (first layer sits half a coin above the floor), with a
-            // small per-slot bump so coins in one layer are never exactly coplanar (which would z-fight).
+            // small per-slot bump so coins in one layer are never exactly coplanar (which would z-fight). The
+            // extra clearance lifts the coin so its tilted edge can't dip below the floor / through the glass.
             var safeThickness = Mathf.Max(0f, coinThickness);
-            var y = safeThickness * (layer + 0.5f) + slotInLayer * safeThickness * 0.18f;
+            var clearance = coinRadius * 0.06f;
+            var y = clearance + safeThickness * (layer + 0.5f) + slotInLayer * safeThickness * 0.18f;
 
             return new Vector3(x, y, z);
         }

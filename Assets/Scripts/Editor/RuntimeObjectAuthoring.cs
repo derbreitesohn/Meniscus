@@ -236,6 +236,14 @@ namespace Meniscus.Editor
             if (prop == null)
                 prop = view.transform.Find("Diegetic Book Shop");
 
+            // Upgrade a prop built with the old separate-cover design (had a "Book Front Cover" leaf) to the
+            // folding two-leaf book: delete it so it is rebuilt below by the current BuildProp.
+            if (prop != null && (prop.Find("Book Front Cover") != null || prop.Find("Book Back Cover") != null))
+            {
+                Undo.DestroyObjectImmediate(prop.gameObject);
+                prop = null;
+            }
+
             if (prop == null)
             {
                 prop = BookShopBuilder.BuildProp(view.transform, new BookShopBuilder.BookPropParams
