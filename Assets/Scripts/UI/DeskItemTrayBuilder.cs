@@ -6,7 +6,9 @@ namespace Meniscus.UI
     /// <summary>
     /// Builds one desk item box: a placeholder cube body (with the collider that receives clicks), a
     /// camera-facing name/count label, and two hidden Use/Cancel tiles. Pure geometry — shared by the
-    /// runtime tray and (indirectly) the authoring tool. Splits geometry from logic (see DeskItemTray).
+    /// runtime tray fallback and the authoring tool, which freezes a box built here into an editable
+    /// prefab (Tools > Meniscus > Author Desk Item Box Prefab) the tray then instantiates per stack.
+    /// Splits geometry from logic (see DeskItemTray).
     /// </summary>
     public static class DeskItemTrayBuilder
     {
@@ -26,10 +28,16 @@ namespace Meniscus.UI
             renderer.SetPropertyBlock(mpb);
         }
 
-        public static DeskItemBox BuildBox(Transform parent, DeskItemTray tray, ItemDefinition item)
+        /// <summary>
+        /// Builds an item-agnostic box (geometry + relays + bound part references) WITHOUT tying it to a
+        /// tray or item. This is what the authoring tool freezes into the editable box prefab, and what
+        /// <see cref="BuildBox"/> defers to for the runtime fallback. A designer can replace the cube body
+        /// in that prefab with a modelled box (mesh/material/Animator) and the wiring still holds.
+        /// </summary>
+        public static DeskItemBox BuildBoxGeometry(Transform parent)
         {
             // Container (unscaled) carries the DeskItemBox; children carry geometry/colliders.
-            var container = new GameObject($"Desk Item Box ({item.Id})");
+            var container = new GameObject("Desk Item Box");
             container.transform.SetParent(parent, false);
 
             var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -53,7 +61,19 @@ namespace Meniscus.UI
             use.GetComponent<DeskItemTileRelay>().Initialize(box, DeskItemTileRelay.Kind.Use);
             cancel.GetComponent<DeskItemTileRelay>().Initialize(box, DeskItemTileRelay.Kind.Cancel);
 
-            box.Initialize(tray, item, label, use, cancel, bodyRenderer, bodyColor);
+            box.Bind(label, use, cancel, bodyRenderer, bodyColor);
+            return box;
+        }
+
+        /// <summary>
+        /// Runtime fallback used only when the tray has no authored box prefab: builds the placeholder
+        /// box (see <see cref="BuildBoxGeometry"/>) and initialises it for <paramref name="item"/>.
+        /// </summary>
+        public static DeskItemBox BuildBox(Transform parent, DeskItemTray tray, ItemDefinition item)
+        {
+            var box = BuildBoxGeometry(parent);
+            box.gameObject.name = $"Desk Item Box ({item.Id})";
+            box.Initialize(tray, item);
             return box;
         }
 

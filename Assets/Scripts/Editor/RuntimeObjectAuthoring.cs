@@ -21,6 +21,7 @@ namespace Meniscus.Editor
         const string WaterMaterialPath = "Assets/Art/Materials/Water_Surface.mat";
         const string PrefabsDir = "Assets/Prefabs";
         const string SpillPrefabPath = "Assets/Prefabs/SpillEffect.prefab";
+        const string DeskItemBoxPrefabPath = "Assets/Prefabs/DeskItemBox.prefab";
         const string MenuRoot = "Tools/Meniscus/Author Runtime Objects/";
 
         [MenuItem(MenuRoot + "Author Glass Water Surface")]
@@ -199,6 +200,52 @@ namespace Meniscus.Editor
             t.SetPositionAndRotation(pos, Quaternion.LookRotation(toCamera, Vector3.up));
         }
 
+        [MenuItem(MenuRoot + "Author Desk Item Box Prefab")]
+        static void AuthorDeskItemBoxPrefabMenu()
+        {
+            if (!TryOpenScene(out var scene))
+                return;
+
+            if (AuthorDeskItemBoxPrefab())
+                SaveScene(scene);
+        }
+
+        public static bool AuthorDeskItemBoxPrefab()
+        {
+            var tray = Object.FindAnyObjectByType<DeskItemTray>();
+
+            if (tray == null)
+            {
+                Debug.LogError("[RuntimeObjectAuthoring] No DeskItemTray in the scene. Run 'Author Desk Item Tray' first. Aborting.");
+                return false;
+            }
+
+            if (!AssetDatabase.IsValidFolder(PrefabsDir))
+                AssetDatabase.CreateFolder("Assets", "Prefabs");
+
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(DeskItemBoxPrefabPath);
+
+            if (existing == null)
+            {
+                // Freeze one item-agnostic placeholder box (built by the shared builder) into an editable
+                // prefab the designer can re-skin: swap the cube body for a model, assign materials, add an
+                // Animator/lights. The tray then instantiates this per held stack instead of building in code.
+                var template = DeskItemTrayBuilder.BuildBoxGeometry(null);
+                existing = PrefabUtility.SaveAsPrefabAsset(template.gameObject, DeskItemBoxPrefabPath);
+                Object.DestroyImmediate(template.gameObject);
+            }
+
+            var box = existing.GetComponent<DeskItemBox>();
+
+            var traySerialized = new SerializedObject(tray);
+            traySerialized.FindProperty("boxPrefab").objectReferenceValue = box;
+            traySerialized.ApplyModifiedProperties();
+
+            Debug.Log($"[RuntimeObjectAuthoring] Desk item box prefab authored at '{DeskItemBoxPrefabPath}' and wired to DeskItemTray.boxPrefab. " +
+                      "Edit the prefab to give the box a model / material / animation.");
+            return true;
+        }
+
         [MenuItem(MenuRoot + "Author Book Shop")]
         static void AuthorBookShopMenu()
         {
@@ -244,17 +291,27 @@ namespace Meniscus.Editor
                 prop = null;
             }
 
+            var bookParams = new BookShopBuilder.BookPropParams
+            {
+                pageWidth = 0.30f,
+                pageDepth = 0.38f,
+                coverThickness = 0.02f,
+                coverColor = new Color(0.34f, 0.16f, 0.08f),
+                pageColor = new Color(0.86f, 0.78f, 0.6f),
+            };
+
             if (prop == null)
             {
-                prop = BookShopBuilder.BuildProp(view.transform, new BookShopBuilder.BookPropParams
-                {
-                    pageWidth = 0.30f,
-                    pageDepth = 0.38f,
-                    coverThickness = 0.02f,
-                    coverColor = new Color(0.34f, 0.16f, 0.08f),
-                    pageColor = new Color(0.86f, 0.78f, 0.6f),
-                });
+                prop = BookShopBuilder.BuildProp(view.transform, bookParams);
                 Undo.RegisterCreatedObjectUndo(prop.gameObject, "Author Book Prop");
+            }
+
+            // Author the page-turn sheet under the prop too, so the whole book is editor-owned (the runtime
+            // prefers this over building one). It pivots on the spine and stays hidden until a flip.
+            if (prop.Find("Book Turning Pivot") == null)
+            {
+                var sheet = BookShopBuilder.BuildTurningSheet(prop, bookParams);
+                Undo.RegisterCreatedObjectUndo(sheet.gameObject, "Author Book Turning Sheet");
             }
 
             authoredProp.objectReferenceValue = prop;
@@ -337,6 +394,7 @@ namespace Meniscus.Editor
             changed |= AuthorWaterSurface();
             changed |= AuthorPlayerInventory();
             changed |= AuthorDeskItemTray();
+            changed |= AuthorDeskItemBoxPrefab();
             changed |= AuthorBookShop();
             changed |= AuthorSpillPrefab();
 

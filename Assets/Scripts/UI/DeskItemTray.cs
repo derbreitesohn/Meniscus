@@ -22,6 +22,12 @@ namespace Meniscus.UI
         [SerializeField] Camera worldCamera;
         [SerializeField, Min(0f)] float clickRaycastDistance = 100f;
 
+        [Tooltip("Pre-authored desk item box prefab (built by Tools > Meniscus > Author Desk Item Box " +
+                 "Prefab). When set, the tray instantiates it per held stack, so you can give the box a " +
+                 "model / materials / Animator in the editor; left empty, a placeholder cube box is built " +
+                 "in code at runtime.")]
+        [SerializeField] DeskItemBox boxPrefab;
+
         const float BoxSpacing = 0.3f;
         const float DeskClearance = 0.01f;
 
@@ -154,7 +160,7 @@ namespace Meniscus.UI
 
                 if (box == null)
                 {
-                    box = DeskItemTrayBuilder.BuildBox(transform, this, stack.Item);
+                    box = CreateBox(stack.Item);
                     boxes.Add(box);
                 }
 
@@ -162,6 +168,23 @@ namespace Meniscus.UI
             }
 
             Layout();
+        }
+
+        // Prefer an authored box prefab (so the box carries a model / materials / Animator set in the
+        // editor) and fall back to the placeholder cube built in code. Mirrors the glass-spill / coin
+        // prefab pattern. instantiateInWorldSpace:false keeps the instance's local transform so Layout
+        // can slot it; Initialize binds it to this tray + item using the prefab's serialized parts.
+        DeskItemBox CreateBox(ItemDefinition item)
+        {
+            if (boxPrefab != null)
+            {
+                var instance = Instantiate(boxPrefab, transform, false);
+                instance.gameObject.name = $"Desk Item Box ({item.Id})";
+                instance.Initialize(this, item);
+                return instance;
+            }
+
+            return DeskItemTrayBuilder.BuildBox(transform, this, item);
         }
 
         // Half the stacks sit to the left of centre and half to the right, with a clear gap in the middle

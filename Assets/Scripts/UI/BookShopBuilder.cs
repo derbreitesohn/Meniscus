@@ -24,24 +24,30 @@ namespace Meniscus.UI
             var root = new GameObject("Diegetic Book Shop").transform;
             root.SetParent(parent, false);
 
-            // The book is just its two pages (no separate cover): a fixed LEFT leaf and a RIGHT leaf that
-            // folds about the spine. Closed, the right leaf is folded flat on top of the left (a shut book);
-            // open, it lies level with the left to form the double-page spread the menu prints across.
+            // The book is two cover boards hinged at the spine, each with a page on top: a fixed LEFT leaf and
+            // a RIGHT leaf that folds about the spine. Closed, the right leaf folds flat on top of the left so
+            // its cover board faces up (a shut book); open, it lies level with the left to form the double-page
+            // spread the menu prints across. The cover IS the folding structure — there is no separate cover.
             var halfPage = p.pageWidth * 0.5f;
-            var pageThickness = p.coverThickness * 0.5f;
-            var pageCenterY = pageThickness * 0.5f;            // left leaf rests on the root plane
-            var leafSize = new Vector3(p.pageWidth, pageThickness, p.pageDepth);
+            var ct = p.coverThickness;
+            var pageThk = ct * 0.5f;
+            var boardCenterY = ct * 0.5f;          // cover board rests on the root plane
+            var pageCenterY = ct + pageThk * 0.5f; // page sits on top of its board
+            var hingeY = ct + pageThk;             // = left leaf top, so the folded right leaf stacks cleanly
+            var boardSize = new Vector3(p.pageWidth, ct, p.pageDepth);
+            var pageSize = new Vector3(p.pageWidth * 0.96f, pageThk, p.pageDepth * 0.96f);
 
-            CreateCoverCube(root, "Book Left Page", p.pageColor, leafSize, new Vector3(-halfPage, pageCenterY, 0f));
+            // Left leaf (fixed).
+            CreateCoverCube(root, "Book Back Cover Left", p.coverColor, boardSize, new Vector3(-halfPage, boardCenterY, 0f));
+            CreateCoverCube(root, "Book Left Page", p.pageColor, pageSize, new Vector3(-halfPage, pageCenterY, 0f));
 
-            // Hinge one page-thickness above the left page: folding the right leaf 180° lands it exactly on
-            // top of the left page (closed); at 0° it sits level with it (open). See BookShopView for the
-            // closed→open drive (1 - openProgress).
+            // Right leaf folds about the spine (see BookShopView: closed = openAngle, open = 0°).
             var hingePivot = new GameObject("Book Hinge").transform;
             hingePivot.SetParent(root, false);
-            hingePivot.localPosition = new Vector3(0f, pageCenterY + pageThickness * 0.5f, 0f);
+            hingePivot.localPosition = new Vector3(0f, hingeY, 0f);
 
-            CreateCoverCube(hingePivot, "Book Right Page", p.pageColor, leafSize, new Vector3(halfPage, -pageThickness * 0.5f, 0f));
+            CreateCoverCube(hingePivot, "Book Back Cover Right", p.coverColor, boardSize, new Vector3(halfPage, boardCenterY - hingeY, 0f));
+            CreateCoverCube(hingePivot, "Book Right Page", p.pageColor, pageSize, new Vector3(halfPage, pageCenterY - hingeY, 0f));
 
             var clickCollider = root.gameObject.AddComponent<BoxCollider>();
             clickCollider.center = new Vector3(0f, p.coverThickness, 0f);

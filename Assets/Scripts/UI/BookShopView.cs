@@ -368,16 +368,23 @@ namespace Meniscus.UI
             else
                 BuildProp();
 
-            // A page-sized sheet hung on the spine, swept across the spread during a flip. Built over
-            // the prop (so it pivots on the spine, X = 0) and kept inactive until a turn starts.
-            turningPivot = BookShopBuilder.BuildTurningSheet(root, new BookShopBuilder.BookPropParams
-            {
-                pageWidth = pageWidth,
-                pageDepth = pageDepth,
-                coverThickness = coverThickness,
-                coverColor = CoverColor,
-                pageColor = PageColor,
-            });
+            // A page-sized sheet hung on the spine, swept across the spread during a flip. Prefer an
+            // authored sheet under the prop (built by Tools > Meniscus > Author Book Shop, so it too can
+            // carry a model/material); otherwise build it over the prop at runtime. Either way it pivots
+            // on the spine (X = 0) and starts inactive until a turn begins.
+            turningPivot = root.Find("Book Turning Pivot");
+
+            if (turningPivot == null)
+                turningPivot = BookShopBuilder.BuildTurningSheet(root, new BookShopBuilder.BookPropParams
+                {
+                    pageWidth = pageWidth,
+                    pageDepth = pageDepth,
+                    coverThickness = coverThickness,
+                    coverColor = CoverColor,
+                    pageColor = PageColor,
+                });
+
+            turningPivot.gameObject.SetActive(false);
 
             BuildMenuCanvas(catalog);
 
@@ -427,8 +434,9 @@ namespace Meniscus.UI
             var canvas = RuntimeUiFactory.CreateWorldCanvas(root, "Book Menu Canvas", pixelSize, ActiveCamera());
             menuCanvasTransform = canvas.transform;
 
-            // Centred over the spine, just proud of the paper so it reads as printing on the spread.
-            menuCanvasTransform.localPosition = new Vector3(0f, coverThickness + menuFloatHeight, 0f);
+            // Centred over the spine, just proud of the page (which sits on its cover board, so the page top
+            // is at coverThickness*1.5) so the menu reads as printing on the spread.
+            menuCanvasTransform.localPosition = new Vector3(0f, coverThickness * 1.5f + menuFloatHeight, 0f);
 
             menuScaleBase = MenuLayout.ComputeScale(menuWorldWidth, menuWorldDepth, pixelWidth, pixelHeight);
             menuCanvasTransform.localScale = Vector3.one * menuScaleBase;

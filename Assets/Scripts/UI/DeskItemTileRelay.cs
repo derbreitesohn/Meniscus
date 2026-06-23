@@ -14,8 +14,10 @@ namespace Meniscus.UI
     {
         public enum Kind { Body, Use, Cancel }
 
-        DeskItemBox box;
-        Kind kind;
+        // Serialized so the wiring survives when a box is saved as a prefab (the authored box prefab is
+        // built by the same code path and persisted; see DeskItemTrayBuilder / RuntimeObjectAuthoring).
+        [SerializeField] DeskItemBox box;
+        [SerializeField] Kind kind;
 
         public void Initialize(DeskItemBox owner, Kind tileKind)
         {

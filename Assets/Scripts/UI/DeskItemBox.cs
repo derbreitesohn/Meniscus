@@ -5,9 +5,15 @@ using UnityEngine;
 namespace Meniscus.UI
 {
     /// <summary>
-    /// A placeholder cube on the desk standing in for one held item stack. Visuals only: it shows the
-    /// item name + count, raises when selected and reveals Use/Cancel tiles, and relays all clicks to
-    /// the owning <see cref="DeskItemTray"/>, which makes every decision (select, use, turn-gating).
+    /// One held item stack on the desk. Visuals only: it shows the item name + count, raises when
+    /// selected and reveals Use/Cancel tiles, and relays all clicks to the owning
+    /// <see cref="DeskItemTray"/>, which makes every decision (select, use, turn-gating).
+    ///
+    /// The parts (body renderer, label, Use/Cancel tiles) are SERIALIZED so a box authored as a prefab
+    /// is self-contained: the tray instantiates that prefab per stack and only needs to bind it to a
+    /// tray + item via <see cref="Initialize"/>. The placeholder cube box built in code goes through
+    /// the same fields via <see cref="Bind"/>, so a designer can replace the cube with a modelled box
+    /// (mesh, materials, Animator, lighting) in the prefab without touching this logic.
     /// </summary>
     [DisallowMultipleComponent]
     public class DeskItemBox : MonoBehaviour
@@ -15,29 +21,47 @@ namespace Meniscus.UI
         const float RaiseHeight = 0.02f;
         const float FlashSeconds = 0.3f;
 
+        [SerializeField] TextMesh label;
+        [SerializeField] GameObject useTile;
+        [SerializeField] GameObject cancelTile;
+        [SerializeField] Renderer bodyRenderer;
+        [SerializeField] Color restColor = new(0.55f, 0.4f, 0.25f);
+
         DeskItemTray tray;
-        TextMesh label;
-        GameObject useTile;
-        GameObject cancelTile;
-        Renderer bodyRenderer;
         Vector3 restLocalPos;
-        Color restColor;
         Coroutine flash;
 
         public ItemDefinition Item { get; private set; }
         public int Count { get; private set; }
         public bool IsSelected { get; private set; }
 
-        public void Initialize(DeskItemTray owner, ItemDefinition item, TextMesh labelText,
-            GameObject use, GameObject cancel, Renderer body, Color restColor)
+        /// <summary>
+        /// Binds this box to its parts. Called by <see cref="DeskItemTrayBuilder"/> while building the
+        /// placeholder box (in code at runtime, or once when the authoring tool freezes it as a prefab),
+        /// so the same serialized references back both the runtime-built and prefab-instanced box.
+        /// </summary>
+        public void Bind(TextMesh labelText, GameObject use, GameObject cancel, Renderer body, Color color)
         {
-            tray = owner;
-            Item = item;
             label = labelText;
             useTile = use;
             cancelTile = cancel;
             bodyRenderer = body;
-            this.restColor = restColor;
+            restColor = color;
+        }
+
+        /// <summary>
+        /// Attaches a (built or prefab-instanced) box to its owner tray and the item it stands for. Parts
+        /// come from the serialized references, so this works equally for the code-built box and an
+        /// authored prefab instance.
+        /// </summary>
+        public void Initialize(DeskItemTray owner, ItemDefinition item)
+        {
+            tray = owner;
+            Item = item;
+
+            // Apply the placeholder tint via the renderer's property block (no material asset is created,
+            // so edit-mode tests don't leak a material — see DeskItemTrayBuilder.ApplyColor).
+            DeskItemTrayBuilder.ApplyColor(bodyRenderer, restColor);
 
             SetSelected(false);
         }
