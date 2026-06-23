@@ -1,6 +1,7 @@
 using Meniscus.Core;
 using Meniscus.Gameplay;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Meniscus.UI
@@ -15,7 +16,18 @@ namespace Meniscus.UI
     [DisallowMultipleComponent]
     public class CoinSelectionPreview : MonoBehaviour
     {
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void Register()
+        {
+            // RuntimeInitializeOnLoadMethod fires once per launch, so an AfterSceneLoad install misses a
+            // gameplay scene reached later via the menu (LoadScene). Subscribe instead and install whenever
+            // a scene finishes loading; the guards in Install keep it to gameplay scenes and avoid dupes.
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => Install();
+
         static void Install()
         {
             // Only in gameplay scenes (those that own the glass), and never duplicate.
@@ -175,7 +187,7 @@ namespace Meniscus.UI
             multiplierText.text = combo ? $"×{multiplier:0.0}   COMBO" : $"×{multiplier:0.0}";
             multiplierText.color = Color.Lerp(GoldBright, MultHot, Mathf.InverseLerp(1f, 3f, multiplier));
 
-            riskText.text = $"+{spillIncrease:0}% spill   →   {spillAfter:0}%";
+            riskText.text = $"+{spillIncrease:0}% spill";
             riskText.color = Color.Lerp(RiskCalm, RiskHot, Mathf.Clamp01(spillAfter / GameConstants.MaxSpillChance));
 
             selectionActive = true;

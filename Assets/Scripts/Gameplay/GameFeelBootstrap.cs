@@ -1,5 +1,6 @@
 using Meniscus.Core;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Meniscus.Gameplay
 {
@@ -11,7 +12,18 @@ namespace Meniscus.Gameplay
     /// </summary>
     public static class GameFeelBootstrap
     {
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void Register()
+        {
+            // RuntimeInitializeOnLoadMethod fires once per launch, so an AfterSceneLoad install misses a
+            // gameplay scene reached later via the menu (LoadScene). Install on every scene load instead;
+            // the guards below keep it to gameplay scenes and avoid duplicates.
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => Install();
+
         static void Install()
         {
             // Only act in a gameplay scene, and only when the feel layer isn't already present.

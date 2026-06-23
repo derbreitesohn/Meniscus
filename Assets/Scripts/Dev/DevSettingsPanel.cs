@@ -20,6 +20,7 @@ using Meniscus.Core;
 using Meniscus.Gameplay;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 namespace Meniscus.Dev
 {
@@ -33,7 +34,18 @@ namespace Meniscus.Dev
     public class DevSettingsPanel : MonoBehaviour
     {
         // ---- self-install (mirrors GameFeelBootstrap) -------------------------------------------
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void Register()
+        {
+            // RuntimeInitializeOnLoadMethod fires once per launch, so an AfterSceneLoad install misses a
+            // gameplay scene reached later via the menu (LoadScene). Install on every scene load instead;
+            // the guards below keep it to gameplay scenes and avoid duplicates.
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => Install();
+
         static void Install()
         {
             // Only in gameplay scenes (those that own the glass), and never duplicate.
