@@ -24,13 +24,14 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void CalculateSafeDropPayout_UsesRiskBeforeDropForGreedMultiplier()
+        public void CalculateSafeDropPayout_GreedCountsGlassRiskPlusThisPoursCoins()
         {
             var coin = CreateCoin("Base Coin", 10f, 20, true);
 
+            // greed = 1 + (riskBefore 50 + this coin's risk 10) / 50 = 2.2 → 20 × 2.2 = 44
             var payout = economyManager.CalculateSafeDropPayout(new[] { coin }, 50f);
 
-            Assert.AreEqual(40, payout);
+            Assert.AreEqual(44, payout);
             Object.DestroyImmediate(coin.gameObject);
         }
 
@@ -40,10 +41,11 @@ namespace Meniscus.Tests.EditMode
             var coinA = CreateCoin("Coin A", 5f, 10, true);
             var coinB = CreateCoin("Coin B", 5f, 10, true);
 
+            // greed = 1 + (50 + 5 + 5) / 50 = 2.2; (10 + 10) × 2.2 = 44; combo ×1.5 = 66
             var payout = economyManager.AwardSafeDrop(new[] { coinA, coinB }, 50f);
 
-            Assert.AreEqual(60, payout);
-            Assert.AreEqual(60, economyManager.CurrentRoundEarnings);
+            Assert.AreEqual(66, payout);
+            Assert.AreEqual(66, economyManager.CurrentRoundEarnings);
 
             Object.DestroyImmediate(coinA.gameObject);
             Object.DestroyImmediate(coinB.gameObject);
@@ -54,10 +56,11 @@ namespace Meniscus.Tests.EditMode
         {
             var coin = CreateCoin("Bank Coin", 5f, 25, true);
 
+            // greed = 1 + (0 + 5)/50 = 1.1 → 25 × 1.1 = 27.5 → 28
             economyManager.AwardSafeDrop(new[] { coin }, 0f);
             economyManager.BankCurrentRoundEarnings();
 
-            Assert.AreEqual(25, economyManager.PlayerTotalBankedCash);
+            Assert.AreEqual(28, economyManager.PlayerTotalBankedCash);
             Assert.AreEqual(0, economyManager.CurrentRoundEarnings);
 
             Object.DestroyImmediate(coin.gameObject);
@@ -70,12 +73,13 @@ namespace Meniscus.Tests.EditMode
 
             economyManager.QueueNextSafeDropPayoutMultiplier(2f);
 
+            // base greed = 1 + (0 + 5)/50 = 1.1 → 10 × 1.1 = 11; boosted ×2 = 22
             var boostedPayout = economyManager.AwardSafeDrop(new[] { coin }, 0f);
             var normalPayout = economyManager.AwardSafeDrop(new[] { coin }, 0f);
 
-            Assert.AreEqual(20, boostedPayout);
-            Assert.AreEqual(10, normalPayout);
-            Assert.AreEqual(30, economyManager.CurrentRoundEarnings);
+            Assert.AreEqual(22, boostedPayout);
+            Assert.AreEqual(11, normalPayout);
+            Assert.AreEqual(33, economyManager.CurrentRoundEarnings);
 
             Object.DestroyImmediate(coin.gameObject);
         }
@@ -86,12 +90,13 @@ namespace Meniscus.Tests.EditMode
             var bankedCoin = CreateCoin("Banked Coin", 5f, 30, true);
             var riskCoin = CreateCoin("Risk Coin", 5f, 40, true);
 
+            // greed = 1 + (0 + 5)/50 = 1.1 → 30 × 1.1 = 33 banked; the wiped risk drop doesn't count
             economyManager.AwardSafeDrop(new[] { bankedCoin }, 0f);
             economyManager.BankCurrentRoundEarnings();
             economyManager.AwardSafeDrop(new[] { riskCoin }, 0f);
             economyManager.WipeCurrentRoundEarnings();
 
-            Assert.AreEqual(30, economyManager.PlayerTotalBankedCash);
+            Assert.AreEqual(33, economyManager.PlayerTotalBankedCash);
             Assert.AreEqual(0, economyManager.CurrentRoundEarnings);
 
             Object.DestroyImmediate(bankedCoin.gameObject);

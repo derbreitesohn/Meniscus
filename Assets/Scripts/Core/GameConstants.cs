@@ -15,6 +15,7 @@ namespace Meniscus.Core
         public static int MaxCoinsPerActor = 12;
         public static int CoinsPerActor = 10;
         public static int MaxEnemyCoinsPerTurn = 2;
+        public static int MaxPlayerCoinsPerTurn = 3;
         public static int DeskCapacity = 8;
 
         public static int MinGlassCapacity = 8;

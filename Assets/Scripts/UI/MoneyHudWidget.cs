@@ -28,14 +28,16 @@ namespace Meniscus.UI
         int _displayedTotal;
         Coroutine _roll;
 
-        static readonly Color PanelBg    = new Color(0.085f, 0.045f, 0.018f, 0.92f);
-        static readonly Color BorderCol  = new Color(0.72f,  0.54f,  0.17f,  0.78f);
         static readonly Color GoldBright = new Color(0.97f,  0.83f,  0.31f,  1f);
         static readonly Color GoldDim    = new Color(0.62f,  0.47f,  0.16f,  1f);
         static readonly Color RedFlash   = new Color(0.95f,  0.22f,  0.13f,  1f);
         static readonly Color FloatShadow = new Color(0f, 0f, 0f, 0.65f);
         // Hot amber the "+$X" shifts toward as the multiplier climbs (greed/combo payouts read hotter).
         static readonly Color MultHot    = new Color(1f,    0.55f,  0.18f,  1f);
+        // Warm, near-black brown that frames the gold like branded leather. The HUD has no panel, so
+        // this outline + a drop shadow are what keep the text legible over the bright saloon.
+        static readonly Color WesternOutline = new Color(0.10f, 0.05f, 0.02f, 0.95f);
+        static readonly Color WesternShadow  = new Color(0f,    0f,    0f,    0.85f);
 
         const float PanelW = 224f;
         const float PanelH = 86f;
@@ -350,27 +352,37 @@ namespace Meniscus.UI
             _canvas = RuntimeUiFactory.CreateOverlayCanvas(transform, "Money HUD Canvas");
             _canvas.sortingOrder = 1;
 
-            // Gold border behind the panel, pinned to the top-right corner.
-            var border = MakeRect(_canvas.transform, "Money Border");
-            AnchorTopRight(border, PanelW + 4f, PanelH + 4f, Margin - 2f);
-            border.gameObject.AddComponent<Image>().color = BorderCol;
+            // No backdrop: a stacked caption + amount pinned to the top-right corner, kept readable over
+            // the bright scene by a branded-leather outline + drop shadow instead of a dark panel.
+            var group = MakeRect(_canvas.transform, "Money Group");
+            AnchorTopRight(group, PanelW, PanelH, Margin);
 
-            // Dark main panel.
-            var panel = MakeRect(_canvas.transform, "Money Panel");
-            AnchorTopRight(panel, PanelW, PanelH, Margin);
-            panel.gameObject.AddComponent<Image>().color = PanelBg;
-
-            // "MONEY" caption across the top.
-            AddText(panel, "MoneyLabel", "MONEY",
-                new Vector2(0f, 0.56f), new Vector2(1f, 1f),
-                new Vector2(10f, 2f),   new Vector2(-10f, -4f),
-                12, GoldDim, TextAnchor.UpperCenter);
+            // Wanted-poster caption: spaced, starred caps for a saloon-signage feel.
+            var label = AddText(group, "MoneyLabel", "★  M O N E Y  ★",
+                new Vector2(0f, 0.58f), new Vector2(1f, 1f),
+                new Vector2(0f, 0f),    new Vector2(0f, 0f),
+                16, GoldDim, TextAnchor.UpperRight, bold: true);
+            AddWesternLegibility(label, strong: false);
 
             // The single live-total amount.
-            _amount = AddText(panel, "MoneyAmount", "$0",
-                new Vector2(0f, 0f),  new Vector2(1f, 0.62f),
-                new Vector2(10f, 4f), new Vector2(-10f, -2f),
-                40, GoldBright, TextAnchor.MiddleCenter, bold: true);
+            _amount = AddText(group, "MoneyAmount", "$0",
+                new Vector2(0f, 0f), new Vector2(1f, 0.6f),
+                new Vector2(0f, 0f), new Vector2(0f, 0f),
+                46, GoldBright, TextAnchor.UpperRight, bold: true);
+            AddWesternLegibility(_amount, strong: true);
+        }
+
+        // Frames a backdrop-free gold label so it stays legible over the saloon: a warm dark outline
+        // plus an offset drop shadow. The amount uses a heavier pass than the small caption.
+        static void AddWesternLegibility(Text txt, bool strong)
+        {
+            var shadow = txt.gameObject.AddComponent<Shadow>();
+            shadow.effectColor    = WesternShadow;
+            shadow.effectDistance = strong ? new Vector2(3f, -3f) : new Vector2(1.5f, -1.5f);
+
+            var outline = txt.gameObject.AddComponent<Outline>();
+            outline.effectColor    = WesternOutline;
+            outline.effectDistance = strong ? new Vector2(2f, 2f) : new Vector2(1.2f, 1.2f);
         }
 
         // Pins a rect to the top-right corner, inset by `margin`, with the given size.

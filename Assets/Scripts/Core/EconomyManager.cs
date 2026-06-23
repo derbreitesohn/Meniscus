@@ -36,16 +36,23 @@ namespace Meniscus.Core
             if (coins == null || coins.Count == 0)
                 return 0;
 
-            var greedMultiplier = 1f + Mathf.Max(0f, currentRisk) / GameConstants.GreedRiskDivisor;
-            var total = 0f;
+            // Greed rewards the risk of THIS pour — the risk already in the glass PLUS the risk the dropped
+            // coins add — so a bigger, riskier coin (gold) earns a higher multiplier than a safer one, not
+            // just more flat payout. Pouring into a fuller glass still pumps it too (riskBefore is included).
+            var addedRisk = 0f;
+            var baseTotal = 0f;
 
             for (var i = 0; i < coins.Count; i++)
             {
                 if (coins[i] == null)
                     continue;
 
-                total += coins[i].basePayout * greedMultiplier;
+                addedRisk += Mathf.Max(0f, coins[i].riskContribution);
+                baseTotal += coins[i].basePayout;
             }
+
+            var greedMultiplier = 1f + (Mathf.Max(0f, currentRisk) + addedRisk) / GameConstants.GreedRiskDivisor;
+            var total = baseTotal * greedMultiplier;
 
             if (coins.Count > 1)
                 total *= GameConstants.ComboMultiplier;

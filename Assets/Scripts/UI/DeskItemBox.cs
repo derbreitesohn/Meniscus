@@ -43,6 +43,13 @@ namespace Meniscus.UI
         public bool IsSelected { get; private set; }
 
         /// <summary>
+        /// The fixed layout slot this box occupies, assigned once when the box is created and held for
+        /// its lifetime. A box never changes slot, so using or removing another item never shifts it —
+        /// the tray maps slot -> position independently of how many boxes are present.
+        /// </summary>
+        public int Slot { get; set; } = -1;
+
+        /// <summary>
         /// Binds this box to its parts. Called by <see cref="DeskItemTrayBuilder"/> while building the
         /// placeholder box (in code at runtime, or once when the authoring tool freezes it as a prefab),
         /// so the same serialized references back both the runtime-built and prefab-instanced box.

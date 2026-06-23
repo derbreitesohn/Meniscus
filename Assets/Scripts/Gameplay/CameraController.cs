@@ -72,6 +72,16 @@ namespace Meniscus.Gameplay
         [Tooltip("Fallback glass radius (metres) used only if no renderer bounds can be measured.")]
         [SerializeField, Min(0.05f)] float fallbackSubjectRadius = 0.45f;
 
+        [Header("Overflow Close-Up")]
+        [Tooltip("Degrees around the glass the overflow reveal swings to (dramatic side-on). 0 = straight on.")]
+        [SerializeField, Range(-180f, 180f)] float overflowYaw = 80f;
+        [Tooltip("Degrees the overflow shot rides above the rim. Negative looks UP so the cascade reads against the background.")]
+        [SerializeField, Range(-40f, 60f)] float overflowPitch = -4f;
+        [Tooltip("Overflow framing distance as a multiple of the glass size. Tight so the spill fills the frame.")]
+        [SerializeField, Min(0.5f)] float overflowFraming = 2.1f;
+        [Tooltip("How high up the glass the overflow shot aims (lower than the drop close-up so the run-down + base show). 0 = base, 1 = rim.")]
+        [SerializeField, Range(0f, 1.2f)] float overflowRimHeightFraction = 0.55f;
+
         [Header("Snappiness")]
         [Tooltip("How fast the camera snaps into / out of a close-up. Higher = snappier.")]
         [SerializeField, Min(0.5f)] float focusSnapSpeed = 9f;
@@ -80,7 +90,18 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0f)] float shakeAmplitude = 0.12f;
         [SerializeField, Min(0f)] float shakeDuration = 0.5f;
 
+        [Header("Death Orbit")]
+        [Tooltip("Distance the loss orbit holds from the glass, as a multiple of the glass size.")]
+        [SerializeField, Min(0.5f)] float orbitRadiusMultiplier = 3.2f;
+        [Tooltip("Height of the loss orbit above the glass centre (metres). Small positive = a gentle look down.")]
+        [SerializeField] float orbitHeight = 0.12f;
+        [Tooltip("How fast the loss orbit circles the glass, in degrees per second.")]
+        [SerializeField] float orbitSpeed = 20f;
+
         float activeGlassYaw;   // live yaw for the glass close-up: front by default, side to bait / on overflow
+        bool framingOverflow;   // the close-up uses its dramatic overflow pose (set by FocusOverflow)
+        bool orbiting;          // the loss "death orbit" owns the camera until the match restarts
+        float orbitAngle;       // current orbit heading around the glass, in degrees
         Vector3 rigPosition;
         Quaternion rigRotation = Quaternion.identity;
         Vector3 basePosition;
@@ -117,6 +138,13 @@ namespace Meniscus.Gameplay
 
             var cameraTransform = targetCamera.transform;
 
+            // The loss "death orbit" fully owns the camera (no rig / focus / sway) until the match restarts.
+            if (orbiting)
+            {
+                ApplyDeathOrbit(cameraTransform);
+                return;
+            }
+
             UpdateRig(cameraTransform);
 
             var finalPosition = rigPosition;
@@ -131,6 +159,10 @@ namespace Meniscus.Gameplay
 
         public void SwitchCamera(CameraState newState)
         {
+            // The overflow framing only applies to its own reveal; any other state change clears it.
+            if (newState != CameraState.GlassZoom && newState != CameraState.GlassInspect)
+                framingOverflow = false;
+
             currentState = newState;
         }
 
@@ -267,10 +299,12 @@ namespace Meniscus.Gameplay
                 if (TryGetSubjectBounds(out var bounds))
                 {
                     // Aim partway up the measured glass and frame relative to its real size, so the
-                    // shot reads the same whatever scale the glass is authored at.
+                    // shot reads the same whatever scale the glass is authored at. The overflow shot
+                    // aims lower so the rim, the run-down and the base all stay in frame.
+                    var rimFraction = framingOverflow ? overflowRimHeightFraction : rimHeightFraction;
                     focusPoint = new Vector3(
                         bounds.center.x,
-                        bounds.min.y + bounds.size.y * rimHeightFraction,
+                        bounds.min.y + bounds.size.y * rimFraction,
                         bounds.center.z);
                     subjectRadius = Mathf.Max(0.05f, bounds.extents.magnitude);
                 }
@@ -283,8 +317,13 @@ namespace Meniscus.Gameplay
                 var danger = glassManager != null
                     ? Mathf.Clamp01(glassManager.CurrentTrueSpillChance / GameConstants.MaxOverflowProbability)
                     : 0f;
-                var standoff = subjectRadius * Mathf.Lerp(inspectFraming, rimFraming, danger);
-                var direction = ComputeOrbitDirection(focusPoint, fromPosition, activeGlassYaw, pitchAngle);
+
+                // The overflow reveal gets its own tight, low side-on framing; otherwise the standoff and
+                // pitch follow the danger-lerped drop close-up.
+                var framingMultiplier = framingOverflow ? overflowFraming : Mathf.Lerp(inspectFraming, rimFraming, danger);
+                var pitch = framingOverflow ? overflowPitch : pitchAngle;
+                var standoff = subjectRadius * framingMultiplier;
+                var direction = ComputeOrbitDirection(focusPoint, fromPosition, activeGlassYaw, pitch);
 
                 focusPosition = focusPoint + direction * standoff;
                 focusRotation = Quaternion.LookRotation((focusPoint - focusPosition).normalized, Vector3.up);
@@ -383,12 +422,92 @@ namespace Meniscus.Gameplay
         /// </summary>
         public void FocusGlass(bool fromSide)
         {
+            framingOverflow = false;
             activeGlassYaw = fromSide ? sideAngle : frontAngle;
+            SwitchCamera(CameraState.GlassZoom);
+        }
+
+        /// <summary>
+        /// Snap to the dramatic overflow shot: a tight, low, side-on close-up that catches the liquid
+        /// cresting the rim and running down the glass. Driven by the drop conductor at the spill reveal.
+        /// </summary>
+        public void FocusOverflow()
+        {
+            activeGlassYaw = overflowYaw;
+            framingOverflow = true;
             SwitchCamera(CameraState.GlassZoom);
         }
 
         /// <summary>Kick the overflow camera shake. Called at the dramatic spill reveal.</summary>
         public void Shake() => shakeTimer = shakeDuration;
+
+        /// <summary>
+        /// Start the loss "death orbit": the camera circles the glass continuously, ignoring the rig, until
+        /// <see cref="StopGlassOrbit"/> (called when the match restarts). The starting angle is taken from the
+        /// camera's current heading on the glass so the orbit eases in without a jump.
+        /// </summary>
+        public void BeginGlassOrbit()
+        {
+            ResolveReferences();
+            orbiting = true;
+
+            var center = OrbitCenter(out _);
+            var flat = (targetCamera != null ? targetCamera.transform.position : center + Vector3.back) - center;
+            flat.y = 0f;
+            orbitAngle = flat.sqrMagnitude > 1e-4f ? Mathf.Atan2(flat.z, flat.x) * Mathf.Rad2Deg : 0f;
+        }
+
+        /// <summary>Stop the loss orbit and hand the rig back where the orbit left off (no jump on restart).</summary>
+        public void StopGlassOrbit()
+        {
+            orbiting = false;
+
+            if (targetCamera != null)
+            {
+                rigPosition = targetCamera.transform.position;
+                rigRotation = targetCamera.transform.rotation;
+            }
+        }
+
+        public bool IsOrbiting => orbiting;
+
+        void ApplyDeathOrbit(Transform cameraTransform)
+        {
+            var center = OrbitCenter(out var radius);
+            orbitAngle += orbitSpeed * Time.unscaledDeltaTime;
+
+            var position = OrbitPosition(center, radius * orbitRadiusMultiplier, orbitHeight, orbitAngle);
+            var look = center - position;
+            var rotation = look.sqrMagnitude > 1e-6f
+                ? Quaternion.LookRotation(look.normalized, Vector3.up)
+                : cameraTransform.rotation;
+
+            cameraTransform.SetPositionAndRotation(position, rotation);
+        }
+
+        // The glass centre + radius the orbit revolves around (measured bounds if available).
+        Vector3 OrbitCenter(out float radius)
+        {
+            if (TryGetSubjectBounds(out var bounds))
+            {
+                radius = Mathf.Max(0.05f, bounds.extents.magnitude);
+                return bounds.center;
+            }
+
+            radius = fallbackSubjectRadius;
+            return glassTarget != null ? glassTarget.position : basePosition;
+        }
+
+        /// <summary>Camera position on a horizontal circle of <paramref name="radius"/> around
+        /// <paramref name="center"/>, lifted by <paramref name="height"/>, at <paramref name="angleDeg"/> degrees.</summary>
+        public static Vector3 OrbitPosition(Vector3 center, float radius, float height, float angleDeg)
+        {
+            var a = angleDeg * Mathf.Deg2Rad;
+            return new Vector3(
+                center.x + Mathf.Cos(a) * radius,
+                center.y + height,
+                center.z + Mathf.Sin(a) * radius);
+        }
 
         Transform FindAnchor(CameraState state)
         {

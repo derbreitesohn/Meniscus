@@ -28,6 +28,8 @@ namespace Meniscus.Core
         [SerializeField] EndScreenManager endScreenManager;
         [SerializeField] RoundWonBanner roundWonBanner;
         [SerializeField] RoundIntroCard roundIntroCard;
+        [SerializeField] LossSequence lossSequence;
+        [SerializeField] CoinTossOverlay coinTossOverlay;
         [SerializeField] CoinDropPresentationController dropPresentationController;
         [SerializeField] SaloonHudController saloonHudController;
         [SerializeField] MoneyHudWidget moneyHudWidget;
@@ -87,6 +89,8 @@ namespace Meniscus.Core
         void Awake()
         {
             EnsureInputSystemUiModules();
+            // Re-apply settings chosen in the main menu (e.g. sound) now that this scene is live.
+            GameSession.EnsureExists().ApplySettings();
             ResolveReferences();
         }
 
@@ -99,6 +103,7 @@ namespace Meniscus.Core
         public void StartMatch()
         {
             ResolveReferences();
+            lossSequence?.End(cameraController);   // restore the scene if the last match ended in the loss orbit
             NormalizeFallbackLayoutIfNeeded();
             EnsureShopPhaseEnabledForCurrentLoop();
             currentRound = 0;
@@ -110,6 +115,7 @@ namespace Meniscus.Core
             endScreenManager?.Hide();
             roundWonBanner?.Hide();
             roundIntroCard?.Hide();
+            coinTossOverlay?.Hide();
             StartRound();
         }
 
@@ -129,9 +135,38 @@ namespace Meniscus.Core
             economyManager?.ResetRoundEarnings();
             GenerateRoundCoinPools();
             RoundStarted?.Invoke(currentRound);
+
+            BeginCoinToss();
+        }
+
+        // Each round opens on a coin toss: the player calls it and the winner takes the first turn. The
+        // round intro card is held back until the toss resolves so the two interstitials don't overlap.
+        // Without an overlay (EditMode tests / unwired scene) the player starts, preserving the old flow.
+        void BeginCoinToss()
+        {
+            if (coinTossOverlay == null)
+            {
+                roundIntroCard?.Show(currentRound, GameConstants.TotalRounds);
+                BeginPlayerTurn();
+                return;
+            }
+
+            // Flip the real gold coin (the large/gold model); the overlay auto-fits and stands in with a
+            // placeholder if no model is wired.
+            coinTossOverlay.Show(
+                coinModels.GetModelForSize(CoinSize.Large),
+                coinModels.ModelScale,
+                OnCoinTossDecided);
+        }
+
+        void OnCoinTossDecided(TurnActor starter)
+        {
             roundIntroCard?.Show(currentRound, GameConstants.TotalRounds);
 
-            BeginPlayerTurn();
+            if (starter == TurnActor.Enemy)
+                BeginEnemyTurn();
+            else
+                BeginPlayerTurn();
         }
 
         public bool TryPlayerDropSelectedCoins(IReadOnlyList<Coin> selectedCoins)
@@ -405,8 +440,23 @@ namespace Meniscus.Core
         {
             lastMatchOutcome = outcome;
             TransitionTo(GameState.GameOver);
-            cameraController?.SwitchCamera(CameraState.TableOverview);
             shopManager?.HideShop();
+
+            // Fold the finished match into the persistent session so the main menu can show running stats.
+            GameSession.EnsureExists().RecordMatchResult(
+                outcome,
+                economyManager == null ? 0 : economyManager.PlayerTotalBankedCash);
+
+            // A loss is its own beat: strip the scene to just the spilled glass and orbit it until the player
+            // restarts, instead of the flat end screen. EditMode tests have no LossSequence, so they fall
+            // through to the unchanged end-screen path below.
+            if (outcome == MatchOutcome.PlayerLost && lossSequence != null)
+            {
+                lossSequence.Begin(this, cameraController, "YOU LOST");
+                return;
+            }
+
+            cameraController?.SwitchCamera(CameraState.TableOverview);
 
             // Delay the end screen so the final drop animation can finish playing.
             StartCoroutine(ShowEndScreenAfterDelay(outcome, reason));
@@ -803,6 +853,20 @@ namespace Meniscus.Core
             // tests (no Update/coroutine tick) never spawn a stray canvas into the shared test scene.
             if (roundIntroCard == null && Application.isPlaying)
                 roundIntroCard = RoundIntroCard.CreateRuntimeFallback();
+
+            if (lossSequence == null)
+                lossSequence = FindAnyObjectByType<LossSequence>();
+
+            if (lossSequence == null && Application.isPlaying)
+                lossSequence = LossSequence.CreateRuntimeFallback();
+
+            if (coinTossOverlay == null)
+                coinTossOverlay = FindAnyObjectByType<CoinTossOverlay>();
+
+            // Play-mode-only: the toss blocks on a button click, so EditMode tests must keep the null path
+            // (BeginCoinToss → player starts) and never spawn an input-blocking canvas into the test scene.
+            if (coinTossOverlay == null && Application.isPlaying)
+                coinTossOverlay = CoinTossOverlay.CreateRuntimeFallback();
 
             if (dropPresentationController == null)
                 dropPresentationController = FindAnyObjectByType<CoinDropPresentationController>();

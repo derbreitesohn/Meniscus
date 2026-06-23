@@ -20,16 +20,20 @@ namespace Meniscus.Gameplay
     {
         [SerializeField] GlassManager glassManager;
         [SerializeField] Transform waterTransform;
-        [SerializeField] float stableSurfaceLocalY = 0.62f;
-        [SerializeField] float maxRiskSurfaceRise = 0.015f;
+        // Calm surface height. The live Saloon scene still stores the old value and can't be rewritten
+        // while the editor is open, so this is re-applied at play start (see OnEnable) and stays tunable
+        // live in the dev panel. Bake into the scene and drop the OnEnable line once it is settled.
+        const float DefaultStableSurfaceLocalY = 1.3f;
+        [SerializeField] float stableSurfaceLocalY = DefaultStableSurfaceLocalY;
+        [SerializeField] float maxRiskSurfaceRise = 0.05f;
         [SerializeField] float riseSpeed = 1.1f;
         [SerializeField] float dangerWobbleAmplitude = 0.008f;
-        [SerializeField] float spillPuddleLifetime = 1.4f;
+        [SerializeField] float spillPuddleLifetime = 1.8f;
 
         [Header("Surface Mesh")]
         [SerializeField, Min(0.05f)] float surfaceRadius = 0.39f;
-        [SerializeField, Range(2, 64)] int radialRings = 6;
-        [SerializeField, Range(3, 96)] int angularSegments = 28;
+        [SerializeField, Range(2, 64)] int radialRings = 32;
+        [SerializeField, Range(3, 96)] int angularSegments = 64;
 
         [Header("Liquid Body")]
         [SerializeField] float fillBottomLocalY = 0.06f;
@@ -58,7 +62,7 @@ namespace Meniscus.Gameplay
         [Header("Meniscus")]
         [SerializeField] float meniscusRimClimb = 0.05f;
         [SerializeField, Range(0f, 0.99f)] float meniscusRimStart = 0.5f;
-        [SerializeField] float dangerDomeHeight = 0.05f;
+        [SerializeField] float dangerDomeHeight = 0.14f;
         [SerializeField] float dangerTrembleAmplitude = 0.006f;
 
         [Header("Surface Motion")]
@@ -74,8 +78,8 @@ namespace Meniscus.Gameplay
         [SerializeField] float sloshDecay = 1.3f;
 
         [Header("Overspill")]
-        [SerializeField, Range(1, 12)] int spillRivuletCount = 4;
-        [SerializeField] float spillRunDownDuration = 0.4f;
+        [SerializeField, Range(1, 12)] int spillRivuletCount = 7;
+        [SerializeField] float spillRunDownDuration = 0.6f;
         [SerializeField] float spillSurfaceDip = 0.02f;
         [SerializeField] float spillTableDrop = 0.34f;
         [Tooltip("Authored spill prefab (built by Tools > Meniscus > Author Spill Effect Prefab). When set " +
@@ -99,9 +103,27 @@ namespace Meniscus.Gameplay
         float targetSurfaceLocalY;
         float currentRisk;
         float spillFlashTimer;
+        bool frozen;                 // held at the peak spill frame during the loss orbit (see FreezeAtMaxSpill)
+        GlassSpillEffect heldSpill;  // the persistent loss spill effect; destroyed on Thaw
 
-        float rippleKick;
-        float rippleStartTime;
+        // --- Procedural ripple field (see KickRipple / UpdateSurfaceVertices) ---
+        // Each coin impact spawns one decaying, radially-travelling sine wave. Several can be alive at
+        // once and their heights are summed (linear superposition), so overlapping rings interfere -
+        // reinforcing where crests meet, cancelling where a crest meets a trough - instead of one kick
+        // simply replacing the last. A small round-robin buffer caps the live count; a new kick past
+        // the cap overwrites the oldest (and faintest) wave.
+        struct RippleWave
+        {
+            public float StartTime; // when this wave was kicked (seconds)
+            public float Amplitude; // initial crest height before time decay
+        }
+
+        const int MaxConcurrentRipples = 6;
+        readonly RippleWave[] rippleWaves = new RippleWave[MaxConcurrentRipples];
+        readonly float[] rippleElapsedScratch = new float[MaxConcurrentRipples]; // per-frame age cache
+        readonly float[] rippleEnvelopeScratch = new float[MaxConcurrentRipples]; // per-frame decayed amplitude
+        int nextRippleSlot;
+
         float sloshKick;
         float sloshStartTime;
         Vector2 sloshDirection = Vector2.right;
@@ -116,6 +138,9 @@ namespace Meniscus.Gameplay
         /// <summary>Local-space height of the calm liquid surface (top of the whiskey column).</summary>
         public float StableSurfaceLocalY => stableSurfaceLocalY;
 
+        /// <summary>Root of the runtime liquid body (the whiskey mesh); kept visible during the loss orbit.</summary>
+        public Transform WaterTransform => waterTransform;
+
         /// <summary>Local-space height of the interior floor the liquid - and dropped coins - rest on.</summary>
         public float FloorLocalY => fillBottomLocalY;
 
@@ -125,9 +150,20 @@ namespace Meniscus.Gameplay
         /// <summary>Fraction of <see cref="SurfaceLocalRadius"/> the interior floor spans.</summary>
         public float FloorRadiusScale => fillBottomRadiusScale;
 
+        // How far the surface climbs from calm to a maxed meter. Floored so the rising whiskey reads
+        // clearly and lifts toward the rim even while the scene still stores the old, smaller authored
+        // value. (Drop the floor once a value is baked into the scene.)
+        float RiskSurfaceRise => Mathf.Max(maxRiskSurfaceRise, 0.045f);
+
         void OnEnable()
         {
             ResolveReferences();
+
+            // DEV: re-apply the dev surface height at play start; the open scene still serializes the old
+            // value and can't be rewritten while the editor is open. Still tunable live in the dev panel.
+            // Remove this once the value is baked into the scene.
+            if (Application.isPlaying)
+                stableSurfaceLocalY = DefaultStableSurfaceLocalY;
 
             if (waterTransform == null)
                 waterTransform = WaterSurfaceBuilder.Build(transform, WaterSurfaceBuilder.DefaultName);
@@ -184,6 +220,14 @@ namespace Meniscus.Gameplay
             if (waterTransform == null || waterMesh == null)
                 return;
 
+            if (frozen)
+                return;   // held at the peak spill frame (FreezeAtMaxSpill) until Thaw on restart
+
+            // Stable Surface Local Y is the authoritative calm-surface height (tunable live in the dev
+            // panel). Recompute the target from it each frame so an edit animates in immediately; the
+            // glass rim auto-fit no longer moves it (see ConfigureSurface).
+            targetSurfaceLocalY = CalculateWaterSurfaceLocalY(currentRisk, stableSurfaceLocalY, RiskSurfaceRise);
+
             if (!Mathf.Approximately(currentSurfaceLocalY, targetSurfaceLocalY))
             {
                 currentSurfaceLocalY = Mathf.MoveTowards(
@@ -234,7 +278,8 @@ namespace Meniscus.Gameplay
         /// </summary>
         public void ConfigureSurface(float surfaceLocalY, float discRadius, float floorLocalY, float floorRadiusScale)
         {
-            stableSurfaceLocalY = surfaceLocalY;
+            // Surface height is driven by stableSurfaceLocalY directly (dev-tunable in the panel), so the
+            // glass rim auto-fit no longer overrides it — it only fits the disc radius and interior floor.
             surfaceRadius = Mathf.Max(0.05f, discRadius);
             fillBottomLocalY = floorLocalY;
             fillBottomRadiusScale = Mathf.Clamp(floorRadiusScale, 0.1f, 1f);
@@ -250,7 +295,7 @@ namespace Meniscus.Gameplay
             PinWaterTransform();
 
             currentSurfaceLocalY = stableSurfaceLocalY;
-            targetSurfaceLocalY = CalculateWaterSurfaceLocalY(currentRisk, stableSurfaceLocalY, maxRiskSurfaceRise);
+            targetSurfaceLocalY = CalculateWaterSurfaceLocalY(currentRisk, stableSurfaceLocalY, RiskSurfaceRise);
 
             // Reflect the new fit immediately (matters in the editor, where Update doesn't animate).
             UpdateSurfaceVertices();
@@ -258,8 +303,9 @@ namespace Meniscus.Gameplay
 
         void OnProbabilityChanged(float probability)
         {
+            frozen = false;   // a probability change means the glass is live again (e.g. a round reset)
             currentRisk = probability;
-            targetSurfaceLocalY = CalculateWaterSurfaceLocalY(probability, stableSurfaceLocalY, maxRiskSurfaceRise);
+            targetSurfaceLocalY = CalculateWaterSurfaceLocalY(probability, stableSurfaceLocalY, RiskSurfaceRise);
 
             if (Mathf.Approximately(probability, 0f))
                 currentSurfaceLocalY = targetSurfaceLocalY;
@@ -273,9 +319,52 @@ namespace Meniscus.Gameplay
         public void PlaySpill()
         {
             spillFlashTimer = 1f;
+
+            // The surface lurches hard as the liquid tips over the rim; big reactive kicks sell the heave,
+            // then the dip drops the body to a lower level once it has poured out.
+            KickRipple(2.6f);
+            KickSlosh(2.2f);
             currentSurfaceLocalY = Mathf.Max(fillBottomLocalY, currentSurfaceLocalY - spillSurfaceDip);
+
             SpawnSpillEffect();
+            SpawnSpillSplash();
             waterSpill?.Post(gameObject);
+        }
+
+        /// <summary>
+        /// Hold the glass at its most-overflowed look for the loss screen: snap the body to its brim, paint
+        /// one peak frame (full danger dome + hot tint), stop animating, and spawn a spill that runs to full
+        /// and then stays. <see cref="Thaw"/> reverses it when the match restarts.
+        /// </summary>
+        public void FreezeAtMaxSpill()
+        {
+            if (!Application.isPlaying || frozen)
+                return;
+
+            // Snap the body up to its current brim target (undo any post-pour dip) and paint one peak frame.
+            spillFlashTimer = 0f;
+            currentSurfaceLocalY = targetSurfaceLocalY;
+
+            if (waterMesh != null)
+                UpdateSurfaceVertices();
+
+            ApplyDangerTint(CurrentDangerNormalized());
+            frozen = true;
+
+            // A held spill: rivulets run to full and then stay (no fade, no self-destruct) until Thaw.
+            heldSpill = SpawnSpillEffect(hold: true);
+        }
+
+        /// <summary>Resume animation and clear the held loss spill (called when the match restarts).</summary>
+        public void Thaw()
+        {
+            frozen = false;
+
+            if (heldSpill != null)
+            {
+                Destroy(heldSpill.gameObject);
+                heldSpill = null;
+            }
         }
 
         void UpdateSurfaceVertices()
@@ -290,8 +379,17 @@ namespace Meniscus.Gameplay
                     ? Mathf.Clamp01(currentRisk / GameConstants.MaxOverflowProbability)
                     : Mathf.Clamp01(glassManager.CurrentTrueSpillChance / GameConstants.MaxOverflowProbability);
 
-            var rippleElapsed = t - rippleStartTime;
-            var rippleEnvelope = rippleKick > 0f ? rippleKick * Mathf.Exp(-rippleElapsed * rippleDecay) : 0f;
+            // Precompute every active ripple's age and time-decayed amplitude once per frame, so the
+            // per-vertex loop below only evaluates the cheap spatial term (sin of distance) and sums.
+            for (var k = 0; k < rippleWaves.Length; k++)
+            {
+                var elapsed = t - rippleWaves[k].StartTime;
+                rippleElapsedScratch[k] = elapsed;
+                rippleEnvelopeScratch[k] = rippleWaves[k].Amplitude > 0f
+                    ? rippleWaves[k].Amplitude * Mathf.Exp(-elapsed * rippleDecay)
+                    : 0f;
+            }
+
             var sloshElapsed = t - sloshStartTime;
             var sloshEnvelope = sloshKick > 0f ? sloshKick * Mathf.Exp(-sloshElapsed * sloshDecay) : 0f;
             var sloshPhase = Mathf.Sin(sloshElapsed * sloshFrequency);
@@ -325,8 +423,16 @@ namespace Meniscus.Gameplay
                             : Mathf.Clamp01((r - meniscusRimStart) / (1f - meniscusRimStart));
                         var concave = meniscusRimClimb * Mathf.SmoothStep(0f, 1f, rimT) * (1f - danger);
 
-                        // Convex dome: surface tension straining a bulge above the rim as overflow nears.
-                        var dome = dangerDomeHeight * danger * Mathf.Clamp01(1f - r * r);
+                        // Convex crown: the whiskey mounds up and stands proud of the rim as overflow nears
+                        // — an over-filled glass held together by surface tension. Driven across the full
+                        // spill-chance range (like the colour tell) so it climbs the whole way instead of
+                        // topping out half-way, with a bold height floor so the bulge clearly stands out of
+                        // the glass even while the scene still stores the old, smaller authored value.
+                        var crownDanger = glassManager == null
+                            ? danger
+                            : Mathf.Clamp01(glassManager.CurrentTrueSpillChance / GameConstants.MaxSpillChance);
+                        var crownHeight = Mathf.Max(dangerDomeHeight, 0.13f);
+                        var dome = crownHeight * crownDanger * Mathf.Clamp01(1f - r * r);
 
                         var tremble = danger > 0f
                             ? Mathf.Sin(t * Mathf.Lerp(7f, 20f, danger) + (nx + nz) * 5f)
@@ -339,10 +445,19 @@ namespace Meniscus.Gameplay
                                 nz * ambientSpatialScale - t * ambientSpeed) - 0.5f) * ambientAmplitude
                             : 0f;
 
-                        var ripple = rippleEnvelope != 0f
-                            ? Mathf.Sin(r * rippleWavelength - rippleElapsed * rippleSpeed)
-                                * rippleEnvelope * Mathf.Clamp01(1f - r * 0.15f)
-                            : 0f;
+                        // Superpose every live ripple: each contributes a travelling sine wave whose
+                        // phase is (distance * wavenumber - age * speed). Summing the active waves makes
+                        // overlapping rings interfere. The radial falloff keeps the rim a touch calmer.
+                        var ripple = 0f;
+                        var rippleFalloff = Mathf.Clamp01(1f - r * 0.15f);
+                        for (var k = 0; k < rippleWaves.Length; k++)
+                        {
+                            if (rippleEnvelopeScratch[k] <= 0.0001f)
+                                continue;
+
+                            ripple += Mathf.Sin(r * rippleWavelength - rippleElapsedScratch[k] * rippleSpeed)
+                                * rippleEnvelopeScratch[k] * rippleFalloff;
+                        }
 
                         var slosh = sloshEnvelope != 0f
                             ? (nx * sloshDirection.x + nz * sloshDirection.y) * sloshPhase * sloshEnvelope
@@ -364,10 +479,18 @@ namespace Meniscus.Gameplay
             waterMesh.RecalculateBounds();
         }
 
+        /// <summary>
+        /// Spawns a new radial ripple from a coin impact. Added to the live set rather than replacing
+        /// the previous one, so rapid drops build an interfering wave field (see <see cref="RippleWave"/>).
+        /// </summary>
         public void KickRipple(float strength)
         {
-            rippleKick = rippleAmplitude * Mathf.Max(0f, strength);
-            rippleStartTime = Time.time;
+            rippleWaves[nextRippleSlot] = new RippleWave
+            {
+                StartTime = Time.time,
+                Amplitude = rippleAmplitude * Mathf.Max(0f, strength)
+            };
+            nextRippleSlot = (nextRippleSlot + 1) % rippleWaves.Length;
         }
 
         public void KickSlosh(float strength)
@@ -476,7 +599,15 @@ namespace Meniscus.Gameplay
         void BuildLiquidMesh()
         {
             var floorRadius = surfaceRadius * Mathf.Clamp(fillBottomRadiusScale, 0.1f, 1f);
-            var data = LiquidBodyMesh.Build(surfaceRadius, floorRadius, radialRings, angularSegments, wallLevels);
+
+            // Tessellate finely enough to actually resolve the ripple wave. With too few radial rings the
+            // crests step from ring to ring, which reads as a jittery, "laggy" shake rather than a smooth
+            // travelling wave. Require ~6 rings per ripple cycle across the radius (comfortably above the
+            // Nyquist minimum) so a short wavelength stays smooth regardless of the authored ring count.
+            var ripplesAcrossRadius = Mathf.Max(1f, rippleWavelength / (2f * Mathf.PI));
+            var rings = Mathf.Max(radialRings, Mathf.CeilToInt(ripplesAcrossRadius * 6f), 24);
+            var segments = Mathf.Max(angularSegments, 56);
+            var data = LiquidBodyMesh.Build(surfaceRadius, floorRadius, rings, segments, wallLevels);
 
             waterMesh = data.Mesh;
             baseVertices = data.BaseVertices;
@@ -489,7 +620,7 @@ namespace Meniscus.Gameplay
             vertexWallT = data.WallT;
         }
 
-        void SpawnSpillEffect()
+        GlassSpillEffect SpawnSpillEffect(bool hold = false)
         {
             // The glass sits under a non-uniform scale, so convert the surface radius to world
             // space and let the effect live at identity world scale (it world-roots itself).
@@ -508,20 +639,36 @@ namespace Meniscus.Gameplay
                     liquidColor,
                     spillRivuletCount,
                     spillRunDownDuration,
-                    spillPuddleLifetime);
+                    spillPuddleLifetime,
+                    hold);
+                return effect;
             }
-            else
-            {
-                GlassSpillEffect.Spawn(
-                    transform.position,
-                    worldRimRadius,
-                    rimWorldY,
-                    transform.position.y - spillTableDrop,
-                    liquidColor,
-                    spillRivuletCount,
-                    spillRunDownDuration,
-                    spillPuddleLifetime);
-            }
+
+            return GlassSpillEffect.Spawn(
+                transform.position,
+                worldRimRadius,
+                rimWorldY,
+                transform.position.y - spillTableDrop,
+                liquidColor,
+                spillRivuletCount,
+                spillRunDownDuration,
+                spillPuddleLifetime,
+                hold);
+        }
+
+        // Droplets flung off the rim as the liquid breaches it — reuses the coin-impact splash burst so an
+        // overflow throws amber, not just runs down. Runtime only (the burst builds GameObjects).
+        void SpawnSpillSplash()
+        {
+            if (!Application.isPlaying)
+                return;
+
+            var scale = transform.lossyScale;
+            var rimWorldY = transform.TransformPoint(new Vector3(0f, currentSurfaceLocalY, 0f)).y;
+            var worldRimRadius = surfaceRadius * Mathf.Max(scale.x, scale.z);
+            var rimCenter = new Vector3(transform.position.x, rimWorldY, transform.position.z);
+
+            ParticleBurst.SpawnSplash(rimCenter, worldRimRadius, liquidColor, 1.8f);
         }
 
         void PinWaterTransform()

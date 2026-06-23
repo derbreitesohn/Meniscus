@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using Meniscus.Core;
 using UnityEngine;
 
@@ -28,12 +29,19 @@ namespace Meniscus.Gameplay
         const float LiftDamping = 20f;
         Spring liftSpring = new Spring(0f, LiftStiffness, LiftDamping);
 
+        // A short side-to-side shudder used to signal a refused click (e.g. the per-turn coin limit is
+        // reached). Decaying sine wiggle along the coin's resting X, no lift — purely cosmetic.
+        const float RejectShakeSeconds = 0.22f;
+        const float RejectShakeAmplitude = 0.03f;
+        const float RejectShakeFrequency = 40f;
+
         Vector3 originalLocalPosition;
         bool hasCachedOriginalPosition;
         bool isSelected;
         bool isSpent;
         GameObject activeModelInstance;
         SelectionGlow glow;
+        Coroutine rejectShake;
 
         public bool IsSelected => isSelected;
         public bool IsSpent => isSpent;
@@ -124,6 +132,42 @@ namespace Meniscus.Gameplay
             liftSpring.Snap(0f);
             transform.localPosition = originalLocalPosition;
             glow?.SetActive(false);
+        }
+
+        /// <summary>
+        /// A brief side-to-side shudder signalling a refused click — e.g. the player is already holding
+        /// the max coins they may pour this turn. Purely cosmetic: selection state is untouched. Safe to
+        /// run on a resting (unselected) coin because Update idles once the lift has settled, so it won't
+        /// fight the shake. No-op outside play mode or on a spent/inactive coin.
+        /// </summary>
+        public void FlashRejected()
+        {
+            if (!Application.isPlaying || isSpent || !isActiveAndEnabled)
+                return;
+
+            CacheOriginalPosition();
+
+            if (rejectShake != null)
+                StopCoroutine(rejectShake);
+
+            rejectShake = StartCoroutine(RejectShakeRoutine());
+        }
+
+        IEnumerator RejectShakeRoutine()
+        {
+            var elapsed = 0f;
+
+            while (elapsed < RejectShakeSeconds)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var decay = 1f - Mathf.Clamp01(elapsed / RejectShakeSeconds);
+                var offset = Mathf.Sin(elapsed * RejectShakeFrequency) * RejectShakeAmplitude * decay;
+                transform.localPosition = originalLocalPosition + new Vector3(offset, 0f, 0f);
+                yield return null;
+            }
+
+            transform.localPosition = originalLocalPosition;
+            rejectShake = null;
         }
 
         /// <summary>

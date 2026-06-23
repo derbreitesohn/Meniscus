@@ -142,10 +142,12 @@ namespace Meniscus.Tests.EditMode
             var coinGo = new GameObject("Coin");
             var coin = coinGo.AddComponent<Coin>();
             coin.basePayout = 30;
+            coin.riskContribution = 10;
 
-            economy.AwardSafeDrop(new List<Coin> { coin }, 50f); // greed = 1 + 50/50 = 2×, single coin
+            // greed = 1 + (50 + this coin's 10) / 50 = 2.2×; single coin, no combo
+            economy.AwardSafeDrop(new List<Coin> { coin }, 50f);
 
-            Assert.AreEqual(2f, economy.LastSafeDropMultiplier, 0.05f);
+            Assert.AreEqual(2.2f, economy.LastSafeDropMultiplier, 0.05f);
             Assert.IsFalse(economy.LastSafeDropComboApplied);
 
             Object.DestroyImmediate(coinGo);
@@ -161,15 +163,50 @@ namespace Meniscus.Tests.EditMode
             var b = new GameObject("CoinB").AddComponent<Coin>();
             a.basePayout = 20;
             b.basePayout = 20;
+            a.riskContribution = 10;
+            b.riskContribution = 10;
 
-            economy.AwardSafeDrop(new List<Coin> { a, b }, 0f); // no greed, combo ×1.5
+            // greed = 1 + (0 + 10 + 10) / 50 = 1.4; combo ×1.5 → 2.1×
+            economy.AwardSafeDrop(new List<Coin> { a, b }, 0f);
 
-            Assert.AreEqual(1.5f, economy.LastSafeDropMultiplier, 0.05f);
+            Assert.AreEqual(2.1f, economy.LastSafeDropMultiplier, 0.05f);
             Assert.IsTrue(economy.LastSafeDropComboApplied);
 
             Object.DestroyImmediate(a.gameObject);
             Object.DestroyImmediate(b.gameObject);
             Object.DestroyImmediate(ecoGo);
+        }
+
+        [Test]
+        public void AwardSafeDrop_RiskierCoinsEarnAHigherMultiplierNotJustMoreMoney()
+        {
+            // Same glass risk and same coin count, but the gold-laden pour adds more risk — so it must earn
+            // BOTH a higher payout and a higher multiplier than the all-silver pour. (The old logic gave the
+            // identical multiplier regardless of coin size — the bug this fixes.)
+            var ecoGo = new GameObject("Economy");
+            var economy = ecoGo.AddComponent<EconomyManager>();
+
+            var threeSilver = new List<Coin> { MakeCoin(20, 10f), MakeCoin(20, 10f), MakeCoin(20, 10f) };
+            var goldTwoSilver = new List<Coin> { MakeCoin(30, 15f), MakeCoin(20, 10f), MakeCoin(20, 10f) };
+
+            var silverPayout = economy.CalculateSafeDropPayout(threeSilver, 20f);   // base 60, risk 30
+            var goldPayout = economy.CalculateSafeDropPayout(goldTwoSilver, 20f);   // base 70, risk 35
+
+            Assert.Greater(goldPayout, silverPayout, "The riskier gold combo must pay more.");
+            Assert.Greater(goldPayout / 70f, silverPayout / 60f,
+                "The riskier gold combo must earn a higher multiplier, not the same.");
+
+            foreach (var c in threeSilver) Object.DestroyImmediate(c.gameObject);
+            foreach (var c in goldTwoSilver) Object.DestroyImmediate(c.gameObject);
+            Object.DestroyImmediate(ecoGo);
+        }
+
+        static Coin MakeCoin(int basePayout, float risk)
+        {
+            var coin = new GameObject("Coin").AddComponent<Coin>();
+            coin.basePayout = basePayout;
+            coin.riskContribution = risk;
+            return coin;
         }
 
         // ── Easing.OutBack (banner / card / pop springs) ───────────────────────────────
@@ -232,6 +269,28 @@ namespace Meniscus.Tests.EditMode
         {
             Assert.AreEqual("ROUND 2 OF 3", RoundIntroCard.RoundLabel(2, 3));
             Assert.AreEqual("ROUND 1", RoundIntroCard.RoundLabel(1, 0), "Drops the total when it is unknown.");
+        }
+
+        // ── CameraController loss orbit ─────────────────────────────────────────────────
+
+        [Test]
+        public void OrbitPosition_CirclesTheCenterAtRadiusAndHeight()
+        {
+            var center = new Vector3(1f, 2f, 3f);
+
+            var at0 = CameraController.OrbitPosition(center, 5f, 0.5f, 0f);
+            Assert.AreEqual(center.x + 5f, at0.x, 1e-3f, "Angle 0 sits +radius on x.");
+            Assert.AreEqual(center.z, at0.z, 1e-3f);
+            Assert.AreEqual(center.y + 0.5f, at0.y, 1e-3f, "Lifted by height.");
+
+            var at90 = CameraController.OrbitPosition(center, 5f, 0.5f, 90f);
+            Assert.AreEqual(center.x, at90.x, 1e-3f, "A quarter turn swings to +z.");
+            Assert.AreEqual(center.z + 5f, at90.z, 1e-3f);
+
+            // Any angle stays on the circle of the given radius (flat distance from the centre).
+            var p = CameraController.OrbitPosition(center, 5f, 0.5f, 37f);
+            var flat = new Vector2(p.x - center.x, p.z - center.z);
+            Assert.AreEqual(5f, flat.magnitude, 1e-3f, "Stays on the orbit radius.");
         }
     }
 }

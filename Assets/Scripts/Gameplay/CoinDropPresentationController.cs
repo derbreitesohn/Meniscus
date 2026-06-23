@@ -31,6 +31,7 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(1f)] float holdAboveWaterSeconds = 1.15f;   // poise over the surface before letting go (>= 1s)
         [SerializeField, Min(0.05f)] float plungeSeconds = 0.55f;        // drop from poised down into the resting slot
         [SerializeField, Min(0f)] float suspenseSeconds = 1.35f;         // watch the water still shaking before the reveal
+        [SerializeField, Min(0f)] float overflowRevealHoldSeconds = 1.4f; // hold on the overflow close-up so the spill is seen
 
         [Header("Shape")]
         [SerializeField, Min(0f)] float liftArcHeight = 0.34f;
@@ -366,11 +367,21 @@ namespace Meniscus.Gameplay
                 yield return null;
             }
 
-            // Phase 5 — reveal: spill over the rim (and shake the camera) only when it really overflowed.
+            // Phase 5 — reveal: spill over the rim only when it really overflowed. Cut to the dramatic
+            // overflow close-up, spill, shake, then HOLD so the cascade is actually seen before the turn
+            // resolves (onComplete hands off to the round-won banner / game-over screen).
             if (result.Overflowed)
             {
+                cameraController?.FocusOverflow();
                 glassVisual?.PlaySpill();
                 cameraController?.Shake();
+
+                var revealHold = 0f;
+                while (revealHold < overflowRevealHoldSeconds)
+                {
+                    revealHold += Time.deltaTime;
+                    yield return null;
+                }
             }
 
             onComplete?.Invoke();

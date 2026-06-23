@@ -1,5 +1,6 @@
 using Meniscus.Core;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Meniscus.UI
@@ -7,16 +8,20 @@ namespace Meniscus.UI
     [DisallowMultipleComponent]
     public class EndScreenManager : MonoBehaviour
     {
+        const string MenuSceneName = "MainMenu";
+
         [SerializeField] Canvas endCanvas;
         [SerializeField] Text titleText;
         [SerializeField] Text detailText;
         [SerializeField] Button restartButton;
+        [SerializeField] Button mainMenuButton;
         [SerializeField] GameManager gameManager;
 
         void Awake()
         {
             ResolveReferences();
             WireRestartButton();
+            WireMainMenuButton();
             Hide();
         }
 
@@ -39,6 +44,7 @@ namespace Meniscus.UI
             gameManager = manager;
             ResolveReferences();
             WireRestartButton();
+            WireMainMenuButton();
             Hide();
         }
 
@@ -86,6 +92,16 @@ namespace Meniscus.UI
                 onClick: null,
                 boldLabel: true);
 
+            var mainMenuButton = RuntimeUiFactory.CreateButton(
+                scrim.transform,
+                "Runtime Main Menu Button",
+                "MAIN MENU",
+                new Vector2(220f, 58f),
+                new Vector2(0f, -218f),
+                22,
+                onClick: null);
+
+            manager.mainMenuButton = mainMenuButton;
             manager.Configure(canvas, title, detail, restartButton, null);
             return manager;
         }
@@ -128,6 +144,12 @@ namespace Meniscus.UI
             gameManager.StartMatch();
         }
 
+        public void ReturnToMainMenu()
+        {
+            Hide();
+            SceneManager.LoadScene(MenuSceneName);
+        }
+
         void ResolveReferences()
         {
             if (gameManager == null)
@@ -141,6 +163,15 @@ namespace Meniscus.UI
 
             restartButton.onClick.RemoveListener(RestartMatch);
             restartButton.onClick.AddListener(RestartMatch);
+        }
+
+        void WireMainMenuButton()
+        {
+            if (mainMenuButton == null)
+                return;
+
+            mainMenuButton.onClick.RemoveListener(ReturnToMainMenu);
+            mainMenuButton.onClick.AddListener(ReturnToMainMenu);
         }
     }
 }

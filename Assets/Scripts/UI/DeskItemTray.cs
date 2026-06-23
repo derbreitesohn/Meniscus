@@ -183,6 +183,7 @@ namespace Meniscus.UI
                 if (box == null)
                 {
                     box = CreateBox(stack.Item);
+                    box.Slot = NextFreeSlot();
                     boxes.Add(box);
                 }
 
@@ -209,27 +210,45 @@ namespace Meniscus.UI
             return DeskItemTrayBuilder.BuildBox(transform, this, item);
         }
 
-        // Half the stacks sit to the left of centre and half to the right, with a clear gap in the middle
-        // so the play area / glass stays unobstructed (instead of a single row across the centre).
+        // Stacks sit to the left and right of centre, with a clear gap in the middle so the play area /
+        // glass stays unobstructed (instead of a single row across the centre).
         const float CenterGap = 0.6f;
 
+        // Each box owns a fixed slot for its lifetime, so a box never moves when another item is used or
+        // removed. Slots fill outward from the centre, alternating right then left:
+        //   slot 0 -> right ring 1, slot 1 -> left ring 1, slot 2 -> right ring 2, slot 3 -> left ring 2 ...
         void Layout()
         {
-            var count = boxes.Count;
-            var leftCount = count / 2;   // left gets the smaller half on an odd count
+            for (var i = 0; i < boxes.Count; i++)
+                boxes[i].SetRestPosition(SlotPosition(boxes[i].Slot));
+        }
 
-            for (var i = 0; i < count; i++)
+        static Vector3 SlotPosition(int slot)
+        {
+            var ring = slot / 2 + 1;                 // 1, 1, 2, 2, 3, 3, ...
+            var sign = (slot % 2 == 0) ? 1f : -1f;   // even -> right, odd -> left
+            return new Vector3(sign * (CenterGap * 0.5f + ring * BoxSpacing), 0f, 0f);
+        }
+
+        // The lowest slot index not currently held by a box. Reusing a freed slot keeps new items as
+        // close to centre as possible, while existing boxes stay put.
+        int NextFreeSlot()
+        {
+            for (var slot = 0; ; slot++)
             {
-                float x;
+                var taken = false;
 
-                if (i < leftCount)
-                    // Left cluster grows outward (leftward) from the gap edge.
-                    x = -CenterGap * 0.5f - (leftCount - i) * BoxSpacing;
-                else
-                    // Right cluster grows outward (rightward) from the gap edge.
-                    x = CenterGap * 0.5f + (i - leftCount + 1) * BoxSpacing;
+                for (var i = 0; i < boxes.Count; i++)
+                {
+                    if (boxes[i].Slot == slot)
+                    {
+                        taken = true;
+                        break;
+                    }
+                }
 
-                boxes[i].SetRestPosition(new Vector3(x, 0f, 0f));
+                if (!taken)
+                    return slot;
             }
         }
 
