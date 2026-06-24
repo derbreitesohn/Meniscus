@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using Meniscus.Core;
 using UnityEngine;
 
@@ -7,6 +8,9 @@ namespace Meniscus.Gameplay
     [DisallowMultipleComponent]
     public class Coin : MonoBehaviour
     {
+        /// <summary>Name given to the instantiated model child by <see cref="ApplyModel"/>.</summary>
+        const string ModelChildName = "Coin Model";
+
         [Header("Coin Definition")]
         public CoinSize size = CoinSize.Medium;
         public float riskContribution = GameConstants.MediumCoinRisk;
@@ -19,14 +23,35 @@ namespace Meniscus.Gameplay
         [Header("Audio")]
         [SerializeField] AK.Wwise.Event coinOnWood;
 
+        // Under-damped spring for the selection lift: snappy with a small overshoot ("pop") instead of a
+        // hard snap. Stepped with unscaled time in Update so it keeps gliding during the slow-mo verdict.
+        const float LiftStiffness = 260f;
+        const float LiftDamping = 20f;
+        Spring liftSpring = new Spring(0f, LiftStiffness, LiftDamping);
+
+        // A short side-to-side shudder used to signal a refused click (e.g. the per-turn coin limit is
+        // reached). Decaying sine wiggle along the coin's resting X, no lift — purely cosmetic.
+        const float RejectShakeSeconds = 0.22f;
+        const float RejectShakeAmplitude = 0.03f;
+        const float RejectShakeFrequency = 40f;
+
         Vector3 originalLocalPosition;
         bool hasCachedOriginalPosition;
         bool isSelected;
         bool isSpent;
         GameObject activeModelInstance;
+        SelectionGlow glow;
+        Coroutine rejectShake;
 
         public bool IsSelected => isSelected;
         public bool IsSpent => isSpent;
+
+        /// <summary>
+        /// The instantiated coin model currently shown, or null when the placeholder cylinder is showing.
+        /// Lets presentation code (e.g. the drop animation) mirror the coin's real visible mesh without
+        /// reaching into its child hierarchy by name.
+        /// </summary>
+        public GameObject ActiveModel => activeModelInstance;
 
         void Awake()
         {
@@ -40,6 +65,24 @@ namespace Meniscus.Gameplay
             selectedYOffset = Mathf.Max(0f, selectedYOffset);
         }
 
+        void Update()
+        {
+            // Spring the selection lift toward its target (play mode only — edit-mode tests have no tick,
+            // and SetSelected places the coin directly there). Unscaled time so the lift keeps gliding
+            // during the slow-motion verdict, matching the selection glow and the desk-item raise. Idle
+            // when already settled, so a resting coin never fights layout that re-homes it.
+            if (!Application.isPlaying || !hasCachedOriginalPosition)
+                return;
+
+            var target = isSelected ? selectedYOffset : 0f;
+
+            if (Mathf.Approximately(liftSpring.Value, target) && Mathf.Approximately(liftSpring.Velocity, 0f))
+                return;
+
+            liftSpring.Step(target, Time.unscaledDeltaTime);
+            transform.localPosition = originalLocalPosition + Vector3.up * liftSpring.Value;
+        }
+
         public void Configure(CoinSize newSize, float newRiskContribution, int newBasePayout, bool belongsToPlayer)
         {
             size = newSize;
@@ -48,6 +91,7 @@ namespace Meniscus.Gameplay
             isPlayerCoin = belongsToPlayer;
             isSpent = false;
             ApplyVisualsForSize();
+            EnsureClickCollider();
             ResetVisualSelection();
         }
 
@@ -65,9 +109,17 @@ namespace Meniscus.Gameplay
 
             CacheOriginalPosition();
             isSelected = selected;
-            transform.localPosition = selected
-                ? originalLocalPosition + Vector3.up * selectedYOffset
-                : originalLocalPosition;
+
+            // In play mode Update springs the lift in/out for a "pop"; outside play mode (edit-mode tests,
+            // no Update tick) place it at the target immediately so logic and tests see the final position.
+            if (!Application.isPlaying)
+            {
+                liftSpring.Snap(selected ? selectedYOffset : 0f);
+                transform.localPosition = originalLocalPosition + Vector3.up * liftSpring.Value;
+            }
+
+            EnsureGlow();
+            glow?.SetActive(selected);
 
             if (selected)
                 coinOnWood?.Post(gameObject);
@@ -77,7 +129,60 @@ namespace Meniscus.Gameplay
         {
             CacheOriginalPosition();
             isSelected = false;
+            liftSpring.Snap(0f);
             transform.localPosition = originalLocalPosition;
+            glow?.SetActive(false);
+        }
+
+        /// <summary>
+        /// A brief side-to-side shudder signalling a refused click — e.g. the player is already holding
+        /// the max coins they may pour this turn. Purely cosmetic: selection state is untouched. Safe to
+        /// run on a resting (unselected) coin because Update idles once the lift has settled, so it won't
+        /// fight the shake. No-op outside play mode or on a spent/inactive coin.
+        /// </summary>
+        public void FlashRejected()
+        {
+            if (!Application.isPlaying || isSpent || !isActiveAndEnabled)
+                return;
+
+            CacheOriginalPosition();
+
+            if (rejectShake != null)
+                StopCoroutine(rejectShake);
+
+            rejectShake = StartCoroutine(RejectShakeRoutine());
+        }
+
+        IEnumerator RejectShakeRoutine()
+        {
+            var elapsed = 0f;
+
+            while (elapsed < RejectShakeSeconds)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var decay = 1f - Mathf.Clamp01(elapsed / RejectShakeSeconds);
+                var offset = Mathf.Sin(elapsed * RejectShakeFrequency) * RejectShakeAmplitude * decay;
+                transform.localPosition = originalLocalPosition + new Vector3(offset, 0f, 0f);
+                yield return null;
+            }
+
+            transform.localPosition = originalLocalPosition;
+            rejectShake = null;
+        }
+
+        /// <summary>
+        /// Re-homes the coin to <paramref name="localPosition"/> and records it as the resting position that
+        /// selection lifts from and returns to. Used when layout code repositions coins after configuring a
+        /// round (each round re-rolls sizes and the active count, so the authored slot no longer fits), so a
+        /// later select/deselect can't snap the coin back to its stale authored position.
+        /// </summary>
+        public void SetRestingLocalPosition(Vector3 localPosition)
+        {
+            transform.localPosition = localPosition;
+            originalLocalPosition = localPosition;
+            hasCachedOriginalPosition = true;
+            isSelected = false;
+            liftSpring.Snap(0f);
         }
 
         public void MarkSpent()
@@ -96,12 +201,18 @@ namespace Meniscus.Gameplay
         {
             if (activeModelInstance != null)
             {
-                if (Application.isPlaying)
-                    Destroy(activeModelInstance);
-                else
-                    DestroyImmediate(activeModelInstance);
-
+                DestroySafely(activeModelInstance);
                 activeModelInstance = null;
+            }
+
+            // Also clear any model child left by an editor preview (or a reloaded domain) so a coin never
+            // shows two stacked models when ApplyModel runs at the start of a round.
+            for (var i = transform.childCount - 1; i >= 0; i--)
+            {
+                var child = transform.GetChild(i);
+
+                if (child.name == ModelChildName)
+                    DestroySafely(child.gameObject);
             }
 
             var ownRenderer = GetComponent<MeshRenderer>();
@@ -129,7 +240,7 @@ namespace Meniscus.Gameplay
             if (ownRenderer != null)
                 ownRenderer.enabled = false;
 
-            activeModelInstance.name = "Coin Model";
+            activeModelInstance.name = ModelChildName;
             activeModelInstance.transform.localPosition = Vector3.zero;
             activeModelInstance.transform.localRotation = Quaternion.identity;
 
@@ -168,6 +279,13 @@ namespace Meniscus.Gameplay
                 SafeDivide(fitWorldScale, rootScale.x),
                 SafeDivide(fitWorldScale, rootScale.y),
                 SafeDivide(fitWorldScale, rootScale.z));
+
+            // Re-centre the model on the coin. An FBX whose pivot isn't at its geometric centre would
+            // otherwise render offset from the coin's transform — and from its click collider — so the coin
+            // looks mis-placed and clicking the visible model selects a neighbour. Shifting by the measured
+            // bounds offset puts the model's centre exactly on the coin's position (and collider centre).
+            var centeredBounds = CalculateWorldRendererBounds(model);
+            model.transform.position += transform.position - centeredBounds.center;
         }
 
         static Bounds CalculateWorldRendererBounds(GameObject root)
@@ -206,8 +324,50 @@ namespace Meniscus.Gameplay
             }
         }
 
+        /// <summary>
+        /// Guarantees the coin's click target is a thin <see cref="BoxCollider"/> sized to the unit cube, so
+        /// it tracks the coin's real footprint via the root scale. A <see cref="CapsuleCollider"/> (the
+        /// default on a primitive cylinder, and what the scene coins were authored with) collapses into an
+        /// oversized *sphere* once the flat per-size scale squashes its height below its diameter — it bulges
+        /// above the coin and into its neighbours, so an angled-camera raycast selects the wrong coin.
+        /// </summary>
+        public void EnsureClickCollider()
+        {
+            var colliders = GetComponents<Collider>();
+
+            for (var i = 0; i < colliders.Length; i++)
+            {
+                if (colliders[i] is not BoxCollider)
+                    DestroySafely(colliders[i]);
+            }
+
+            if (!TryGetComponent<BoxCollider>(out var box))
+                box = gameObject.AddComponent<BoxCollider>();
+
+            box.center = Vector3.zero;
+            box.size = Vector3.one;
+        }
+
+        static void DestroySafely(UnityEngine.Object target)
+        {
+            if (Application.isPlaying)
+                Destroy(target);
+            else
+                DestroyImmediate(target);
+        }
+
         static float SafeDivide(float numerator, float denominator) =>
             Mathf.Approximately(denominator, 0f) ? numerator : numerator / denominator;
+
+        // A warm halo that follows the coin and fades in while selected. Built lazily as a standalone
+        // follower (see SelectionGlow) so the coin's squashed scale never distorts it.
+        void EnsureGlow()
+        {
+            if (glow == null)
+                glow = SelectionGlow.Attach(transform, GlowWorldSize(), new Color(1f, 0.86f, 0.4f, 1f));
+        }
+
+        float GlowWorldSize() => Mathf.Max(transform.localScale.x, transform.localScale.z) * 1.45f;
 
         void CacheOriginalPosition()
         {

@@ -71,6 +71,9 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 
+# macOS Finder metadata
+.DS_Store
+
 # macOS debug symbols
 *.dSYM/
 *.dSYM/**

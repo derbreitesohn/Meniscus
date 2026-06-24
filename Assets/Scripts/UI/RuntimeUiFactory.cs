@@ -117,15 +117,22 @@ namespace Meniscus.UI
             Vector2 position,
             int labelFontSize = 18,
             UnityAction onClick = null,
-            bool boldLabel = false)
+            bool boldLabel = false,
+            Color? normalColor = null,
+            Color? highlightedColor = null,
+            Color? pressedColor = null,
+            Color? labelColor = null,
+            TextAnchor labelAlignment = TextAnchor.MiddleCenter,
+            Vector2 labelPadding = default)
         {
-            var buttonObject = CreateImage(parent, name, size, position, ButtonNormalColor);
+            var normal = normalColor ?? ButtonNormalColor;
+            var buttonObject = CreateImage(parent, name, size, position, normal);
 
             var button = buttonObject.AddComponent<Button>();
             var colors = button.colors;
-            colors.normalColor = ButtonNormalColor;
-            colors.highlightedColor = ButtonHighlightedColor;
-            colors.pressedColor = ButtonPressedColor;
+            colors.normalColor = normal;
+            colors.highlightedColor = highlightedColor ?? ButtonHighlightedColor;
+            colors.pressedColor = pressedColor ?? ButtonPressedColor;
             button.colors = colors;
 
             if (onClick != null)
@@ -136,11 +143,14 @@ namespace Meniscus.UI
                 "Label",
                 label,
                 Vector2.zero,
-                size,
+                new Vector2(size.x - labelPadding.x * 2f, size.y - labelPadding.y * 2f),
                 labelFontSize,
-                ButtonLabelColor,
-                TextAnchor.MiddleCenter,
+                labelColor ?? ButtonLabelColor,
+                labelAlignment,
                 boldLabel);
+
+            // Springy "sink on press, pop on release" feel on every fallback button (play mode only).
+            buttonObject.AddComponent<UiPressPunch>();
 
             return button;
         }

@@ -25,10 +25,51 @@ namespace Meniscus.UI
 
         public IReadOnlyList<ItemDefinition> Catalog => ResolveCatalog();
 
+        /// <summary>
+        /// Whether the player may open the book to browse right now: any time a round is in
+        /// progress, but not while the round-won banner is up, during the post-round shop phase
+        /// (closed via "Finish Drink"), or on the game-over screen.
+        /// </summary>
+        public static bool BrowsingAllowed(GameState state)
+            => state != GameState.RoundWon && state != GameState.ShopPhase && state != GameState.GameOver;
+
+        /// <summary>Banked cash the player can spend right now (0 if economy is unwired).</summary>
+        public int BankedCash => economyManager != null ? economyManager.PlayerTotalBankedCash : 0;
+
+        /// <summary>True when the desk cannot hold any more items.</summary>
+        public bool IsDeskFull => playerInventory != null && playerInventory.IsFull;
+
+        /// <summary>How many of <paramref name="item"/> the player already owns.</summary>
+        public int OwnedCount(ItemDefinition item)
+        {
+            if (item == null || playerInventory == null)
+                return 0;
+
+            foreach (var stack in playerInventory.Contents())
+                if (stack.Item == item)
+                    return stack.Count;
+
+            return 0;
+        }
+
         void Awake()
         {
             ResolveReferences();
             HideShop();
+        }
+
+        void Start()
+        {
+            // Seat the diegetic book on the desk from the start of the match so it is a visible prop
+            // during the rounds and is lifted from there when the shop opens, rather than spawning.
+            if (!useDiegeticBookShop)
+                return;
+
+            EnsureBookShop();
+            WireBrowseGate();
+
+            if (bookShop != null)
+                bookShop.PrepareOnDesk(Catalog, this);
         }
 
         public void Configure(
@@ -49,6 +90,7 @@ namespace Meniscus.UI
             if (useDiegeticBookShop)
             {
                 EnsureBookShop();
+                WireBrowseGate();
 
                 if (bookShop != null)
                 {
@@ -217,6 +259,12 @@ namespace Meniscus.UI
 
             if (bookShop == null)
                 bookShop = new GameObject("Runtime Book Shop").AddComponent<BookShopView>();
+        }
+
+        void WireBrowseGate()
+        {
+            if (bookShop != null)
+                bookShop.SetBrowseGate(() => gameManager == null || BrowsingAllowed(gameManager.CurrentState));
         }
 
         void EnsureFallbackShopCanvas()

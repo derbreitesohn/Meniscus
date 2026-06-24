@@ -78,9 +78,9 @@ namespace Meniscus.Tests.EditMode
             Assert.Greater(GlassManager.CalculateTrueSpillChance(10f), 0f);
 
             // Continuous curve: chance = MaxSpillChance * (1 - e^(-(risk/50)^2)). Small early, climbing.
-            Assert.AreEqual(1.96f, GlassManager.CalculateTrueSpillChance(10f), 0.05f);
-            Assert.AreEqual(15.12f, GlassManager.CalculateTrueSpillChance(30f), 0.1f);
-            Assert.AreEqual(31.61f, GlassManager.CalculateTrueSpillChance(50f), 0.1f);
+            Assert.AreEqual(3.14f, GlassManager.CalculateTrueSpillChance(10f), 0.05f);
+            Assert.AreEqual(24.19f, GlassManager.CalculateTrueSpillChance(30f), 0.1f);
+            Assert.AreEqual(50.57f, GlassManager.CalculateTrueSpillChance(50f), 0.1f);
 
             // Monotonic increase.
             Assert.Greater(
@@ -102,7 +102,7 @@ namespace Meniscus.Tests.EditMode
 
             Assert.AreEqual(39f, result.RiskAfterDrop);
             Assert.Greater(result.TrueSpillChance, 0f);                 // no safe zone any more
-            Assert.AreEqual(22.79f, result.TrueSpillChance, 0.1f);      // 50 * (1 - e^(-(39/50)^2))
+            Assert.AreEqual(36.46f, result.TrueSpillChance, 0.1f);      // 80 * (1 - e^(-(39/50)^2))
             Assert.IsFalse(result.Overflowed);                          // highest roll didn't spill
 
             Object.DestroyImmediate(coin.gameObject);
@@ -195,8 +195,8 @@ namespace Meniscus.Tests.EditMode
         {
             glassManager.AddEnemyPourPenalty(12f);
 
-            // A roll between the player's (lower) and the drunk enemy's (higher) spill chance.
-            glassManager.SpillRollProvider = () => 36f;
+            // A roll between the sober player's (~50.6%) and the drunk enemy's (~62.8%) spill chance.
+            glassManager.SpillRollProvider = () => 56f;
 
             var enemyCoin = CreateCoin("Enemy Fill", 50f, 10, false);
             var enemyResult = glassManager.DropCoins(new[] { enemyCoin }, TurnActor.Enemy);
@@ -205,7 +205,7 @@ namespace Meniscus.Tests.EditMode
             Assert.Greater(enemyResult.TrueSpillChance, GlassManager.CalculateTrueSpillChance(50f, 0f));
 
             glassManager.ResetGlass();                 // clears the penalty and the fill
-            glassManager.SpillRollProvider = () => 36f;
+            glassManager.SpillRollProvider = () => 56f;
 
             var playerCoin = CreateCoin("Player Fill", 50f, 10, true);
             var playerResult = glassManager.DropCoins(new[] { playerCoin }, TurnActor.Player);

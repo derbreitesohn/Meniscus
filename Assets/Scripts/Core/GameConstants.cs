@@ -2,20 +2,28 @@ using UnityEngine;
 
 namespace Meniscus.Core
 {
+    // NOTE: The balance/feel values below were authored as `const`, but are intentionally plain
+    // `static` so the dev-only settings overlay (Meniscus.Dev.DevSettingsPanel) can mutate them at
+    // runtime to trial different values. The consuming code reads them live, so edits take effect
+    // immediately. MaxOverflowProbability stays `const` because it is used as a [Range] attribute
+    // argument (GlassManager), which requires a compile-time constant. Revert these to `const` when
+    // the dev overlay is removed.
     public static class GameConstants
     {
-        public const int TotalRounds = 3;
-        public const int MinCoinsPerActor = 8;
-        public const int MaxCoinsPerActor = 12;
-        public const int MaxEnemyCoinsPerTurn = 2;
-        public const int DeskCapacity = 8;
+        public static int TotalRounds = 3;
+        public static int MinCoinsPerActor = 8;
+        public static int MaxCoinsPerActor = 12;
+        public static int CoinsPerActor = 10;
+        public static int MaxEnemyCoinsPerTurn = 2;
+        public static int MaxPlayerCoinsPerTurn = 3;
+        public static int DeskCapacity = 8;
 
-        public const int MinGlassCapacity = 8;
-        public const int MaxGlassCapacity = 15;
-        public const int MinDeposit = 1;
-        public const int MaxDeposit = 2;
-        public const int RoundsToWin = 2;
-        public const int RoundsPerMatch = TotalRounds;
+        public static int MinGlassCapacity = 8;
+        public static int MaxGlassCapacity = 15;
+        public static int MinDeposit = 1;
+        public static int MaxDeposit = 2;
+        public static int RoundsToWin = 2;
+        public static int RoundsPerMatch => TotalRounds;
 
         public static bool IsValidBet(int amount) =>
             amount >= MinCoinsPerActor && amount <= MaxCoinsPerActor;
@@ -23,41 +31,42 @@ namespace Meniscus.Core
         public static bool IsValidDeposit(int amount) =>
             amount >= MinDeposit && amount <= MaxDeposit;
 
-        public const float SmallCoinRisk = 5f;
-        public const float MediumCoinRisk = 10f;
-        public const float LargeCoinRisk = 15f;
+        public static float SmallCoinRisk = 5f;
+        public static float MediumCoinRisk = 10f;
+        public static float LargeCoinRisk = 15f;
 
-        public const int SmallCoinBasePayout = 10;
-        public const int MediumCoinBasePayout = 20;
-        public const int LargeCoinBasePayout = 30;
+        public static int SmallCoinBasePayout = 10;
+        public static int MediumCoinBasePayout = 20;
+        public static int LargeCoinBasePayout = 30;
 
-        public const float GreedRiskDivisor = 50f;
-        public const float ComboMultiplier = 1.5f;
+        public static float GreedRiskDivisor = 50f;
+        public static float ComboMultiplier = 1.5f;
         public const float MaxOverflowProbability = 100f;
 
         // No default grace period: with zero relief the spill curve rises straight from an empty glass,
         // so even the first coins of a round carry a small chance. Shop items (Steady Hand / Iron Grip)
         // raise the relief to temporarily shrug off some accumulated risk.
-        public const float SpillSafeZoneThreshold = 0f;
+        public static float SpillSafeZoneThreshold = 0f;
 
         // The spill chance is a continuous curve that climbs with fill and asymptotically approaches
         // MaxSpillChance — getting ever closer but never reaching it, so a spill is never guaranteed.
-        // The ceiling sits well below 100% on purpose: even a brimming glass stays under a coin-flip, so
-        // pushing your luck is always tempting. This is the single tuning knob; the climb rate is
-        // derived from the meter scale (see GlassManager.CalculateTrueSpillChance).
-        public const float MaxSpillChance = 50f;
+        // The ceiling sits below 100% on purpose: even a brimming glass keeps a real chance to walk away
+        // (a maxed meter lands around 78%, never quite 80), so pushing your luck stays a gamble rather
+        // than a certainty. This is the single tuning knob; the climb rate is derived from the meter
+        // scale (see GlassManager.CalculateTrueSpillChance).
+        public static float MaxSpillChance = 80f;
 
-        public const float EnemyTurnDelaySeconds = 2f;
-        public const float EnemyTellDelaySeconds = 0.35f;
-        public const float EnemyConservativeSpillChanceThreshold = 50f;
+        public static float EnemyTurnDelaySeconds = 2f;
+        public static float EnemyTellDelaySeconds = 0.35f;
+        public static float EnemyConservativeSpillChanceThreshold = 50f;
 
-        public static readonly Vector3 CopperCoinVisualScale = new(0.27f, 0.045f, 0.27f);
-        public static readonly Vector3 SilverCoinVisualScale = new(0.34f, 0.052f, 0.34f);
-        public static readonly Vector3 GoldCoinVisualScale = new(0.43f, 0.064f, 0.43f);
+        public static Vector3 CopperCoinVisualScale = new(0.16f, 0.027f, 0.16f);
+        public static Vector3 SilverCoinVisualScale = new(0.20f, 0.031f, 0.20f);
+        public static Vector3 GoldCoinVisualScale = new(0.23f, 0.035f, 0.23f);
 
-        public static readonly Color CopperCoinColor = new(0.72f, 0.32f, 0.13f, 1f);
-        public static readonly Color SilverCoinColor = new(0.74f, 0.76f, 0.74f, 1f);
-        public static readonly Color GoldCoinColor = new(1f, 0.68f, 0.18f, 1f);
+        public static Color CopperCoinColor = new(0.72f, 0.32f, 0.13f, 1f);
+        public static Color SilverCoinColor = new(0.74f, 0.76f, 0.74f, 1f);
+        public static Color GoldCoinColor = new(1f, 0.68f, 0.18f, 1f);
 
         public static float GetRiskForSize(CoinSize size) =>
             size switch
@@ -77,14 +86,9 @@ namespace Meniscus.Core
                 _ => MediumCoinBasePayout
             };
 
-        public static int GetCoinCountForRound(int round)
-        {
-            var clampedRound = Mathf.Clamp(round, 1, TotalRounds);
-            return Mathf.Clamp(
-                MinCoinsPerActor + (clampedRound - 1) * 2,
-                MinCoinsPerActor,
-                MaxCoinsPerActor);
-        }
+        // Each actor gets exactly the same number of coins every round. The per-round parameter is kept so
+        // callers (and a future scaling rule) need not change.
+        public static int GetCoinCountForRound(int round) => CoinsPerActor;
 
         public static Vector3 GetVisualScaleForSize(CoinSize size) =>
             size switch

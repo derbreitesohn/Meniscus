@@ -110,6 +110,62 @@ namespace Meniscus.Tests.EditMode
             Object.DestroyImmediate(coin.gameObject);
         }
 
+        [Test]
+        public void Configure_ReplacesBulgingCapsuleWithFlatBoxCollider()
+        {
+            var coin = CreateRenderedCoin("Collider Coin");
+            Assert.IsNotNull(coin.GetComponent<CapsuleCollider>(),
+                "A primitive cylinder starts with the bulging CapsuleCollider this fix is meant to replace.");
+
+            coin.Configure(CoinSize.Medium, 10f, 20, true);
+
+            Assert.IsNull(coin.GetComponent<CapsuleCollider>(),
+                "The capsule collider (which squashes into an oversized sphere) must be removed.");
+            var box = coin.GetComponent<BoxCollider>();
+            Assert.IsNotNull(box, "A flat BoxCollider must back the click target.");
+            Assert.AreEqual(Vector3.one, box.size);
+            Assert.AreEqual(Vector3.zero, box.center);
+
+            Object.DestroyImmediate(coin.gameObject);
+        }
+
+        [Test]
+        public void ApplyModel_CentersAnOffPivotModelOnTheCoin()
+        {
+            var coin = CreateRenderedCoin("Centered Coin");
+            coin.transform.position = new Vector3(1f, 2f, 3f);
+            coin.Configure(CoinSize.Medium, 10f, 20, true);
+
+            // A model whose visible mesh sits far from its own pivot — the case that made coins render
+            // offset from their collider.
+            var prefab = new GameObject("Off-Pivot Model");
+            var mesh = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            mesh.transform.SetParent(prefab.transform);
+            mesh.transform.localPosition = new Vector3(5f, 3f, -4f);
+
+            coin.ApplyModel(prefab, Vector3.one);
+
+            Assert.IsNotNull(coin.ActiveModel, "A model should be showing after ApplyModel.");
+            var bounds = WorldBounds(coin.ActiveModel);
+            Assert.AreEqual(coin.transform.position.x, bounds.center.x, 0.01f, "Model X must center on the coin.");
+            Assert.AreEqual(coin.transform.position.y, bounds.center.y, 0.01f, "Model Y must center on the coin.");
+            Assert.AreEqual(coin.transform.position.z, bounds.center.z, 0.01f, "Model Z must center on the coin.");
+
+            Object.DestroyImmediate(prefab);
+            Object.DestroyImmediate(coin.gameObject);
+        }
+
+        static Bounds WorldBounds(GameObject root)
+        {
+            var renderers = root.GetComponentsInChildren<Renderer>();
+            var bounds = renderers[0].bounds;
+
+            for (var i = 1; i < renderers.Length; i++)
+                bounds.Encapsulate(renderers[i].bounds);
+
+            return bounds;
+        }
+
         static Coin CreateRenderedCoin(string name)
         {
             var coinObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);

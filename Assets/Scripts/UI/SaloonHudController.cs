@@ -91,32 +91,32 @@ namespace Meniscus.UI
 
             hudCanvas = RuntimeUiFactory.CreateOverlayCanvas(transform, "Runtime Saloon HUD Canvas");
 
-            var panelObject = RuntimeUiFactory.CreateImage(
-                hudCanvas.transform,
-                "HUD Table Card",
-                new Vector2(720f, 70f),
-                new Vector2(24f, -24f),
-                new Color(0.075f, 0.042f, 0.024f, 0.78f));
-
-            var panelRect = panelObject.GetComponent<RectTransform>();
-            panelRect.anchorMin = new Vector2(0f, 1f);
-            panelRect.anchorMax = new Vector2(0f, 1f);
-            panelRect.pivot = new Vector2(0f, 1f);
-
-            var textObject = new GameObject("Status", typeof(RectTransform), typeof(Text));
-            textObject.transform.SetParent(panelObject.transform, false);
+            // No backdrop: the status line sits straight on the scene, pinned to the top-left. A warm
+            // dark outline + drop shadow stand in for the old dark card so it stays legible.
+            var textObject = new GameObject("Status", typeof(RectTransform), typeof(Text), typeof(Shadow), typeof(Outline));
+            textObject.transform.SetParent(hudCanvas.transform, false);
 
             var textRect = textObject.GetComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = new Vector2(18f, 8f);
-            textRect.offsetMax = new Vector2(-18f, -8f);
+            textRect.anchorMin = new Vector2(0f, 1f);
+            textRect.anchorMax = new Vector2(0f, 1f);
+            textRect.pivot = new Vector2(0f, 1f);
+            textRect.sizeDelta = new Vector2(840f, 54f);
+            textRect.anchoredPosition = new Vector2(28f, -28f);
 
             statusText = textObject.GetComponent<Text>();
             statusText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            statusText.fontSize = 20;
+            statusText.fontSize = 22;
+            statusText.fontStyle = FontStyle.Bold;
             statusText.alignment = TextAnchor.MiddleLeft;
-            statusText.color = new Color(0.95f, 0.84f, 0.62f);
+            statusText.color = new Color(0.96f, 0.86f, 0.62f);
+
+            var shadow = textObject.GetComponent<Shadow>();
+            shadow.effectColor    = new Color(0f, 0f, 0f, 0.8f);
+            shadow.effectDistance = new Vector2(2f, -2f);
+
+            var outline = textObject.GetComponent<Outline>();
+            outline.effectColor    = new Color(0.10f, 0.05f, 0.02f, 0.95f);
+            outline.effectDistance = new Vector2(1.4f, 1.4f);
         }
 
         public static string BuildStatusLine(

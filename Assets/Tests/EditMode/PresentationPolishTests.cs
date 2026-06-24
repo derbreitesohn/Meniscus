@@ -11,27 +11,6 @@ namespace Meniscus.Tests.EditMode
     public class PresentationPolishTests
     {
         [Test]
-        public void CalculateStagedDropPosition_PausesAtRimBeforeSidewaysRelease()
-        {
-            var start = new Vector3(-1f, 1f, 0f);
-            var hold = new Vector3(0.25f, 2.1f, 0f);
-            var end = new Vector3(0f, 1.72f, 0f);
-
-            var atStart = CoinDropPresentationController.CalculateStagedDropPosition(start, hold, end, 0f, 0.35f);
-            var atHoldStart = CoinDropPresentationController.CalculateStagedDropPosition(start, hold, end, 0.58f, 0.35f);
-            var duringPause = CoinDropPresentationController.CalculateStagedDropPosition(start, hold, end, 0.68f, 0.35f);
-            var afterRelease = CoinDropPresentationController.CalculateStagedDropPosition(start, hold, end, 0.9f, 0.35f);
-            var atEnd = CoinDropPresentationController.CalculateStagedDropPosition(start, hold, end, 1f, 0.35f);
-
-            AssertVectorApproximately(start, atStart);
-            AssertVectorApproximately(hold, atHoldStart);
-            AssertVectorApproximately(hold, duringPause);
-            Assert.Greater(afterRelease.x, end.x);
-            Assert.Less(afterRelease.y, hold.y);
-            AssertVectorApproximately(end, atEnd);
-        }
-
-        [Test]
         public void BuildStatusLine_HidesTrueSpillChanceButShowsReadableTableState()
         {
             var status = SaloonHudController.BuildStatusLine(
@@ -93,6 +72,25 @@ namespace Meniscus.Tests.EditMode
             Assert.AreEqual(0.34f, GlassVisualController.CalculateWallRingY(0.06f, 0.62f, 0.5f), 1e-4f);
             Assert.AreEqual(0.62f, GlassVisualController.CalculateWallRingY(0.06f, 0.62f, 2f), 1e-4f); // clamps
             Assert.AreEqual(0.06f, GlassVisualController.CalculateWallRingY(0.06f, 0.62f, -1f), 1e-4f); // clamps
+        }
+
+        [Test]
+        public void CreateTransparentLiquidMaterial_RendersAsSolidVolumeNotHollowShell()
+        {
+            // A closed liquid body (cap + walls + bottom) must read as a solid amber column, not a
+            // see-through "cup". Two-sided culling with ZWrite off shows the back/inner faces through
+            // the front, so the body looks hollow. The fix: write depth and cull back faces so only
+            // the nearest front surface shows.
+            var amber = new Color(0.55f, 0.27f, 0.05f, 0.82f);
+            var material = GlassVisualController.CreateTransparentLiquidMaterial("Test Liquid", amber);
+
+            Assert.AreEqual(1f, material.GetFloat("_ZWrite"), "Liquid must write depth so back faces don't show through.");
+            Assert.AreEqual(
+                (float)UnityEngine.Rendering.CullMode.Back,
+                material.GetFloat("_Cull"),
+                "Liquid must cull back faces so the interior walls aren't visible through the front.");
+
+            Object.DestroyImmediate(material);
         }
 
         [Test]
@@ -168,14 +166,6 @@ namespace Meniscus.Tests.EditMode
 
             for (var i = 0; i < eventSystems.Length; i++)
                 Object.DestroyImmediate(eventSystems[i].gameObject);
-        }
-
-        static void AssertVectorApproximately(Vector3 expected, Vector3 actual)
-        {
-            const float tolerance = 0.001f;
-            Assert.AreEqual(expected.x, actual.x, tolerance);
-            Assert.AreEqual(expected.y, actual.y, tolerance);
-            Assert.AreEqual(expected.z, actual.z, tolerance);
         }
     }
 }

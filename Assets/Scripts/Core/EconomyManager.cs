@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Meniscus.Gameplay;
 using UnityEngine;
@@ -11,9 +12,19 @@ namespace Meniscus.Core
         [SerializeField] int currentRoundEarnings;
         [SerializeField, Min(1f)] float nextSafeDropPayoutMultiplier = 1f;
 
+        public event Action<int, int> MoneyAwarded;   // (payout, newRoundTotal)
+        public event Action RoundEarningsWiped;
+        public event Action<int, int> EarningsBanked; // (earned, newBankTotal)
+
         public int PlayerTotalBankedCash => playerTotalBankedCash;
         public int CurrentRoundEarnings => currentRoundEarnings;
         public float NextSafeDropPayoutMultiplier => nextSafeDropPayoutMultiplier;
+
+        // The effective payout multiplier (final ÷ raw coin value) the last safe drop earned, plus
+        // whether a multi-coin combo was part of it. Set just before MoneyAwarded fires, so the HUD
+        // can show "×2.4" / "COMBO" on the money pop-up. 1 = no bonus.
+        public float LastSafeDropMultiplier { get; private set; } = 1f;
+        public bool LastSafeDropComboApplied { get; private set; }
 
         public void ResetRoundEarnings()
         {
@@ -25,16 +36,23 @@ namespace Meniscus.Core
             if (coins == null || coins.Count == 0)
                 return 0;
 
-            var greedMultiplier = 1f + Mathf.Max(0f, currentRisk) / GameConstants.GreedRiskDivisor;
-            var total = 0f;
+            // Greed rewards the risk of THIS pour — the risk already in the glass PLUS the risk the dropped
+            // coins add — so a bigger, riskier coin (gold) earns a higher multiplier than a safer one, not
+            // just more flat payout. Pouring into a fuller glass still pumps it too (riskBefore is included).
+            var addedRisk = 0f;
+            var baseTotal = 0f;
 
             for (var i = 0; i < coins.Count; i++)
             {
                 if (coins[i] == null)
                     continue;
 
-                total += coins[i].basePayout * greedMultiplier;
+                addedRisk += Mathf.Max(0f, coins[i].riskContribution);
+                baseTotal += coins[i].basePayout;
             }
+
+            var greedMultiplier = 1f + (Mathf.Max(0f, currentRisk) + addedRisk) / GameConstants.GreedRiskDivisor;
+            var total = baseTotal * greedMultiplier;
 
             if (coins.Count > 1)
                 total *= GameConstants.ComboMultiplier;
@@ -52,8 +70,29 @@ namespace Meniscus.Core
                 nextSafeDropPayoutMultiplier = 1f;
             }
 
+            RecordLastSafeDropMultiplier(coins, payout);
             currentRoundEarnings += payout;
+            MoneyAwarded?.Invoke(payout, currentRoundEarnings);
             return payout;
+        }
+
+        // Folds greed (risk), combo, and any shop multiplier into one figure — how many times the raw
+        // coin value the player actually banked — for the money pop-up to celebrate.
+        void RecordLastSafeDropMultiplier(IReadOnlyList<Coin> coins, int payout)
+        {
+            var baseTotal = 0;
+
+            if (coins != null)
+            {
+                for (var i = 0; i < coins.Count; i++)
+                {
+                    if (coins[i] != null)
+                        baseTotal += coins[i].basePayout;
+                }
+            }
+
+            LastSafeDropMultiplier = baseTotal > 0 ? (float)payout / baseTotal : 1f;
+            LastSafeDropComboApplied = (coins?.Count ?? 0) > 1;
         }
 
         public void QueueNextSafeDropPayoutMultiplier(float multiplier)
@@ -75,13 +114,16 @@ namespace Meniscus.Core
 
         public void BankCurrentRoundEarnings()
         {
-            playerTotalBankedCash += currentRoundEarnings;
+            var earned = currentRoundEarnings;
+            playerTotalBankedCash += earned;
             currentRoundEarnings = 0;
+            EarningsBanked?.Invoke(earned, playerTotalBankedCash);
         }
 
         public void WipeCurrentRoundEarnings()
         {
             currentRoundEarnings = 0;
+            RoundEarningsWiped?.Invoke();
         }
 
         public bool CanAfford(int cost) =>

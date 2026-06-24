@@ -25,14 +25,30 @@ namespace Meniscus.Gameplay
         [Tooltip("Hide the anchor's own MeshRenderer (the placeholder cup) while a real glass model is shown.")]
         [SerializeField] bool hidePlaceholderRenderer = true;
 
+        [Tooltip("A real glass already placed in the scene. When the matching type is selected it is just " +
+                 "shown and driven by code (no runtime instantiation); other types still spawn their model.")]
+        [SerializeField] Transform authoredGlass;
+        [Tooltip("Which glass-type id the in-scene authored glass represents.")]
+        [SerializeField] string authoredGlassTypeId = "standard";
+
         [Header("Liquid Auto-Fit")]
-        [Tooltip("Measure the spawned glass model's bounds and fit the liquid body to its interior, instead " +
-                 "of the glass-type's authored radius/floor (which can't know the real model size).")]
-        [SerializeField] bool autoFitLiquidToGlass = true;
+        [Tooltip("Measure the spawned glass model's bounds and fit the liquid body to its interior. NOTE: this " +
+                 "measures the model's OUTER AABB, so for a glass with a solid base/stem (like the authored " +
+                 "Standard glass) it drops the floor to the exterior base and widens the rim to the outer wall " +
+                 "— the liquid balloons and dropped coins rest below/outside the real cup. Leave OFF and use the " +
+                 "glass-type's hand-authored radius/floor unless a model's interior genuinely matches its AABB.")]
+        [SerializeField] bool autoFitLiquidToGlass;
         [Tooltip("Liquid rim radius as a fraction of the measured glass radius, to sit just inside the wall.")]
         [SerializeField, Range(0.5f, 1f)] float glassInteriorRadiusFactor = 0.9f;
         [Tooltip("Liquid floor raised above the measured glass base by this fraction of the glass height.")]
         [SerializeField, Range(0f, 0.3f)] float glassFloorInset = 0.03f;
+        [Tooltip("Raise the calm water surface to the glass's measured rim (the top of its bounds) so it sits " +
+                 "brim-full as a meniscus, whatever the model. Unlike full auto-fit this keeps the authored " +
+                 "radius and floor, so it never balloons the liquid.")]
+        [SerializeField] bool fitSurfaceToRim = true;
+        [Tooltip("Headroom below the measured rim for the surface, as a fraction of glass height — a hair so the " +
+                 "meniscus climbs to the brim without spilling over.")]
+        [SerializeField, Range(0f, 0.2f)] float rimInset = 0.04f;
 
         [Header("Debug")]
         [Tooltip("Press this key in play mode to cycle through the glass types. Also available via the " +
@@ -121,12 +137,29 @@ namespace Meniscus.Gameplay
             activeType = type;
 
             if (activeModel != null)
+            {
                 Destroy(activeModel);
+                activeModel = null;
+            }
 
             Transform glassForFit = null;
 
-            if (type.ModelPrefab != null)
+            // Prefer a glass already authored in the scene for its type: just show it and drive it via code,
+            // instead of spawning a model at runtime. Other types still instantiate their prefab on demand.
+            var useAuthored = authoredGlass != null
+                              && !string.IsNullOrEmpty(authoredGlassTypeId)
+                              && type.Id == authoredGlassTypeId;
+
+            if (useAuthored)
             {
+                authoredGlass.gameObject.SetActive(true);
+                glassForFit = authoredGlass;
+            }
+            else if (type.ModelPrefab != null)
+            {
+                if (authoredGlass != null)
+                    authoredGlass.gameObject.SetActive(false);
+
                 // Instantiating a model slot wired to a non-GameObject sub-asset (e.g. an FBX's Mesh instead
                 // of its GameObject root) throws; that must never bubble out of Start and leave the table
                 // glass-less. On failure, drop back to the placeholder cup instead of crashing.
@@ -162,15 +195,19 @@ namespace Meniscus.Gameplay
                         Destroy(activeModel);
                         activeModel = null;
                     }
+
+                    if (authoredGlass != null)
+                        authoredGlass.gameObject.SetActive(true);
                 }
             }
 
-            // Only hide the placeholder cup once a real model is actually showing, so a missing/empty model
-            // never leaves the table glass-less.
+            // Hide the anchor's own placeholder renderer whenever a real glass (authored or model) is showing,
+            // so a missing/empty model never leaves the table glass-less.
             var placeholder = glassAnchor != null ? glassAnchor.GetComponent<MeshRenderer>() : null;
+            var showingRealGlass = useAuthored || activeModel != null;
 
             if (placeholder != null)
-                placeholder.enabled = !(hidePlaceholderRenderer && activeModel != null);
+                placeholder.enabled = !(hidePlaceholderRenderer && showingRealGlass);
 
             if (waterController != null)
             {
@@ -203,25 +240,68 @@ namespace Meniscus.Gameplay
         // space). Falls back to the authored radius/floor when auto-fit is off or no glass renderer exists.
         LiquidFit MeasureLiquidFit(Transform glass, Transform liquidSpace, GlassTypeDefinition type)
         {
-            var fallback = new LiquidFit(type.WaterSurfaceLocalY, type.WaterSurfaceRadius, type.FillBottomLocalY);
+            // Start from the glass-type's hand-authored fit.
+            var surfaceLocalY = type.WaterSurfaceLocalY;
+            var rimRadius = type.WaterSurfaceRadius;
+            var floorLocalY = type.FillBottomLocalY;
 
-            if (!autoFitLiquidToGlass || glass == null || liquidSpace == null)
-                return fallback;
+            var wantMeasure = (autoFitLiquidToGlass || fitSurfaceToRim) && glass != null && liquidSpace != null;
+
+            if (!wantMeasure || !TryMeasureGlassLocalBounds(glass, liquidSpace, out var min, out var max))
+                return new LiquidFit(surfaceLocalY, rimRadius, floorLocalY);
+
+            var height = max.y - min.y;
+            var radius = 0.5f * Mathf.Max(max.x - min.x, max.z - min.z);
+
+            if (height <= 1e-4f || radius <= 1e-4f)
+                return new LiquidFit(surfaceLocalY, rimRadius, floorLocalY);
+
+            // Brim-full: drop the surface to the measured rim (top of the bounds) minus a hair of headroom,
+            // so the liquid sits at the very top and the meniscus climbs to the lip. The glass is open at the
+            // top, so the bounds' max.y IS the rim.
+            if (fitSurfaceToRim)
+                surfaceLocalY = max.y - height * Mathf.Clamp(rimInset, 0f, 0.2f);
+
+            // Full auto-fit additionally takes the radius and floor from the measured bounds (off by default;
+            // see the field tooltip for why that balloons a glass with a solid base).
+            if (autoFitLiquidToGlass)
+            {
+                rimRadius = radius * Mathf.Clamp(glassInteriorRadiusFactor, 0.5f, 1f);
+                floorLocalY = min.y + height * Mathf.Clamp(glassFloorInset, 0f, 0.3f);
+
+                if (!fitSurfaceToRim)
+                {
+                    surfaceLocalY = type.WaterSurfaceLocalY;
+                    if (surfaceLocalY <= floorLocalY || surfaceLocalY > max.y)
+                        surfaceLocalY = min.y + height * 0.82f;
+                }
+            }
+
+            Debug.Log(
+                $"[GlassFit] '{type.DisplayName}' interior (liquid-local): y[{min.y:F3}..{max.y:F3}] " +
+                $"radius {radius:F3} -> surface {surfaceLocalY:F3}, rim {rimRadius:F3}, floor {floorLocalY:F3}",
+                this);
+
+            return new LiquidFit(surfaceLocalY, rimRadius, floorLocalY);
+        }
+
+        // Measures the glass model's world AABB and converts it into the liquid's local space (where surface
+        // heights and the radius are expressed). Returns false when there is nothing to measure.
+        static bool TryMeasureGlassLocalBounds(Transform glass, Transform liquidSpace, out Vector3 min, out Vector3 max)
+        {
+            min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+            max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
 
             var renderers = glass.GetComponentsInChildren<Renderer>();
 
             if (renderers.Length == 0)
-                return fallback;
+                return false;
 
             var world = renderers[0].bounds;
 
             for (var i = 1; i < renderers.Length; i++)
                 world.Encapsulate(renderers[i].bounds);
 
-            // Convert the world AABB's 8 corners into the liquid's local space (where surface heights and the
-            // radius are expressed), then take the local extents.
-            var min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
-            var max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
             var center = world.center;
             var extents = world.extents;
 
@@ -235,27 +315,7 @@ namespace Meniscus.Gameplay
                         max = Vector3.Max(max, corner);
                     }
 
-            var height = max.y - min.y;
-            var radius = 0.5f * Mathf.Max(max.x - min.x, max.z - min.z);
-
-            if (height <= 1e-4f || radius <= 1e-4f)
-                return fallback;
-
-            var rimRadius = radius * Mathf.Clamp(glassInteriorRadiusFactor, 0.5f, 1f);
-            var floorLocalY = min.y + height * Mathf.Clamp(glassFloorInset, 0f, 0.3f);
-
-            // Keep the authored fill level when it sits inside the measured glass; otherwise fall to ~80% full.
-            var surfaceLocalY = type.WaterSurfaceLocalY;
-
-            if (surfaceLocalY <= floorLocalY || surfaceLocalY > max.y)
-                surfaceLocalY = min.y + height * 0.82f;
-
-            Debug.Log(
-                $"[GlassFit] '{type.DisplayName}' interior (liquid-local): y[{min.y:F3}..{max.y:F3}] " +
-                $"radius {radius:F3} -> surface {surfaceLocalY:F3}, rim {rimRadius:F3}, floor {floorLocalY:F3}",
-                this);
-
-            return new LiquidFit(surfaceLocalY, rimRadius, floorLocalY);
+            return true;
         }
 
         // When several glasses share one model (like Glas_Types), keep only the named child visible and
