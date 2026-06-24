@@ -36,6 +36,61 @@
 						</Action>
 					</ChildrenList>
 				</Event>
+				<Event Name="Play_coins_on_wood" ID="{230E55CC-AB00-4765-ACB6-E0D703714AC2}">
+					<ChildrenList>
+						<Action Name="" ID="{E86722DC-6E74-4775-8C98-E8C278010943}" ShortID="494588631">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="coins_on_wood" ID="{D4488FB1-202B-4199-9CCD-52184C4E94F2}" WorkUnitID="{3E5ABF94-8B9A-4507-853B-33764D180567}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Event Name="Play_pageflip" ID="{0D9F3A58-C8E5-46F5-9707-1CC5526C698E}">
+					<ChildrenList>
+						<Action Name="" ID="{DFEEE761-8341-427A-B407-AA728065FBCD}" ShortID="54583452">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="pageflip" ID="{60A360F8-D3C3-4D0D-835C-2B1D08BAC4CB}" WorkUnitID="{3E5ABF94-8B9A-4507-853B-33764D180567}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Event Name="Play_pageclose" ID="{E67892A4-20F8-4B1B-B15C-82F37618D44A}">
+					<ChildrenList>
+						<Action Name="" ID="{5EC052C1-C5CA-41A5-B410-D9512876EC0A}" ShortID="245056848">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="pageclose" ID="{B98BA23A-B68D-4DFA-935C-465274678DAA}" WorkUnitID="{3E5ABF94-8B9A-4507-853B-33764D180567}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Event Name="Play_coinflip" ID="{8E0BFB2D-D248-4C9B-BCC6-F59B021DC201}">
+					<ChildrenList>
+						<Action Name="" ID="{81571B5E-F226-425E-8DF8-9F68ED230A2A}" ShortID="345735596">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="coinflip" ID="{6E7F11D8-E2BD-49EE-BE58-01154F582E65}" WorkUnitID="{3E5ABF94-8B9A-4507-853B-33764D180567}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Event Name="Play_24Bit_Piano_Chords_Melodie_State2_3_102BPM" ID="{ECF0AA0C-AF4E-49A1-A6CD-2098B8FE756D}">
+					<ChildrenList>
+						<Action Name="" ID="{7AEF7B63-7AD2-4753-B9B3-62DE442BFDFE}" ShortID="829957363">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="24Bit_Piano_Chords+Melodie_State2-3_102BPM" ID="{97A402C2-84AA-4DC9-B210-2F71B4F54F30}" WorkUnitID="{3E5ABF94-8B9A-4507-853B-33764D180567}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
 			</ChildrenList>
 		</WorkUnit>
 	</Events>

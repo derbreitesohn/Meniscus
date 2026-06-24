@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 276578224cc7c464ea3e399cd59679e6, type: 3}
+  m_Name: ECF0AA0C-AF4E-49A1-A6CD-2098B8FE756D
+  m_EditorClassIdentifier: AK.Wwise.Unity.API.WwiseTypes::WwiseEventReference
+  objectName: Play_24Bit_Piano_Chords_Melodie_State2_3_102BPM
+  id: 2739229492
+  guid: ECF0AA0C-AF4E-49A1-A6CD-2098B8FE756D
+  IsInUserDefinedSoundBank: 0

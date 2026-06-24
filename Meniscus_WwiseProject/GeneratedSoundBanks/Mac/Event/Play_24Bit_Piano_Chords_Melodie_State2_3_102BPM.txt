@@ -1,0 +1,15 @@
+Event	ID	Name			Wwise Object Path	Notes
+	2739229492	Play_24Bit_Piano_Chords_Melodie_State2_3_102BPM			\Default Work Unit\Play_24Bit_Piano_Chords_Melodie_State2_3_102BPM	
+
+State Group	ID	Name			Wwise Object Path	Notes
+	1021618141	MusicState			\Default Work Unit\MusicState	
+
+State	ID	Name	State Group			Notes
+	391998042	Tense	MusicState			
+	748895195	None	MusicState			
+	1874288895	Idle	MusicState			
+	2135990474	Chritical	MusicState			
+
+Effect plug-ins	ID	Name	Type				Notes
+	1990128658	Room_Medium	Wwise RoomVerb			
+
