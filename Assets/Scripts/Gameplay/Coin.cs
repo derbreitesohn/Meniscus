@@ -125,6 +125,16 @@ namespace Meniscus.Gameplay
                 coinOnWood?.Post(gameObject);
         }
 
+        /// <summary>
+        /// Tints this coin's selection glow (if shown) by how dangerous pouring the current selection would
+        /// be — cool when steady, hot as the brim nears. Driven by <see cref="UI.CoinSelectionPreview"/> so
+        /// the risk reads off the coins themselves, not just a floating label. No-op before the glow exists.
+        /// </summary>
+        public void SetSelectionGlowTint(Color color)
+        {
+            glow?.SetTint(color);
+        }
+
         public void ResetVisualSelection()
         {
             CacheOriginalPosition();

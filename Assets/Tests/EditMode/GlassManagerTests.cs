@@ -16,9 +16,9 @@ namespace Meniscus.Tests.EditMode
             glassObject = new GameObject("GlassManager Test Host");
             glassManager = glassObject.AddComponent<GlassManager>();
 
-            // Deterministic roll so drop outcomes don't depend on the RNG. Default to the highest
-            // possible roll, which never spills (the chance asymptotes below the max); tests that want
-            // a forced spill override this with a low roll.
+            // Overflow is deterministic now (it triggers when the fill reaches the brim), so the roll no
+            // longer decides the outcome. The provider is kept only because the result still carries a
+            // roll value for the presentation layer; pin it so nothing depends on the RNG.
             glassManager.SpillRollProvider = () => GameConstants.MaxOverflowProbability;
         }
 
@@ -29,14 +29,27 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void ResetGlass_SetsOverflowProbabilityToZero()
+        public void ResetGlass_OpensTheGlassAtTheBrimStartFill()
         {
             var coin = CreateCoin("Risk Coin", 45f, 10, true);
 
             glassManager.DropCoins(new[] { coin }, TurnActor.Player);
             glassManager.ResetGlass();
 
-            Assert.AreEqual(0f, glassManager.CurrentOverflowProbability);
+            // The glass opens full to the brim each round, not empty: fill resets to GlassStartFill.
+            Assert.AreEqual(GameConstants.GlassStartFill, glassManager.CurrentOverflowProbability);
+            Object.DestroyImmediate(coin.gameObject);
+        }
+
+        [Test]
+        public void SettleSurface_EasesFillBackDown_ClampedAtZero()
+        {
+            var coin = CreateCoin("Fill", 30f, 10, true);
+            glassManager.DropCoins(new[] { coin }, TurnActor.Player);
+            Assert.AreEqual(30f, glassManager.CurrentOverflowProbability, 0.001f);
+
+            glassManager.SettleSurface();
+            Assert.AreEqual(30f - GameConstants.SurfaceSettlePerTurn, glassManager.CurrentOverflowProbability, 0.001f);
             Object.DestroyImmediate(coin.gameObject);
         }
 
@@ -71,55 +84,59 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void CalculateTrueSpillChance_ClimbsTowardCeilingButNeverReachesIt()
+        public void CalculateTrueSpillChance_IsZeroBelowSafeZone_RampsToCertainAtTheBrim()
         {
-            // No grace period: an empty glass is safe, but even a light early pour can spill.
+            // Below the safe zone the surface tension holds for sure.
             Assert.AreEqual(0f, GlassManager.CalculateTrueSpillChance(0f));
-            Assert.Greater(GlassManager.CalculateTrueSpillChance(10f), 0f);
+            Assert.AreEqual(0f, GlassManager.CalculateTrueSpillChance(GameConstants.DomeSafeZone));
 
-            // Continuous curve: chance = MaxSpillChance * (1 - e^(-(risk/50)^2)). Small early, climbing.
-            Assert.AreEqual(3.14f, GlassManager.CalculateTrueSpillChance(10f), 0.05f);
-            Assert.AreEqual(24.19f, GlassManager.CalculateTrueSpillChance(30f), 0.1f);
-            Assert.AreEqual(50.57f, GlassManager.CalculateTrueSpillChance(50f), 0.1f);
+            // Across the dome the chance climbs monotonically from there.
+            var low = GlassManager.CalculateTrueSpillChance(GameConstants.DomeSafeZone + 5f);
+            var mid = GlassManager.CalculateTrueSpillChance(
+                (GameConstants.DomeSafeZone + GameConstants.DomeCapacity) * 0.5f);
+            Assert.Greater(low, 0f);
+            Assert.Greater(mid, low);
 
-            // Monotonic increase.
-            Assert.Greater(
-                GlassManager.CalculateTrueSpillChance(80f),
-                GlassManager.CalculateTrueSpillChance(50f));
-
-            // Approaches the ceiling at a maxed meter but never reaches it — always a chance to walk away.
-            var atMax = GlassManager.CalculateTrueSpillChance(GameConstants.MaxOverflowProbability);
-            Assert.Greater(atMax, 0.95f * GameConstants.MaxSpillChance);
-            Assert.Less(atMax, GameConstants.MaxSpillChance);
+            // At and beyond the brim (the dome capacity) a spill is CERTAIN — push it there and it goes over.
+            Assert.AreEqual(
+                GameConstants.MaxOverflowProbability,
+                GlassManager.CalculateTrueSpillChance(GameConstants.DomeCapacity));
+            Assert.AreEqual(
+                GameConstants.MaxOverflowProbability,
+                GlassManager.CalculateTrueSpillChance(GameConstants.DomeCapacity + 20f));
         }
 
         [Test]
-        public void DropCoins_AtModerateRisk_HasSmallButRealSpillChance()
+        public void DropCoins_InsideTheDome_HasAReadableRampSpillChance()
         {
-            var coin = CreateCoin("Moderate Risk Coin", 39f, 10, true);
+            var coin = CreateCoin("Dome Fill Coin", 30f, 10, true);
 
             var result = glassManager.DropCoins(new[] { coin }, TurnActor.Player);
 
-            Assert.AreEqual(39f, result.RiskAfterDrop);
-            Assert.Greater(result.TrueSpillChance, 0f);                 // no safe zone any more
-            Assert.AreEqual(36.46f, result.TrueSpillChance, 0.1f);      // 80 * (1 - e^(-(39/50)^2))
-            Assert.IsFalse(result.Overflowed);                          // highest roll didn't spill
+            Assert.AreEqual(30f, result.RiskAfterDrop);
+            // fill 30 sits in the dome band: the chance ramps convexly (t^DomeRampExponent) between the
+            // safe zone and the brim.
+            var t = (30f - GameConstants.DomeSafeZone)
+                / (GameConstants.DomeCapacity - GameConstants.DomeSafeZone);
+            var expected = GameConstants.MaxOverflowProbability * Mathf.Pow(t, GameConstants.DomeRampExponent);
+            Assert.AreEqual(expected, result.TrueSpillChance, 0.1f);
+            Assert.IsFalse(result.Overflowed);   // below the brim, even the highest roll holds
 
             Object.DestroyImmediate(coin.gameObject);
         }
 
 
         [Test]
-        public void DropCoins_AtMaxRisk_StaysBelowCeilingButCanSpill()
+        public void DropCoins_PastTheBrim_IsACertainSpill()
         {
             var heavy = CreateCoin("Heavy Coin", 120f, 100, false);
-            glassManager.SpillRollProvider = () => 0f; // lowest roll spills whenever any chance exists
+            // Even the highest possible roll spills once the fill is at/over the brim — the spill is certain.
+            glassManager.SpillRollProvider = () => GameConstants.MaxOverflowProbability;
 
             var result = glassManager.DropCoins(new[] { heavy }, TurnActor.Enemy);
 
-            Assert.AreEqual(100f, glassManager.CurrentOverflowProbability);   // risk clamps to the max
-            Assert.Greater(result.TrueSpillChance, 0.95f * GameConstants.MaxSpillChance); // near the ceiling
-            Assert.Less(result.TrueSpillChance, GameConstants.MaxSpillChance);            // but never reaches it
+            Assert.AreEqual(GameConstants.MaxOverflowProbability, glassManager.CurrentOverflowProbability); // fill clamps to the max
+            Assert.AreEqual(GameConstants.MaxOverflowProbability, result.TrueSpillChance);                  // certain
             Assert.AreEqual(TurnActor.Enemy, result.Actor);
             Assert.IsTrue(result.Overflowed);
 
@@ -191,29 +208,30 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void DropCoins_DrunkEnemy_SpillsWhereSoberPlayerWouldNot()
+        public void DropCoins_DrunkEnemy_OverflowsAtAFillASoberPlayerWouldSurvive()
         {
+            // The drunk penalty pushes the enemy's EFFECTIVE fill up the dome, so the enemy hits the brim
+            // (a certain, deterministic spill) at an actual fill a sober player would still survive.
+            const float actualFill = 72f;   // below the brim for a sober pour, over it once +12 is added
+
+            // Sober player pours to the fill — effective fill is the same, still under the brim → safe.
+            var playerCoin = CreateCoin("Player Fill", actualFill, 10, true);
+            var playerResult = glassManager.DropCoins(new[] { playerCoin }, TurnActor.Player);
+            Assert.IsFalse(playerResult.Overflowed);
+            Assert.Less(playerResult.TrueSpillChance, GameConstants.MaxOverflowProbability);
+
+            // Drain back, make the enemy drunk, and pour to the same actual fill — the penalty tips the
+            // effective fill over the brim, so now it is a certain spill.
+            glassManager.ReduceCurrentRisk(GameConstants.MaxOverflowProbability);
             glassManager.AddEnemyPourPenalty(12f);
 
-            // A roll between the sober player's (~50.6%) and the drunk enemy's (~62.8%) spill chance.
-            glassManager.SpillRollProvider = () => 56f;
-
-            var enemyCoin = CreateCoin("Enemy Fill", 50f, 10, false);
+            var enemyCoin = CreateCoin("Enemy Fill", actualFill, 10, false);
             var enemyResult = glassManager.DropCoins(new[] { enemyCoin }, TurnActor.Enemy);
-
             Assert.IsTrue(enemyResult.Overflowed);
-            Assert.Greater(enemyResult.TrueSpillChance, GlassManager.CalculateTrueSpillChance(50f, 0f));
+            Assert.AreEqual(GameConstants.MaxOverflowProbability, enemyResult.TrueSpillChance);
 
-            glassManager.ResetGlass();                 // clears the penalty and the fill
-            glassManager.SpillRollProvider = () => 56f;
-
-            var playerCoin = CreateCoin("Player Fill", 50f, 10, true);
-            var playerResult = glassManager.DropCoins(new[] { playerCoin }, TurnActor.Player);
-
-            Assert.IsFalse(playerResult.Overflowed);   // sober player at the same fill is safe
-
-            Object.DestroyImmediate(enemyCoin.gameObject);
             Object.DestroyImmediate(playerCoin.gameObject);
+            Object.DestroyImmediate(enemyCoin.gameObject);
         }
 
         [Test]

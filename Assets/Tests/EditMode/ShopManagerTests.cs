@@ -37,15 +37,10 @@ namespace Meniscus.Tests.EditMode
             Object.DestroyImmediate(host);
         }
 
-        // EconomyManager has no public cash setter; bank cash through the normal award path.
+        // Grant cash directly to the bank — the award path now pays for boldness, not 1:1 face value.
         void BankCash(int amount)
         {
-            var coinObject = new GameObject("Cash Coin");
-            var coin = coinObject.AddComponent<Coin>();
-            coin.Configure(CoinSize.Medium, 0f, amount, true);
-            economy.AwardSafeDrop(new[] { coin }, 0f);
-            economy.BankCurrentRoundEarnings();
-            Object.DestroyImmediate(coinObject);
+            economy.GrantBankedCash(amount);
         }
 
         static ItemDefinition Item(string id, int cost) =>

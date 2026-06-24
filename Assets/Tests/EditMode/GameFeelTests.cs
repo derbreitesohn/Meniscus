@@ -135,7 +135,7 @@ namespace Meniscus.Tests.EditMode
         // ── EconomyManager multiplier feedback (shown on the money pop-up) ─────────────
 
         [Test]
-        public void AwardSafeDrop_RecordsGreedMultiplierForTheMoneyPopUp()
+        public void AwardSafeDrop_RecordsBoldnessMultiplierForTheMoneyPopUp()
         {
             var ecoGo = new GameObject("Economy");
             var economy = ecoGo.AddComponent<EconomyManager>();
@@ -144,10 +144,10 @@ namespace Meniscus.Tests.EditMode
             coin.basePayout = 30;
             coin.riskContribution = 10;
 
-            // greed = 1 + (50 + this coin's 10) / 50 = 2.2×; single coin, no combo
+            // braved 50% → factor ≈ 2.2213 → 30 × 2.2213 ≈ 67; multiplier ≈ 67/30 ≈ 2.23×; single coin, no combo
             economy.AwardSafeDrop(new List<Coin> { coin }, 50f);
 
-            Assert.AreEqual(2.2f, economy.LastSafeDropMultiplier, 0.05f);
+            Assert.AreEqual(2.23f, economy.LastSafeDropMultiplier, 0.05f);
             Assert.IsFalse(economy.LastSafeDropComboApplied);
 
             Object.DestroyImmediate(coinGo);
@@ -166,10 +166,10 @@ namespace Meniscus.Tests.EditMode
             a.riskContribution = 10;
             b.riskContribution = 10;
 
-            // greed = 1 + (0 + 10 + 10) / 50 = 1.4; combo ×1.5 → 2.1×
-            economy.AwardSafeDrop(new List<Coin> { a, b }, 0f);
+            // braved 50% → factor ≈ 2.2213; (20 + 20) × 2.2213 × combo 2 ≈ 178; multiplier ≈ 178/40 ≈ 4.45×
+            economy.AwardSafeDrop(new List<Coin> { a, b }, 50f);
 
-            Assert.AreEqual(2.1f, economy.LastSafeDropMultiplier, 0.05f);
+            Assert.AreEqual(4.45f, economy.LastSafeDropMultiplier, 0.05f);
             Assert.IsTrue(economy.LastSafeDropComboApplied);
 
             Object.DestroyImmediate(a.gameObject);
@@ -178,26 +178,27 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void AwardSafeDrop_RiskierCoinsEarnAHigherMultiplierNotJustMoreMoney()
+        public void CalculateSafeDropPayout_BoldnessDrivesTheMultiplierNotCoinSize()
         {
-            // Same glass risk and same coin count, but the gold-laden pour adds more risk — so it must earn
-            // BOTH a higher payout and a higher multiplier than the all-silver pour. (The old logic gave the
-            // identical multiplier regardless of coin size — the bug this fixes.)
+            // Pay for boldness: a small coin dared into a near-overflowing glass earns a far higher
+            // multiplier — and even out-earns — a big coin poured into a calm one. The reward tracks the
+            // danger braved, not the coin's size.
             var ecoGo = new GameObject("Economy");
             var economy = ecoGo.AddComponent<EconomyManager>();
 
-            var threeSilver = new List<Coin> { MakeCoin(20, 10f), MakeCoin(20, 10f), MakeCoin(20, 10f) };
-            var goldTwoSilver = new List<Coin> { MakeCoin(30, 15f), MakeCoin(20, 10f), MakeCoin(20, 10f) };
+            var bigCoinSafe = new List<Coin> { MakeCoin(50, 15f) };   // Gold, but poured into a calm glass
+            var smallCoinBold = new List<Coin> { MakeCoin(10, 5f) };  // Copper, dared at the brim
 
-            var silverPayout = economy.CalculateSafeDropPayout(threeSilver, 20f);   // base 60, risk 30
-            var goldPayout = economy.CalculateSafeDropPayout(goldTwoSilver, 20f);   // base 70, risk 35
+            var safePayout = economy.CalculateSafeDropPayout(bigCoinSafe, 20f);   // braved 20%
+            var boldPayout = economy.CalculateSafeDropPayout(smallCoinBold, 70f); // braved 70%
 
-            Assert.Greater(goldPayout, silverPayout, "The riskier gold combo must pay more.");
-            Assert.Greater(goldPayout / 70f, silverPayout / 60f,
-                "The riskier gold combo must earn a higher multiplier, not the same.");
+            Assert.Greater(boldPayout / 10f, safePayout / 50f,
+                "Boldness must drive a higher multiplier than merely pouring a bigger coin.");
+            Assert.Greater(boldPayout, safePayout,
+                "Daring a small coin at the brim even out-earns a big, safe pour.");
 
-            foreach (var c in threeSilver) Object.DestroyImmediate(c.gameObject);
-            foreach (var c in goldTwoSilver) Object.DestroyImmediate(c.gameObject);
+            foreach (var c in bigCoinSafe) Object.DestroyImmediate(c.gameObject);
+            foreach (var c in smallCoinBold) Object.DestroyImmediate(c.gameObject);
             Object.DestroyImmediate(ecoGo);
         }
 

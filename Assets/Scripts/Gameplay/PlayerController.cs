@@ -137,6 +137,13 @@ namespace Meniscus.Gameplay
         /// </summary>
         public void CommitSelection() => SubmitSelectedCoins();
 
+        /// <summary>
+        /// Drops any lifted coins without pouring them. The desk item tray calls this when the player
+        /// picks an item, so coins and a held item are never both selected (their commit paths are
+        /// mutually exclusive). No-op when nothing is selected.
+        /// </summary>
+        public void ClearCoinSelection() => ClearSelection();
+
         void SubmitSelectedCoins()
         {
             if (selectedCoins.Count == 0)

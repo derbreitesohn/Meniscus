@@ -90,6 +90,31 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0f)] float shakeAmplitude = 0.12f;
         [SerializeField, Min(0f)] float shakeDuration = 0.5f;
 
+        [Header("Seating Intro")]
+        [Tooltip("Optional pixel-exact standing/far pose the seating intro starts from. If set, the back/up " +
+                 "offsets below are ignored.")]
+        [SerializeField] Transform seatingStartAnchor;
+        [Tooltip("How far back (metres) along the floor the intro starts — how far you 'walk in' to the desk.")]
+        [SerializeField, Min(0f)] float seatingStandBack = 6f;
+        [Tooltip("Standing eye height above the seated pose (metres) — i.e. how far the camera drops when it " +
+                 "sits down. Kept small so the walk-in stays around the seated head height.")]
+        [SerializeField, Min(0f)] float seatingStandUp = 0.5f;
+        [Tooltip("Downward look (degrees) held while walking in. Small = looking ahead into the room rather " +
+                 "than down at the table; the view tips down to the seated framing as you sit.")]
+        [SerializeField, Range(0f, 45f)] float seatingStandPitch = 12f;
+        [Tooltip("Seconds the walk-in to the desk takes.")]
+        [SerializeField, Min(0.1f)] float seatingApproachSeconds = 3f;
+        [Tooltip("Number of footstep bobs over the whole walk.")]
+        [SerializeField, Min(0f)] float seatingStepCount = 7f;
+        [Tooltip("Vertical footstep bob height (metres).")]
+        [SerializeField, Min(0f)] float seatingBobAmplitude = 0.06f;
+        [Tooltip("Side-to-side walk sway (metres).")]
+        [SerializeField, Min(0f)] float seatingSwayAmplitude = 0.03f;
+        [Tooltip("How far into the walk (0..1) the player reaches the seat and the sit-down begins.")]
+        [SerializeField, Range(0.5f, 1f)] float seatingSitStart = 0.78f;
+        [Tooltip("How far the camera dips below the seat and settles back as it sits (metres) — a cushion bounce.")]
+        [SerializeField, Min(0f)] float seatingSitDip = 0.06f;
+
         [Header("Death Orbit")]
         [Tooltip("Distance the loss orbit holds from the glass, as a multiple of the glass size.")]
         [SerializeField, Min(0.5f)] float orbitRadiusMultiplier = 3.2f;
@@ -102,6 +127,17 @@ namespace Meniscus.Gameplay
         bool framingOverflow;   // the close-up uses its dramatic overflow pose (set by FocusOverflow)
         bool orbiting;          // the loss "death orbit" owns the camera until the match restarts
         float orbitAngle;       // current orbit heading around the glass, in degrees
+
+        bool seatingIntroActive;   // the seating intro fully owns the camera (stand → walk → sit)
+        bool seatingWalking;       // the walk-in has begun (false while holding the standing shot)
+        float seatingT;            // walk progress, 0..1
+        Vector3 seatStartPos;      // far standing pose the walk begins at (back along the floor, head height)
+        Quaternion seatStartRot = Quaternion.identity;
+        Vector3 seatStandPos;      // standing over the seat, just before sitting (same head height)
+        Quaternion seatStandRot = Quaternion.identity;   // the level walking look
+        Vector3 seatEndPos;        // seated pose the walk ends at (the captured base/overview pose)
+        Quaternion seatEndRot = Quaternion.identity;
+        Action seatingArrived;     // fired once seated, handing control back to the GameManager
         Vector3 rigPosition;
         Quaternion rigRotation = Quaternion.identity;
         Vector3 basePosition;
@@ -145,6 +181,14 @@ namespace Meniscus.Gameplay
                 return;
             }
 
+            // The start-of-match seating intro likewise owns the camera: it holds the standing shot, then
+            // walks in and sits, before handing the rig back for normal play.
+            if (seatingIntroActive)
+            {
+                ApplySeatingIntro(cameraTransform);
+                return;
+            }
+
             UpdateRig(cameraTransform);
 
             var finalPosition = rigPosition;
@@ -168,27 +212,7 @@ namespace Meniscus.Gameplay
 
         void UpdateRig(Transform cameraTransform)
         {
-            if (!baseCaptured)
-            {
-                // The resting reference pose: an authored TableOverview anchor if present, else wherever
-                // the scene camera starts. Every offset-based viewpoint is measured from here.
-                var overview = FindAnchor(CameraState.TableOverview);
-
-                if (overview != null)
-                {
-                    basePosition = overview.position;
-                    baseRotation = overview.rotation;
-                }
-                else
-                {
-                    basePosition = cameraTransform.position;
-                    baseRotation = cameraTransform.rotation;
-                }
-
-                rigPosition = basePosition;
-                rigRotation = baseRotation;
-                baseCaptured = true;
-            }
+            EnsureBaseCaptured(cameraTransform);
 
             if (!TryGetRestingPose(out var targetPosition, out var targetRotation))
                 return; // Hold the current rig pose (glass close-ups blend on top of wherever we are).
@@ -196,6 +220,32 @@ namespace Meniscus.Gameplay
             var t = blendSpeed <= 0f ? 1f : 1f - Mathf.Exp(-blendSpeed * Time.deltaTime);
             rigPosition = Vector3.Lerp(rigPosition, targetPosition, t);
             rigRotation = Quaternion.Slerp(rigRotation, targetRotation, t);
+        }
+
+        void EnsureBaseCaptured(Transform cameraTransform)
+        {
+            if (baseCaptured)
+                return;
+
+            // The resting reference pose: an authored TableOverview anchor if present, else wherever the
+            // scene camera starts. Every offset-based viewpoint (and the seated end of the intro) is measured
+            // from here.
+            var overview = FindAnchor(CameraState.TableOverview);
+
+            if (overview != null)
+            {
+                basePosition = overview.position;
+                baseRotation = overview.rotation;
+            }
+            else
+            {
+                basePosition = cameraTransform.position;
+                baseRotation = cameraTransform.rotation;
+            }
+
+            rigPosition = basePosition;
+            rigRotation = baseRotation;
+            baseCaptured = true;
         }
 
         bool TryGetRestingPose(out Vector3 position, out Quaternion rotation)
@@ -507,6 +557,162 @@ namespace Meniscus.Gameplay
                 center.x + Mathf.Cos(a) * radius,
                 center.y + height,
                 center.z + Mathf.Sin(a) * radius);
+        }
+
+        public bool IsSeatingIntroActive => seatingIntroActive;
+
+        /// <summary>
+        /// Take over the camera for the start-of-match seating intro: capture the seated framing, place the
+        /// camera at a standing pose pulled back from the desk, and hold there. Call
+        /// <see cref="PlaySeatingApproach"/> once the player chooses to sit to walk it in.
+        /// </summary>
+        public void BeginSeatingIntro()
+        {
+            if (targetCamera == null)
+                targetCamera = Camera.main;
+
+            ResolveReferences();
+
+            var cameraTransform = targetCamera != null ? targetCamera.transform : null;
+            if (cameraTransform == null)
+                return;
+
+            EnsureBaseCaptured(cameraTransform);
+
+            seatEndPos = basePosition;
+            seatEndRot = baseRotation;
+
+            // Standing over the seat: the seated eye position raised by standUp. This is the head height held
+            // the whole walk; sitting just drops world-Y back down to the seated pose.
+            seatStandPos = basePosition + Vector3.up * seatingStandUp;
+
+            // The walking look: the seated heading flattened onto the floor (so we don't inherit its downward
+            // tilt) plus a small look-down. The view tips the rest of the way down as the player sits.
+            var flatForward = baseRotation * Vector3.forward;
+            flatForward.y = 0f;
+            flatForward = flatForward.sqrMagnitude > 1e-5f ? flatForward.normalized : Vector3.forward;
+            seatStandRot = Quaternion.LookRotation(flatForward, Vector3.up) * Quaternion.Euler(seatingStandPitch, 0f, 0f);
+
+            if (seatingStartAnchor != null)
+            {
+                seatStartPos = seatingStartAnchor.position;
+                seatStartRot = seatingStartAnchor.rotation;
+            }
+            else
+            {
+                // Back along the floor at the same head height — a level approach, no descent from above.
+                seatStartPos = seatStandPos - flatForward * seatingStandBack;
+                seatStartRot = seatStandRot;
+            }
+
+            seatingIntroActive = true;
+            seatingWalking = false;
+            seatingT = 0f;
+
+            cameraTransform.SetPositionAndRotation(seatStartPos, seatStartRot);
+        }
+
+        /// <summary>
+        /// Walk the held standing shot in to the seated pose — footstep bob plus a sit-down settle — then
+        /// release the camera and invoke <paramref name="onArrived"/>. If the intro isn't active it simply
+        /// fires the callback so the round can still start.
+        /// </summary>
+        public void PlaySeatingApproach(Action onArrived)
+        {
+            if (!seatingIntroActive)
+            {
+                onArrived?.Invoke();
+                return;
+            }
+
+            seatingArrived = onArrived;
+            seatingWalking = true;
+            seatingT = 0f;
+        }
+
+        /// <summary>Abort the intro immediately, snapping to the seated pose and firing any pending callback.</summary>
+        public void CancelSeatingIntro()
+        {
+            if (!seatingIntroActive)
+                return;
+
+            if (targetCamera != null)
+                targetCamera.transform.SetPositionAndRotation(seatEndPos, seatEndRot);
+
+            FinishSeating();
+        }
+
+        void ApplySeatingIntro(Transform cameraTransform)
+        {
+            if (!seatingWalking)
+            {
+                // Holding the standing shot until the player chooses to sit; keep a gentle handheld sway so
+                // it reads as a live view rather than a frozen frame.
+                var holdPosition = seatStartPos;
+                var holdRotation = seatStartRot;
+                ApplyIdleSway(ref holdPosition, ref holdRotation);
+                cameraTransform.SetPositionAndRotation(holdPosition, holdRotation);
+                return;
+            }
+
+            seatingT += Time.unscaledDeltaTime / Mathf.Max(0.01f, seatingApproachSeconds);
+            var finished = seatingT >= 1f;
+            var t = Mathf.Clamp01(seatingT);
+
+            Vector3 position;
+            Quaternion rotation;
+
+            if (t < seatingSitStart)
+            {
+                // Walk in at head height: travel horizontally to the seat with a footstep bob — no descent.
+                var walk = Smootherstep(t / seatingSitStart);
+                position = Vector3.Lerp(seatStartPos, seatStandPos, walk);
+                rotation = Quaternion.Slerp(seatStartRot, seatStandRot, walk);
+
+                var window = Mathf.Sin((t / seatingSitStart) * Mathf.PI);   // fade the bob in and out
+                var stepPhase = (t / seatingSitStart) * seatingStepCount * Mathf.PI * 2f;
+                var bob = Mathf.Sin(stepPhase) * (seatingBobAmplitude * window);
+                var sway = Mathf.Cos(stepPhase * 0.5f) * (seatingSwayAmplitude * window);
+                position += Vector3.up * bob + rotation * new Vector3(sway, 0f, 0f);
+            }
+            else
+            {
+                // Sit down: drop world-Y from standing to the seated pose and tip into the seated framing,
+                // with a small cushion dip that settles back to rest.
+                var s = Smootherstep(Mathf.InverseLerp(seatingSitStart, 1f, t));
+                position = Vector3.Lerp(seatStandPos, seatEndPos, s);
+                rotation = Quaternion.Slerp(seatStandRot, seatEndRot, s);
+                position += Vector3.up * (-Mathf.Sin(s * Mathf.PI) * seatingSitDip);
+            }
+
+            cameraTransform.SetPositionAndRotation(position, rotation);
+
+            if (finished)
+                FinishSeating();
+        }
+
+        void FinishSeating()
+        {
+            seatingIntroActive = false;
+            seatingWalking = false;
+
+            // Hand the rig back exactly where the walk ended so the resting framing doesn't jump when the
+            // GameManager switches to TableOverview for the round.
+            if (targetCamera != null)
+            {
+                rigPosition = targetCamera.transform.position;
+                rigRotation = targetCamera.transform.rotation;
+            }
+
+            var callback = seatingArrived;
+            seatingArrived = null;
+            callback?.Invoke();
+        }
+
+        static float Smootherstep(float x)
+        {
+            x = Mathf.Clamp01(x);
+            return x * x * x * (x * (6f * x - 15f) + 10f);
         }
 
         Transform FindAnchor(CameraState state)

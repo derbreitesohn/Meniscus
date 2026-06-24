@@ -95,7 +95,9 @@ namespace Meniscus.Tests.EditMode
             Assert.Contains(GameState.RestockPhase, observedStates);
             Assert.AreEqual(1, fixture.GameManager.CurrentRound);
             Assert.AreEqual(GameState.PlayerTurn, fixture.GameManager.CurrentState);
-            Assert.AreEqual(39f, fixture.GlassManager.CurrentOverflowProbability);
+            // Restock must NOT reset the glass: the danger built up this round persists (it stays above the
+            // brim fill a fresh round would open at).
+            Assert.Greater(fixture.GlassManager.CurrentOverflowProbability, GameConstants.GlassStartFill);
             Assert.AreEqual(GameConstants.GetCoinCountForRound(1), fixture.GameManager.PlayerCoins.Count);
             Assert.AreEqual(GameConstants.GetCoinCountForRound(1), fixture.GameManager.EnemyCoins.Count);
             Assert.AreEqual(MatchOutcome.None, fixture.GameManager.LastMatchOutcome);

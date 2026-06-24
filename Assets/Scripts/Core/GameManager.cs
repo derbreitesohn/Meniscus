@@ -17,6 +17,8 @@ namespace Meniscus.Core
         [SerializeField] bool autoStart = true;
         [SerializeField] bool shopBetweenRoundsEnabled = true;
         [SerializeField] float endScreenDelay = 1.5f;
+        [Tooltip("Play the camera 'walk in and take your seat' intro before the first coin toss of a match.")]
+        [SerializeField] bool playSeatingIntro = true;
 
 
         [Header("Managers")]
@@ -24,6 +26,7 @@ namespace Meniscus.Core
         [SerializeField] EconomyManager economyManager;
         [SerializeField] EnemyAI enemyAI;
         [SerializeField] CameraController cameraController;
+        [SerializeField] PlayerSeatingIntro seatingIntro;
         [SerializeField] ShopManager shopManager;
         [SerializeField] EndScreenManager endScreenManager;
         [SerializeField] RoundWonBanner roundWonBanner;
@@ -116,8 +119,18 @@ namespace Meniscus.Core
             roundWonBanner?.Hide();
             roundIntroCard?.Hide();
             coinTossOverlay?.Hide();
-            StartRound();
+
+            // Open the match by walking the camera in to the desk and sitting down; the round (and its coin
+            // toss) only begins once the player is seated. Edit-mode / unwired scenes skip straight to the
+            // round so the old flow is preserved.
+            if (ShouldPlaySeatingIntro())
+                seatingIntro.Play(cameraController, StartRound);
+            else
+                StartRound();
         }
+
+        bool ShouldPlaySeatingIntro() =>
+            Application.isPlaying && playSeatingIntro && seatingIntro != null && cameraController != null;
 
         public void StartRound()
         {
@@ -286,9 +299,16 @@ namespace Meniscus.Core
 
         void ResolveSafeDrop(GlassDropResult result, IReadOnlyList<Coin> coins)
         {
+            // The surface eases back between drops (tug-of-war recovery): a safe pour spikes the dome,
+            // then it settles a little before the next actor pours, so the glass hovers at the brim over
+            // many turns instead of racing over the top in a couple. Overflow skips this (the round is over).
+            glassManager?.SettleSurface();
+
             if (result.Actor == TurnActor.Player)
             {
-                economyManager?.AwardSafeDrop(coins, result.RiskBeforeDrop);
+                // Pay for the danger this pour actually braved (the dome spill chance it survived), not the
+                // fill that was already there — boldness, not bookkeeping.
+                economyManager?.AwardSafeDrop(coins, result.TrueSpillChance);
                 BeginEnemyTurn();
                 return;
             }
@@ -673,9 +693,14 @@ namespace Meniscus.Core
         {
             var size = RollCoinSizeForRound(currentRound);
             var displayName = GameConstants.GetDisplayNameForSize(size);
+
+            // Later rounds scale every coin's risk up so the glass fills faster and the danger zone
+            // arrives sooner — the round-to-round difficulty ramp. Payout is left unscaled here; the higher
+            // risk feeds the greed multiplier, so a riskier round also pays more on a safe pour.
+            var roundRiskMultiplier = GameConstants.GetRoundRiskMultiplier(currentRound);
             coin.Configure(
                 size,
-                GameConstants.GetRiskForSize(size),
+                GameConstants.GetRiskForSize(size) * roundRiskMultiplier,
                 GameConstants.GetBasePayoutForSize(size),
                 actor == TurnActor.Player);
 
@@ -818,6 +843,14 @@ namespace Meniscus.Core
 
             if (cameraController == null)
                 cameraController = FindAnyObjectByType<CameraController>();
+
+            if (seatingIntro == null)
+                seatingIntro = FindAnyObjectByType<PlayerSeatingIntro>();
+
+            // Play-mode-only, like the coin toss / loss sequence: the intro builds an input-blocking prompt
+            // canvas, so EditMode tests keep the null path (StartMatch → StartRound) and never spawn one.
+            if (seatingIntro == null && Application.isPlaying)
+                seatingIntro = PlayerSeatingIntro.CreateRuntimeFallback();
 
             if (dropPresentationController == null)
                 dropPresentationController = FindAnyObjectByType<CoinDropPresentationController>();

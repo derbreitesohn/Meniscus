@@ -57,6 +57,13 @@ namespace Meniscus.Gameplay
                 sprite.enabled = value;
         }
 
+        /// <summary>Recolours the glow (RGB only; the pulsing alpha is unchanged). Used to tint a selected
+        /// coin by how dangerous pouring it would be — cool when steady, hot as the brim nears.</summary>
+        public void SetTint(Color color)
+        {
+            tint = new Color(color.r, color.g, color.b, tint.a);
+        }
+
         void LateUpdate()
         {
             // The coin/box was destroyed (round cleared) — take the halo with it.

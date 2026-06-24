@@ -35,25 +35,52 @@ namespace Meniscus.Core
         public static float MediumCoinRisk = 10f;
         public static float LargeCoinRisk = 15f;
 
+        // Payouts skew hard by size so big coins are the high-roller play: Gold pays 5× a Copper. This is
+        // the coin's raw value; the boldness factor below multiplies it by how dangerous the pour was.
         public static int SmallCoinBasePayout = 10;
-        public static int MediumCoinBasePayout = 20;
-        public static int LargeCoinBasePayout = 30;
+        public static int MediumCoinBasePayout = 25;
+        public static int LargeCoinBasePayout = 50;
 
-        public static float GreedRiskDivisor = 50f;
-        public static float ComboMultiplier = 1.5f;
+        // Pay for boldness, not for pouring (see EconomyManager.CalculateSafeDropPayout). A safe pour pays
+        // base × (floor + scale · boldness^exponent), where boldness is the spill chance the pour actually
+        // braved (0..1 of a certain spill). A timid pour into a calm glass pays pennies; a big coin dared
+        // into a near-overflowing one is the jackpot. The exponent makes the scariest pours pay
+        // disproportionately. Lower floor → safe pours pay even less; raise scale/exponent → bigger jackpots.
+        public static float BoldnessPayoutFloor = 0.1f;
+        public static float BoldnessPayoutScale = 6f;
+        public static float BoldnessExponent = 1.5f;
+        public static float ComboMultiplier = 2f;
         public const float MaxOverflowProbability = 100f;
 
-        // No default grace period: with zero relief the spill curve rises straight from an empty glass,
-        // so even the first coins of a round carry a small chance. Shop items (Steady Hand / Iron Grip)
-        // raise the relief to temporarily shrug off some accumulated risk.
+        // Baseline relief (0 by default). Relief is a subtractive discount on the dome fill: shop items
+        // (Steady Hand / Iron Grip) raise the player's relief to shrug off some fill, and a drunk-enemy
+        // penalty applies it negatively. See GlassManager.CalculateTrueSpillChance.
         public static float SpillSafeZoneThreshold = 0f;
 
-        // The spill chance is a continuous curve that climbs with fill and asymptotically approaches
-        // MaxSpillChance — getting ever closer but never reaching it, so a spill is never guaranteed.
-        // The ceiling sits below 100% on purpose: even a brimming glass keeps a real chance to walk away
-        // (a maxed meter lands around 78%, never quite 80), so pushing your luck stays a gamble rather
-        // than a certainty. This is the single tuning knob; the climb rate is derived from the meter
-        // scale (see GlassManager.CalculateTrueSpillChance).
+        // ── The meniscus dome (the playfield) ───────────────────────────────────────────────────────
+        // The glass opens full to the brim; all play happens in the thin meniscus dome above the rim.
+        // CurrentOverflowProbability is "how far coins have pushed into the dome" (0..100). The spill
+        // resolution (GlassManager.CalculateTrueSpillChance) reads these knobs:
+        //   • below DomeSafeZone   → surface tension holds for sure (0% spill, readable-safe),
+        //   • across the dome      → the break chance ramps up CONVEXLY (gentle early, steep near the brim),
+        //   • at/above DomeCapacity → a CERTAIN spill (the brim — pour here and it WILL go over).
+        // GlassStartFill is where the glass opens each round (the "already at the edge" lever; 0 = calm
+        // open). SurfaceSettlePerTurn is the tug-of-war recovery: the surface eases back this much between
+        // drops, so the glass hovers at the brim over many turns instead of racing over the top in a couple.
+        // DomeRampExponent shapes the climb: 1 = linear, higher = early pours stay safe and the danger
+        // escalates into a late climax (so a round builds instead of busting on an early coin-flip).
+        // Tuning: longer / less spiky rounds → raise DomeCapacity, SurfaceSettlePerTurn or DomeRampExponent,
+        // or lower GlassStartFill; more knife-edge from turn one → raise GlassStartFill or shrink the dome.
+        public static float DomeSafeZone = 10f;
+        public static float DomeCapacity = 80f;
+        public static float GlassStartFill = 15f;
+        // Kept below the smallest coin's risk (Copper = 5) so even all-Copper play still creeps the glass
+        // up — otherwise two players could turtle on Copper forever and the round never resolves.
+        public static float SurfaceSettlePerTurn = 4f;
+        public static float DomeRampExponent = 2.5f;
+
+        // Kept only as the normaliser the danger visuals/HUD scale against (dome bulge, vignette, tension
+        // RTPC). No longer governs the spill resolution — the dome knobs above do.
         public static float MaxSpillChance = 80f;
 
         public static float EnemyTurnDelaySeconds = 2f;
@@ -89,6 +116,24 @@ namespace Meniscus.Core
         // Each actor gets exactly the same number of coins every round. The per-round parameter is kept so
         // callers (and a future scaling rule) need not change.
         public static int GetCoinCountForRound(int round) => CoinsPerActor;
+
+        // Round-to-round difficulty ramp: later rounds scale every coin's risk contribution up, so the
+        // shared glass climbs toward the brim faster and the danger zone arrives sooner. Round 1 is
+        // unscaled (a gentle on-ramp); 2 and 3 ramp up so shop items become the survival edge rather than
+        // a luxury — the player has to earn (greedy paydays) to afford the relief that later rounds demand.
+        // Neutral for now: with the meniscus-dome model a per-coin risk multiplier double-counts and makes
+        // late rounds spill almost instantly. Per-round difficulty will instead come from a thinner dome
+        // (a higher GlassStartFill / lower DomeCapacity in later rounds). Left as knobs at 1.0 (no scaling).
+        public static float Round2RiskMultiplier = 1f;
+        public static float Round3RiskMultiplier = 1f;
+
+        public static float GetRoundRiskMultiplier(int round) =>
+            round switch
+            {
+                <= 1 => 1f,
+                2 => Round2RiskMultiplier,
+                _ => Round3RiskMultiplier
+            };
 
         public static Vector3 GetVisualScaleForSize(CoinSize size) =>
             size switch

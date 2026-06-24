@@ -35,9 +35,31 @@ namespace Meniscus.Tests.EditMode
 
             box.SetCount(3);
 
-            var label = box.GetComponentInChildren<TextMesh>();
+            // includeInactive: the card is hidden until the box is selected, so its text lives on an
+            // inactive object at rest.
+            var label = box.GetComponentInChildren<TextMesh>(true);
             StringAssert.Contains("TEST ITEM", label.text);
             StringAssert.Contains("x3", label.text);
+        }
+
+        [Test]
+        public void Card_HiddenAtRest_RevealedOnSelect_AndExplainsTheItem()
+        {
+            var tray = host.AddComponent<DeskItemTray>();
+            var item = ItemDefinition.Create(
+                "test", "Test Item", "Does a test thing.", 10, ItemEffectKind.PayoutMultiplier, 2f);
+            var box = DeskItemTrayBuilder.BuildBox(host.transform, tray, item);
+            box.SetCount(1);
+
+            var label = box.GetComponentInChildren<TextMesh>(true);
+            Assert.IsFalse(label.gameObject.activeInHierarchy, "Card is hidden until the box is picked up.");
+            StringAssert.Contains("Does a test thing.", label.text, "Card explains what the item does.");
+
+            box.SetSelected(true);
+            Assert.IsTrue(label.gameObject.activeInHierarchy, "Selecting the box reveals its card.");
+
+            box.SetSelected(false);
+            Assert.IsFalse(label.gameObject.activeInHierarchy, "Deselecting hides the card again.");
         }
     }
 }

@@ -48,7 +48,7 @@ namespace Meniscus.UI
             ApplyColor(bodyRenderer, bodyColor);
             body.AddComponent<DeskItemTileRelay>(); // wired below
 
-            var label = CreateLabel(container.transform, new Vector3(0f, BoxSize * 0.9f, 0f));
+            var card = BuildDescriptionCard(container.transform, out var label, out var backing);
 
             var box = container.AddComponent<DeskItemBox>();
 
@@ -56,7 +56,7 @@ namespace Meniscus.UI
             // button (DeskUseButton), so no per-box Use/Cancel tiles are built.
             body.GetComponent<DeskItemTileRelay>().Initialize(box, DeskItemTileRelay.Kind.Body);
 
-            box.Bind(label, null, null, bodyRenderer, bodyColor);
+            box.Bind(label, card, backing, bodyRenderer, bodyColor);
             return box;
         }
 
@@ -103,24 +103,59 @@ namespace Meniscus.UI
             return box;
         }
 
-        static TextMesh CreateLabel(Transform parent, Vector3 localPos)
+        /// <summary>
+        /// Builds the selection card a box reveals only while it's picked up (DeskItemBox toggles it): a
+        /// dark plate behind readable light text, floating above the box. The plate gives the text contrast
+        /// on the busy desk; DeskItemBox auto-sizes it to whatever description the item carries. Both face
+        /// the player via the same 180° flip as the USE text (a TextMesh reads from its -Z side while the
+        /// tray's +Z faces the camera, so an unflipped card would render mirrored).
+        /// </summary>
+        static GameObject BuildDescriptionCard(Transform parent, out TextMesh text, out Transform backing)
         {
-            var go = new GameObject("Label");
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = localPos;
-            // Same orientation fix as the USE text: a TextMesh reads from its -Z side and the tray's +Z
-            // faces the camera, so flip 180° about up or the label renders mirrored.
-            go.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
-            // Scale the text with the box so it stays readable (a fixed scale looked tiny on a bigger box).
-            go.transform.localScale = Vector3.one * (BoxSize * 0.2f);
+            var card = new GameObject("Description Card");
+            card.transform.SetParent(parent, false);
+            // Float clear above the box, which itself lifts when selected.
+            card.transform.localPosition = new Vector3(0f, BoxSize * 1.6f, 0f);
+            card.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
 
-            var text = go.AddComponent<TextMesh>();
-            text.anchor = TextAnchor.LowerCenter;
+            // Dark backing plate: a thin cube reads from any angle (no two-sided material needed). This is
+            // just a sane starting scale — DeskItemBox.FitBackingToText sizes it to the text at runtime.
+            var plate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            plate.name = "Backing";
+            plate.transform.SetParent(card.transform, false);
+            plate.transform.localScale = new Vector3(0.3f, 0.14f, 0.004f);
+            // Behind the text from the player's view (the card's local +Z points away from the camera).
+            plate.transform.localPosition = new Vector3(0f, 0f, 0.006f);
+            StripCollider(plate); // never intercept the tray's click raycast
+            ApplyColor(plate.GetComponent<Renderer>(), new Color(0.05f, 0.04f, 0.03f));
+            backing = plate.transform;
+
+            var textGo = new GameObject("Text");
+            textGo.transform.SetParent(card.transform, false);
+            // In front of the plate, toward the player.
+            textGo.transform.localPosition = new Vector3(0f, 0f, -0.002f);
+
+            text = textGo.AddComponent<TextMesh>();
+            text.anchor = TextAnchor.MiddleCenter;
             text.alignment = TextAlignment.Center;
-            text.fontSize = 48;
-            text.characterSize = 0.1f;
-            text.color = Color.white;
-            return text;
+            text.fontSize = 64;
+            text.characterSize = 0.011f;
+            text.richText = true; // bold name header via <b> in DeskItemBox.RefreshCard
+            text.color = new Color(0.98f, 0.95f, 0.86f);
+            return card;
+        }
+
+        static void StripCollider(GameObject go)
+        {
+            var collider = go.GetComponent<Collider>();
+
+            if (collider == null)
+                return;
+
+            if (Application.isPlaying)
+                Object.Destroy(collider);
+            else
+                Object.DestroyImmediate(collider);
         }
 
     }

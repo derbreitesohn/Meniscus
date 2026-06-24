@@ -31,28 +31,26 @@ namespace Meniscus.Core
             currentRoundEarnings = 0;
         }
 
-        public int CalculateSafeDropPayout(IReadOnlyList<Coin> coins, float currentRisk)
+        public int CalculateSafeDropPayout(IReadOnlyList<Coin> coins, float spillChanceBraved)
         {
             if (coins == null || coins.Count == 0)
                 return 0;
 
-            // Greed rewards the risk of THIS pour — the risk already in the glass PLUS the risk the dropped
-            // coins add — so a bigger, riskier coin (gold) earns a higher multiplier than a safer one, not
-            // just more flat payout. Pouring into a fuller glass still pumps it too (riskBefore is included).
-            var addedRisk = 0f;
             var baseTotal = 0f;
-
             for (var i = 0; i < coins.Count; i++)
             {
-                if (coins[i] == null)
-                    continue;
-
-                addedRisk += Mathf.Max(0f, coins[i].riskContribution);
-                baseTotal += coins[i].basePayout;
+                if (coins[i] != null)
+                    baseTotal += coins[i].basePayout;
             }
 
-            var greedMultiplier = 1f + (Mathf.Max(0f, currentRisk) + addedRisk) / GameConstants.GreedRiskDivisor;
-            var total = baseTotal * greedMultiplier;
+            // Pay for boldness, not for pouring: the reward scales with how close to spilling this pour was
+            // (the danger braved), not with merely having dropped a coin. A timid pour into a calm glass
+            // pays pennies; a big coin dared into a near-overflowing glass is the jackpot. The exponent
+            // makes the scariest pours pay disproportionately.
+            var boldness = Mathf.Clamp01(spillChanceBraved / GameConstants.MaxOverflowProbability);
+            var payoutFactor = GameConstants.BoldnessPayoutFloor
+                + GameConstants.BoldnessPayoutScale * Mathf.Pow(boldness, GameConstants.BoldnessExponent);
+            var total = baseTotal * payoutFactor;
 
             if (coins.Count > 1)
                 total *= GameConstants.ComboMultiplier;
@@ -60,9 +58,9 @@ namespace Meniscus.Core
             return Mathf.RoundToInt(total);
         }
 
-        public int AwardSafeDrop(IReadOnlyList<Coin> coins, float currentRisk)
+        public int AwardSafeDrop(IReadOnlyList<Coin> coins, float spillChanceBraved)
         {
-            var payout = CalculateSafeDropPayout(coins, currentRisk);
+            var payout = CalculateSafeDropPayout(coins, spillChanceBraved);
 
             if (nextSafeDropPayoutMultiplier > 1f)
             {
@@ -110,6 +108,19 @@ namespace Meniscus.Core
         public void ClearQueuedShopBonuses()
         {
             nextSafeDropPayoutMultiplier = 1f;
+        }
+
+        /// <summary>
+        /// Adds cash straight to the bank (a stipend, a future "found money" item, or test setup), bypassing
+        /// the boldness payout path. Non-positive amounts are ignored.
+        /// </summary>
+        public void GrantBankedCash(int amount)
+        {
+            if (amount <= 0)
+                return;
+
+            playerTotalBankedCash += amount;
+            EarningsBanked?.Invoke(amount, playerTotalBankedCash);
         }
 
         public void BankCurrentRoundEarnings()

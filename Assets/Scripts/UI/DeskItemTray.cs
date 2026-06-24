@@ -30,6 +30,15 @@ namespace Meniscus.UI
                  "in code at runtime.")]
         [SerializeField] DeskItemBox boxPrefab;
 
+        [Header("Hand Delivery")]
+        [Tooltip("When on (play mode only), a newly ordered item is carried onto the desk by a hand that " +
+                 "reaches in from the side instead of popping into place. Tune the hand's reach, side and " +
+                 "timing on the DeskHandDelivery component (auto-added here if not assigned).")]
+        [SerializeField] bool deliverItemsByHand = true;
+        [Tooltip("The hand that delivers ordered items. Leave empty to auto-add one to this object at " +
+                 "runtime; assign one to tune it in the editor before play.")]
+        [SerializeField] DeskHandDelivery handDelivery;
+
         const float BoxSpacing = 0.3f;
         const float DeskClearance = 0.01f;
 
@@ -39,6 +48,11 @@ namespace Meniscus.UI
 
         bool subscribedManager;
         bool subscribedInventory;
+        bool subscribedPlayer;
+
+        // True only while servicing a genuine inventory change (a grant/use) at runtime, so the hand
+        // carries in just the boxes that newly arrived — not the ones rebuilt on enable / reconfigure.
+        bool deliverArrivals;
 
         Bounds deskBounds;
         bool deskResolved;
@@ -120,8 +134,14 @@ namespace Meniscus.UI
 
             if (!subscribedInventory && inventory != null)
             {
-                inventory.Changed += Rebuild;
+                inventory.Changed += OnInventoryChanged;
                 subscribedInventory = true;
+            }
+
+            if (!subscribedPlayer && playerController != null)
+            {
+                playerController.SelectionChanged += OnPlayerSelectionChanged;
+                subscribedPlayer = true;
             }
         }
 
@@ -131,10 +151,22 @@ namespace Meniscus.UI
                 gameManager.StateChanged -= OnStateChanged;
 
             if (subscribedInventory && inventory != null)
-                inventory.Changed -= Rebuild;
+                inventory.Changed -= OnInventoryChanged;
+
+            if (subscribedPlayer && playerController != null)
+                playerController.SelectionChanged -= OnPlayerSelectionChanged;
 
             subscribedManager = false;
             subscribedInventory = false;
+            subscribedPlayer = false;
+        }
+
+        // Coins and a held item are mutually exclusive: when the player lifts a coin, drop any raised item.
+        // (The reverse — picking an item clears coins — is done in OnBoxClicked.)
+        void OnPlayerSelectionChanged()
+        {
+            if (selected != null && playerController != null && playerController.HasSelectedCoins)
+                Deselect();
         }
 
         void OnStateChanged(GameState state)
@@ -147,6 +179,16 @@ namespace Meniscus.UI
             // first time it's the player's turn, even before the first inventory rebuild).
             EnsureUseButton();
             useButton.gameObject.SetActive(state == GameState.PlayerTurn);
+        }
+
+        // A real grant/use: at runtime, let the hand carry in any boxes this change creates. The initial
+        // OnEnable / Configure rebuilds go through Rebuild() directly with the flag off, so pre-owned
+        // items just appear without a delivery animation.
+        void OnInventoryChanged()
+        {
+            deliverArrivals = Application.isPlaying && deliverItemsByHand;
+            Rebuild();
+            deliverArrivals = false;
         }
 
         public void Rebuild()
@@ -175,6 +217,8 @@ namespace Meniscus.UI
             }
 
             // Add new boxes and refresh counts.
+            List<DeskItemBox> arrivals = null;
+
             for (var i = 0; i < contents.Count; i++)
             {
                 var stack = contents[i];
@@ -185,12 +229,24 @@ namespace Meniscus.UI
                     box = CreateBox(stack.Item);
                     box.Slot = NextFreeSlot();
                     boxes.Add(box);
+
+                    if (deliverArrivals && EnsureHandDelivery() != null)
+                    {
+                        // Mark it before Layout so Layout records its slot without snapping it into view;
+                        // the hand carries it there from off-desk instead.
+                        box.IsBeingDelivered = true;
+                        (arrivals ??= new List<DeskItemBox>()).Add(box);
+                    }
                 }
 
                 box.SetCount(stack.Count);
             }
 
             Layout();
+
+            if (arrivals != null)
+                for (var i = 0; i < arrivals.Count; i++)
+                    handDelivery.Deliver(arrivals[i], SlotPosition(arrivals[i].Slot));
         }
 
         // Prefer an authored box prefab (so the box carries a model / materials / Animator set in the
@@ -254,7 +310,8 @@ namespace Meniscus.UI
 
         public void OnBoxClicked(DeskItemBox box)
         {
-            if (box == null)
+            // Ignore a box that's still being carried in — it isn't on its slot yet.
+            if (box == null || box.IsBeingDelivered)
                 return;
 
             // Click a raised box again to set it back down.
@@ -267,6 +324,11 @@ namespace Meniscus.UI
             Deselect();
             selected = box;
             box.SetSelected(true);
+
+            // Picking an item drops any coins the player had lifted (the two selections are mutually
+            // exclusive). This clears coins without pouring; HasSelectedCoins is then false, so the
+            // SelectionChanged it raises won't bounce back and deselect the box we just picked.
+            playerController?.ClearCoinSelection();
         }
 
         public void OnUseClicked(DeskItemBox box)
@@ -355,6 +417,20 @@ namespace Meniscus.UI
 
             useButton = DeskItemTrayBuilder.BuildUseButton(transform);
             useButton.gameObject.SetActive(gameManager != null && gameManager.CurrentState == GameState.PlayerTurn);
+        }
+
+        // The hand lives on the tray so it shares the tray's local space (its slot coordinates). Use an
+        // assigned one if a designer placed/tuned it; otherwise add one on demand (play mode only, so
+        // edit-mode tests don't pick up a stray component).
+        DeskHandDelivery EnsureHandDelivery()
+        {
+            if (handDelivery == null)
+                handDelivery = GetComponent<DeskHandDelivery>();
+
+            if (handDelivery == null && Application.isPlaying)
+                handDelivery = gameObject.AddComponent<DeskHandDelivery>();
+
+            return handDelivery;
         }
 
         void PositionTrayOnDesk()
