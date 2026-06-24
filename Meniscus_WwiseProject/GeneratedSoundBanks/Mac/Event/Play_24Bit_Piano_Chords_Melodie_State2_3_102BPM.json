@@ -1,0 +1,99 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Mac",
+  "BasePlatform": "Mac",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "2739229492",
+    "Type": "Event",
+    "GUID": "{ECF0AA0C-AF4E-49A1-A6CD-2098B8FE756D}",
+    "Language": "SFX",
+    "Hash": "{F13E228E-0C73-2D84-3A88-71A66F63E602}",
+    "ObjectPath": "Play_24Bit_Piano_Chords_Melodie_State2_3_102BPM",
+    "ShortName": "Play_24Bit_Piano_Chords_Melodie_State2_3_102BPM",
+    "Path": "Event/Play_24Bit_Piano_Chords_Melodie_State2_3_102BPM.bnk",
+    "Media": [
+     {
+      "Id": "897760597",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "24Bit_Piano_Chords+Melodie_State2-3_102BPM.wav",
+      "Path": "Media/897760597.wem",
+      "CachePath": "9B/{9BA26FB8-54A3-C7A8-5B64-A0B09A72EADD}.wem"
+     }
+    ],
+    "Plugins": {
+     "ShareSets": [
+      {
+       "Id": "1990128658",
+       "Name": "Room_Medium",
+       "ObjectPath": "\\Effects\\Factory Effects\\RoomVerb\\Rooms\\Room_Medium",
+       "GUID": "{F5C06EC1-E4A4-4332-A7D3-A89E2986B74F}",
+       "LibName": "Wwise RoomVerb",
+       "LibId": "7733251"
+      }
+     ]
+    },
+    "Events": [
+     {
+      "Id": "2739229492",
+      "Name": "Play_24Bit_Piano_Chords_Melodie_State2_3_102BPM",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_24Bit_Piano_Chords_Melodie_State2_3_102BPM",
+      "GUID": "{ECF0AA0C-AF4E-49A1-A6CD-2098B8FE756D}",
+      "DurationType": "Infinite",
+      "MediaRefs": [
+       {
+        "Id": "897760597"
+       }
+      ],
+      "PluginRefs": {
+       "ShareSets": [
+        {
+         "Id": "1990128658"
+        }
+       ]
+      }
+     }
+    ],
+    "StateGroups": [
+     {
+      "Id": "1021618141",
+      "Name": "MusicState",
+      "ObjectPath": "\\States\\Default Work Unit\\MusicState",
+      "GUID": "{A953B08C-76B6-4D13-9E95-874027D35B29}",
+      "States": [
+       {
+        "Id": "391998042",
+        "Name": "Tense",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\Tense",
+        "GUID": "{26510479-E127-49E9-9EF2-A57EE18E97F1}"
+       },
+       {
+        "Id": "748895195",
+        "Name": "None",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\None",
+        "GUID": "{B80BFC4A-01BB-43CD-8AE1-7D1C322427DF}"
+       },
+       {
+        "Id": "1874288895",
+        "Name": "Idle",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\Idle",
+        "GUID": "{BF046EDC-EC06-4BB4-8734-2C241B6FA7A2}"
+       },
+       {
+        "Id": "2135990474",
+        "Name": "Chritical",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\Chritical",
+        "GUID": "{51A583EB-ADA0-4C2A-B622-576077F8911C}"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{84A52D1D-02D4-2615-A7AE-E16E2172EFA2}"
+ }
+}

@@ -15,4 +15,4 @@ MonoBehaviour:
   objectName: Play_coin_on_wood
   id: 2511138137
   guid: FF5DFE73-6D7A-472E-80A7-CE90864D7F3A
-  IsInUserDefinedSoundBank: 0
+  IsInUserDefinedSoundBank: 1

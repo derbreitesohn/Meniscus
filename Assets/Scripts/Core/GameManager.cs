@@ -60,6 +60,10 @@ namespace Meniscus.Core
         [SerializeField] float coinRowLocalZPlayer = -0.78f;
         [SerializeField] float coinRowLocalZEnemy = 1.12f;
 
+        [Header("Audio")]
+      
+
+
         readonly List<Coin> playerCoins = new();
         readonly List<Coin> enemyCoins = new();
         readonly List<Coin> generatedCoins = new();
@@ -150,6 +154,7 @@ namespace Meniscus.Core
                 BeginPlayerTurn();
                 return;
             }
+           
 
             // Flip the real gold coin (the large/gold model); the overlay auto-fits and stands in with a
             // placeholder if no model is wired.

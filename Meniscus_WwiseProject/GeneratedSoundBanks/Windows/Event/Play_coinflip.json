@@ -1,0 +1,84 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "4084283492",
+    "Type": "Event",
+    "GUID": "{8E0BFB2D-D248-4C9B-BCC6-F59B021DC201}",
+    "Language": "SFX",
+    "Hash": "{12010C74-8D5B-4F96-A6BA-2D98CB2C11B0}",
+    "ObjectPath": "Play_coinflip",
+    "ShortName": "Play_coinflip",
+    "Path": "Event/Play_coinflip.bnk",
+    "Media": [
+     {
+      "Id": "10235593",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "coinflip02.wav",
+      "Path": "Media/10235593.wem",
+      "CachePath": "53/{53207343-2334-3269-B929-E30A9A73B8A4}.wem"
+     },
+     {
+      "Id": "529103067",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "coinflip03.wav",
+      "Path": "Media/529103067.wem",
+      "CachePath": "6D/{6DFAC4F2-91BA-3FBE-DD06-1AAA458CE091}.wem"
+     },
+     {
+      "Id": "532640387",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "coinflip05.wav",
+      "Path": "Media/532640387.wem",
+      "CachePath": "CC/{CC08CD93-C30E-E7A9-8366-3ED13F995088}.wem"
+     },
+     {
+      "Id": "995319830",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "coinflip06.wav",
+      "Path": "Media/995319830.wem",
+      "CachePath": "5C/{5C494EB7-CAD9-ABC4-B19C-CDBFF9513B6B}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "4084283492",
+      "Name": "Play_coinflip",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_coinflip",
+      "GUID": "{8E0BFB2D-D248-4C9B-BCC6-F59B021DC201}",
+      "DurationType": "OneShot",
+      "DurationMin": "1.6834375",
+      "DurationMax": "2.995375",
+      "MediaRefs": [
+       {
+        "Id": "10235593"
+       },
+       {
+        "Id": "529103067"
+       },
+       {
+        "Id": "532640387"
+       },
+       {
+        "Id": "995319830"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{2683440C-DD07-CD19-E87E-D304AFB304BD}"
+ }
+}

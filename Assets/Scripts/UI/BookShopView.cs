@@ -38,6 +38,11 @@ namespace Meniscus.UI
         [Tooltip("How far the printed menu sits proud of the open page (small, so it reads as ink on the page).")]
         [SerializeField] float menuFloatHeight = 0.012f;
 
+        [Header("Audio")]
+        [SerializeField] AK.Wwise.Event pageFlip;
+        [SerializeField] AK.Wwise.Event pageClose;
+
+
         [Header("Desk Placement")]
         [Tooltip("Where the closed book rests on the desk. Place this component's GameObject on the desk " +
                  "(or assign a separate empty here) and the book sits at that transform, lifting toward " +
@@ -170,23 +175,25 @@ namespace Meniscus.UI
         }
 
         public void Open(IReadOnlyList<ItemDefinition> catalog, ShopManager shop)
-        {
-            shopManager = shop;
-            ResolveReferences();
+{
+    shopManager = shop;
+    ResolveReferences();
 
-            if (!built)
-                Build(catalog);
+    if (!built)
+        Build(catalog);
 
-            root.gameObject.SetActive(true);
-            isOpen = true;
-            previewMode = false;
+    var wasOpen = isOpen;          // merken, ob schon offen
 
-            Log($"Open (shop phase, buyable). catalogCount={catalog?.Count ?? 0}");
+    root.gameObject.SetActive(true);
+    isOpen = true;
+    previewMode = false;
 
-            // Seat it on the desk immediately so the first frame shows it resting there; Update lifts it.
-            ApplyHeldPose(Mathf.SmoothStep(0f, 1f, animT));
-        }
+    if (!wasOpen)                  // nur beim echten Übergang zu→auf
+        pageFlip?.Post(gameObject);
 
+    Log($"Open (shop phase, buyable). catalogCount={catalog?.Count ?? 0}");
+    ApplyHeldPose(Mathf.SmoothStep(0f, 1f, animT));
+}   
         /// <summary>
         /// Builds the book (if needed) and seats it closed on the desk without opening it, so it is a
         /// visible prop on the table during the rounds and is then lifted from there when the shop opens.
@@ -213,12 +220,16 @@ namespace Meniscus.UI
         }
 
         public void Close()
-        {
-            Log("Close");
-            isOpen = false;
-            previewMode = false;
-            ResetPageTurn();
-        }
+{
+    Log("Close");
+
+    if (isOpen)                    
+        pageClose?.Post(gameObject);
+
+    isOpen = false;
+    previewMode = false;
+    ResetPageTurn();
+}
 
         /// <summary>
         /// Sets the predicate deciding whether a book-prop click may open a browse preview.
@@ -256,16 +267,23 @@ namespace Meniscus.UI
         /// preview; while previewing, a click closes it again. Ignored once the shop phase has
         /// opened it for real, where closing is done via "Finish Drink".
         /// </summary>
-        void OnBookClicked()
-        {
-            Log($"OnBookClicked received. built={built}, isOpen={isOpen}, previewMode={previewMode}");
+   void OnBookClicked()
+{
+    Log($"OnBookClicked received. built={built}, isOpen={isOpen}, previewMode={previewMode}");
 
-            if (!built)
-                return;
+    if (!built)
+        return;
 
-            (isOpen, previewMode) = ComputeBrowseToggle(isOpen, previewMode);
-            Log($"-> isOpen={isOpen}, previewMode={previewMode}");
-        }
+    var wasOpen = isOpen;
+    (isOpen, previewMode) = ComputeBrowseToggle(isOpen, previewMode);
+
+    if (!wasOpen && isOpen)
+        pageFlip?.Post(gameObject);
+    else if (wasOpen && !isOpen)
+        pageClose?.Post(gameObject);
+
+    Log($"-> isOpen={isOpen}, previewMode={previewMode}");
+}
 
         void Update()
         {

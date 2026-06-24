@@ -1,0 +1,48 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "1627151722",
+    "Type": "Event",
+    "GUID": "{0D9F3A58-C8E5-46F5-9707-1CC5526C698E}",
+    "Language": "SFX",
+    "Hash": "{4F2DD2B3-B065-99A9-AA12-B3D2FBD8131A}",
+    "ObjectPath": "Play_pageflip",
+    "ShortName": "Play_pageflip",
+    "Path": "Event/Play_pageflip.bnk",
+    "Media": [
+     {
+      "Id": "21093391",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "pageflip.wav",
+      "Path": "Media/21093391.wem",
+      "CachePath": "08/{088CC2EF-CCD8-6ED1-2891-6AA7AF0D5AF8}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "1627151722",
+      "Name": "Play_pageflip",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_pageflip",
+      "GUID": "{0D9F3A58-C8E5-46F5-9707-1CC5526C698E}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.42172918",
+      "DurationMax": "0.42172918",
+      "MediaRefs": [
+       {
+        "Id": "21093391"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{EF54A07C-E6FF-B3E3-4BC4-89A37792F7A6}"
+ }
+}

@@ -1,0 +1,48 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "895213161",
+    "Type": "Event",
+    "GUID": "{E67892A4-20F8-4B1B-B15C-82F37618D44A}",
+    "Language": "SFX",
+    "Hash": "{8E731EB3-7749-DE31-FB2A-F5CF83B928F5}",
+    "ObjectPath": "Play_pageclose",
+    "ShortName": "Play_pageclose",
+    "Path": "Event/Play_pageclose.bnk",
+    "Media": [
+     {
+      "Id": "574240359",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "pageclose.wav",
+      "Path": "Media/574240359.wem",
+      "CachePath": "64/{641AA186-2464-A565-178E-3FD18814EEC3}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "895213161",
+      "Name": "Play_pageclose",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_pageclose",
+      "GUID": "{E67892A4-20F8-4B1B-B15C-82F37618D44A}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.24832",
+      "DurationMax": "0.24832",
+      "MediaRefs": [
+       {
+        "Id": "574240359"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{ECF56AC3-C64A-5128-029E-0858E760A420}"
+ }
+}

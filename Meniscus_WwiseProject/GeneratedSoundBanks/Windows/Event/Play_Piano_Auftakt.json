@@ -1,0 +1,82 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "3402962276",
+    "Type": "Event",
+    "GUID": "{54CB9E89-11FE-4634-8C7A-91D89AEBA89D}",
+    "Language": "SFX",
+    "Hash": "{8F86A152-709E-9237-C3AD-8B7D04E6529E}",
+    "ObjectPath": "Play_Piano_Auftakt",
+    "ShortName": "Play_Piano_Auftakt",
+    "Path": "Event/Play_Piano_Auftakt.bnk",
+    "Media": [
+     {
+      "Id": "590189198",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "Piano_Auftakt_State1_82BPM.wav",
+      "Path": "Media/590189198.wem",
+      "CachePath": "3B/{3BB00629-1967-7F46-2B68-9A9125CD5F9F}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "3402962276",
+      "Name": "Play_Piano_Auftakt",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Piano_Auftakt",
+      "GUID": "{54CB9E89-11FE-4634-8C7A-91D89AEBA89D}",
+      "DurationType": "OneShot",
+      "DurationMin": "1.4634167",
+      "DurationMax": "1.4634167",
+      "MediaRefs": [
+       {
+        "Id": "590189198"
+       }
+      ]
+     }
+    ],
+    "StateGroups": [
+     {
+      "Id": "1021618141",
+      "Name": "MusicState",
+      "ObjectPath": "\\States\\Default Work Unit\\MusicState",
+      "GUID": "{A953B08C-76B6-4D13-9E95-874027D35B29}",
+      "States": [
+       {
+        "Id": "391998042",
+        "Name": "Tense",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\Tense",
+        "GUID": "{26510479-E127-49E9-9EF2-A57EE18E97F1}"
+       },
+       {
+        "Id": "748895195",
+        "Name": "None",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\None",
+        "GUID": "{B80BFC4A-01BB-43CD-8AE1-7D1C322427DF}"
+       },
+       {
+        "Id": "1874288895",
+        "Name": "Idle",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\Idle",
+        "GUID": "{BF046EDC-EC06-4BB4-8734-2C241B6FA7A2}"
+       },
+       {
+        "Id": "2135990474",
+        "Name": "Chritical",
+        "ObjectPath": "\\States\\Default Work Unit\\MusicState\\Chritical",
+        "GUID": "{51A583EB-ADA0-4C2A-B622-576077F8911C}"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{10EAA405-9D09-EAB6-EC69-7F921B545B80}"
+ }
+}

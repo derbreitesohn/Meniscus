@@ -28,6 +28,11 @@ namespace Meniscus.UI
         [SerializeField] GameObject silverCoinModel;
         [SerializeField] GameObject goldCoinModel;
 
+        [Header("Audio")]
+        [SerializeField] AK.Wwise.Event auftakt;
+        [SerializeField] float auftaktDauer = 2f;
+
+
         GameSession session;
         Text statsText;
         Text soundButtonLabel;
@@ -116,7 +121,24 @@ namespace Meniscus.UI
             RefreshSoundLabel();
         }
 
-        void PlayGame() => SceneManager.LoadScene(GameSceneName);
+     void PlayGame()
+        {
+            if (auftakt != null && auftakt.IsValid())
+            {
+                auftakt.Post(gameObject);
+                StartCoroutine(LoadAfterDelay(auftaktDauer));
+            }
+            else
+            {
+                SceneManager.LoadScene(GameSceneName);
+            }
+        }
+
+        System.Collections.IEnumerator LoadAfterDelay(float seconds)
+        {
+            yield return new WaitForSeconds(seconds);
+            SceneManager.LoadScene(GameSceneName);
+        }
 
         void ToggleSound()
         {
