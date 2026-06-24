@@ -20,8 +20,9 @@ namespace AK
         static const AkUniqueID PLAY_COINS_ON_WOOD = 4117578692U;
         static const AkUniqueID PLAY_PAGECLOSE = 895213161U;
         static const AkUniqueID PLAY_PAGEFLIP = 1627151722U;
-        static const AkUniqueID PLAY_PIANO_AUFTAKT = 3402962276U;
         static const AkUniqueID PLAY_PIANO_CHORDS_STATE1_82BPM = 271372744U;
+        static const AkUniqueID PLAY_SPILL = 1363090524U;
+        static const AkUniqueID PLAY_WATER = 441572235U;
     } // namespace EVENTS
 
     namespace STATES

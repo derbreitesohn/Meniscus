@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 276578224cc7c464ea3e399cd59679e6, type: 3}
-  m_Name: 54CB9E89-11FE-4634-8C7A-91D89AEBA89D
+  m_Name: 684213FA-F16A-481B-9DDC-1A42624D9C89
   m_EditorClassIdentifier: AK.Wwise.Unity.API.WwiseTypes::WwiseEventReference
-  objectName: Play_Piano_Auftakt
-  id: 3402962276
-  guid: 54CB9E89-11FE-4634-8C7A-91D89AEBA89D
+  objectName: Play_spill
+  id: 1363090524
+  guid: 684213FA-F16A-481B-9DDC-1A42624D9C89
   IsInUserDefinedSoundBank: 1

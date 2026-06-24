@@ -4,6 +4,9 @@ using Meniscus.Core;
 using UnityEngine;
 using UnityEngine.UI;
 
+
+
+
 namespace Meniscus.UI
 {
     /// <summary>
@@ -37,6 +40,10 @@ namespace Meniscus.UI
         [Tooltip("Tint multiplied onto the rear face to make it read as copper.")]
         [SerializeField] Color copperTint = new(0.80f, 0.46f, 0.20f, 1f);
         [SerializeField] int flipFullTurns = 5;
+
+        [Header("Audio")]
+[       SerializeField] AK.Wwise.Event coinflip;
+
 
         Action<TurnActor> onDecided;
         Coroutine routine;
@@ -176,6 +183,7 @@ namespace Meniscus.UI
             // Ignore a second click while the coin is already spinning.
             if (routine != null)
                 return;
+
 
             SetButtonsVisible(false);
 
