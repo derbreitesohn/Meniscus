@@ -14,6 +14,10 @@ namespace Meniscus.Items
         EnemySafeZonePenalty,
         RevealTrueOdds,
         ReduceCurrentRisk,
-        SkipTurn
+        SkipTurn,
+        // A payout multiplier that lasts the WHOLE round (every safe pour), not just the next one.
+        RoundPayoutMultiplier,
+        // Recasts one of the player's coins one size up — more risk, more reward.
+        UpgradePlayerCoin
     }
 }

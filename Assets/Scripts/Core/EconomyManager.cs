@@ -11,6 +11,8 @@ namespace Meniscus.Core
         [SerializeField] int playerTotalBankedCash;
         [SerializeField] int currentRoundEarnings;
         [SerializeField, Min(1f)] float nextSafeDropPayoutMultiplier = 1f;
+        // Lasts the whole round (every safe pour), reset at each round start — Happy Hour's lever.
+        [SerializeField, Min(1f)] float roundPayoutMultiplier = 1f;
 
         public event Action<int, int> MoneyAwarded;   // (payout, newRoundTotal)
         public event Action RoundEarningsWiped;
@@ -19,6 +21,7 @@ namespace Meniscus.Core
         public int PlayerTotalBankedCash => playerTotalBankedCash;
         public int CurrentRoundEarnings => currentRoundEarnings;
         public float NextSafeDropPayoutMultiplier => nextSafeDropPayoutMultiplier;
+        public float RoundPayoutMultiplier => roundPayoutMultiplier;
 
         // The effective payout multiplier (final ÷ raw coin value) the last safe drop earned, plus
         // whether a multi-coin combo was part of it. Set just before MoneyAwarded fires, so the HUD
@@ -29,6 +32,7 @@ namespace Meniscus.Core
         public void ResetRoundEarnings()
         {
             currentRoundEarnings = 0;
+            roundPayoutMultiplier = 1f;   // a round-long boost (Happy Hour) lasts only its own round
         }
 
         public int CalculateSafeDropPayout(IReadOnlyList<Coin> coins, float spillChanceBraved)
@@ -62,6 +66,11 @@ namespace Meniscus.Core
         {
             var payout = CalculateSafeDropPayout(coins, spillChanceBraved);
 
+            // Round-long boost (Happy Hour) applies to every safe pour and is NOT consumed.
+            if (roundPayoutMultiplier > 1f)
+                payout = Mathf.RoundToInt(payout * roundPayoutMultiplier);
+
+            // One-shot boost (Marked Coin / Loaded Dice) stacks on top and is spent by this pour.
             if (nextSafeDropPayoutMultiplier > 1f)
             {
                 payout = Mathf.RoundToInt(payout * nextSafeDropPayoutMultiplier);
@@ -108,6 +117,19 @@ namespace Meniscus.Core
         public void ClearQueuedShopBonuses()
         {
             nextSafeDropPayoutMultiplier = 1f;
+            roundPayoutMultiplier = 1f;
+        }
+
+        public void SetRoundPayoutMultiplier(float multiplier)
+        {
+            if (multiplier <= 1f)
+            {
+                Debug.LogWarning(
+                    $"[EconomyManager] Ignored non-boosting round multiplier={multiplier:0.##}.");
+                return;
+            }
+
+            roundPayoutMultiplier = Mathf.Max(roundPayoutMultiplier, multiplier);
         }
 
         /// <summary>

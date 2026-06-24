@@ -51,5 +51,37 @@ namespace Meniscus.Tests.EditMode
             Assert.AreEqual(ItemEffectKind.SkipTurn, item.Effect);
             Assert.AreEqual(40, item.Cost);
         }
+
+        [Test]
+        public void DefaultCatalog_ContainsHappyHour()
+        {
+            var item = Find(ShopCatalog.CreateDefaultCatalog(), "happy_hour");
+
+            Assert.IsNotNull(item);
+            Assert.AreEqual(ItemEffectKind.RoundPayoutMultiplier, item.Effect);
+            Assert.AreEqual(55, item.Cost);
+            Assert.AreEqual(1.5f, item.Magnitude, 0.001f);
+        }
+
+        [Test]
+        public void DefaultCatalog_ContainsRecast()
+        {
+            var item = Find(ShopCatalog.CreateDefaultCatalog(), "recast_coin");
+
+            Assert.IsNotNull(item);
+            Assert.AreEqual(ItemEffectKind.UpgradePlayerCoin, item.Effect);
+            Assert.AreEqual(45, item.Cost);
+        }
+
+        [Test]
+        public void DefaultCatalog_ContainsTaro()
+        {
+            var item = Find(ShopCatalog.CreateDefaultCatalog(), "taro_laps");
+
+            Assert.IsNotNull(item);
+            Assert.AreEqual(ItemEffectKind.ReduceCurrentRisk, item.Effect);
+            Assert.AreEqual(70, item.Cost);
+            Assert.AreEqual(30f, item.Magnitude, 0.001f);
+        }
     }
 }

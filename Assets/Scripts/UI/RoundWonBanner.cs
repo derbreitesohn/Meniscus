@@ -147,10 +147,14 @@ namespace Meniscus.UI
         }
 
         // Fades the banner up and pops the title in with a springy overshoot, so a round win lands as a
-        // beat instead of snapping on screen. Unscaled time so it is unaffected by any slow-motion verdict.
+        // beat instead of snapping on screen, then slowly drifts the title closer to the camera (a gentle
+        // scale-up) while the win sits waiting on Continue — capped at ApproachScale so it never balloons
+        // past the scrim, and held there once it arrives. Unscaled time, unaffected by any slow-motion verdict.
         IEnumerator AnimateIn()
         {
             const float duration = 0.45f;
+            // The slow "dolly in" after the pop settles: creep to a sensible ceiling, then hold.
+            const float settledScale = 1f, approachScale = 1.12f, approachTime = 1.6f;
             var titleTransform = titleText != null ? titleText.transform : null;
 
             if (group != null)
@@ -167,7 +171,7 @@ namespace Meniscus.UI
                     group.alpha = Mathf.Clamp01(p / 0.4f);   // fade in over the first ~40%
 
                 if (titleTransform != null)
-                    titleTransform.localScale = Vector3.one * Mathf.LerpUnclamped(0.6f, 1f, Easing.OutBack(p));
+                    titleTransform.localScale = Vector3.one * Mathf.LerpUnclamped(0.6f, settledScale, Easing.OutBack(p));
 
                 yield return null;
             }
@@ -176,7 +180,18 @@ namespace Meniscus.UI
                 group.alpha = 1f;
 
             if (titleTransform != null)
-                titleTransform.localScale = Vector3.one;
+                titleTransform.localScale = Vector3.one * settledScale;
+
+            for (var drift = 0f; drift < approachTime; drift += Time.unscaledDeltaTime)
+            {
+                if (titleTransform != null)
+                    titleTransform.localScale = Vector3.one * Mathf.Lerp(settledScale, approachScale, drift / approachTime);
+
+                yield return null;
+            }
+
+            if (titleTransform != null)
+                titleTransform.localScale = Vector3.one * approachScale;
 
             animateRoutine = null;
         }

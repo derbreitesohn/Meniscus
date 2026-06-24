@@ -49,6 +49,18 @@ namespace Meniscus.Items
                     "step_outside", "Step Outside",
                     "End your turn without pouring; pass the loaded glass to the dealer.",
                     40, ItemEffectKind.SkipTurn, 0f),
+                ItemDefinition.Create(
+                    "happy_hour", "Happy Hour",
+                    "Open a tab: every safe pour pays ×1.5 for the rest of this round.",
+                    55, ItemEffectKind.RoundPayoutMultiplier, 1.5f),
+                ItemDefinition.Create(
+                    "recast_coin", "Recast",
+                    "Melt and recast your biggest coin one size up — more risk, more reward.",
+                    45, ItemEffectKind.UpgradePlayerCoin, 1f),
+                ItemDefinition.Create(
+                    "taro_laps", "Taro",
+                    "Taro laps the glass down — a big, guaranteed cut to the spill risk right now.",
+                    70, ItemEffectKind.ReduceCurrentRisk, 30f),
             };
     }
 }

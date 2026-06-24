@@ -86,6 +86,30 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
+        public void SetRoundPayoutMultiplier_AppliesToEverySafeDrop_UntilRoundReset()
+        {
+            var coin = CreateCoin("Happy Hour Coin", 5f, 10, true);
+
+            economyManager.SetRoundPayoutMultiplier(2f);
+
+            // braved 50% → 22 base; round ×2 = 44. Unlike the one-shot bonus it is NOT consumed, so the
+            // next pour this round is boosted too.
+            var first = economyManager.AwardSafeDrop(new[] { coin }, 50f);
+            var second = economyManager.AwardSafeDrop(new[] { coin }, 50f);
+
+            Assert.AreEqual(44, first);
+            Assert.AreEqual(44, second);
+
+            // A new round (ResetRoundEarnings) clears the boost, so the next pour pays the base again.
+            economyManager.ResetRoundEarnings();
+            var afterReset = economyManager.AwardSafeDrop(new[] { coin }, 50f);
+
+            Assert.AreEqual(22, afterReset);
+
+            Object.DestroyImmediate(coin.gameObject);
+        }
+
+        [Test]
         public void WipeCurrentRoundEarnings_DoesNotClearBankedCash()
         {
             var bankedCoin = CreateCoin("Banked Coin", 5f, 30, true);

@@ -96,11 +96,14 @@ namespace Meniscus.UI
                 canvas.enabled = false;
         }
 
-        // Fade up + spring the title in, hold briefly, then fade out and disable — a self-dismissing card.
-        // Unscaled time so it is unaffected by any slow-motion verdict still ramping out from the last drop.
+        // Fade up + spring the title in, then let it slowly drift closer to the camera (a gentle scale-up)
+        // across the hold + fade-out instead of sitting dead-static — capped at ApproachScale so it never
+        // balloons past the card. Unscaled time so it is unaffected by any slow-motion verdict still ramping out.
         IEnumerator PlayRoutine()
         {
             const float fadeIn = 0.4f, hold = 1.1f, fadeOut = 0.4f;
+            // The slow "dolly in": creep from settled to a sensible ceiling over the rest of the card's life.
+            const float settledScale = 1f, approachScale = 1.12f, approachTime = hold + fadeOut;
             var titleTransform = titleText != null ? titleText.transform : null;
 
             if (group != null)
@@ -114,21 +117,34 @@ namespace Meniscus.UI
                     group.alpha = Mathf.Clamp01(p / 0.5f);
 
                 if (titleTransform != null)
-                    titleTransform.localScale = Vector3.one * Mathf.LerpUnclamped(0.55f, 1f, Easing.OutBack(p));
+                    titleTransform.localScale = Vector3.one * Mathf.LerpUnclamped(0.55f, settledScale, Easing.OutBack(p));
 
                 yield return null;
             }
 
             if (group != null) group.alpha = 1f;
-            if (titleTransform != null) titleTransform.localScale = Vector3.one;
+            if (titleTransform != null) titleTransform.localScale = Vector3.one * settledScale;
 
+            // One continuous approach spans the hold and the fade-out; Lerp clamps it at the ceiling.
+            var drift = 0f;
             for (var t = 0f; t < hold; t += Time.unscaledDeltaTime)
+            {
+                drift += Time.unscaledDeltaTime;
+                if (titleTransform != null)
+                    titleTransform.localScale = Vector3.one * Mathf.Lerp(settledScale, approachScale, drift / approachTime);
+
                 yield return null;
+            }
 
             for (var t = 0f; t < fadeOut; t += Time.unscaledDeltaTime)
             {
+                drift += Time.unscaledDeltaTime;
+
                 if (group != null)
                     group.alpha = 1f - Mathf.Clamp01(t / fadeOut);
+
+                if (titleTransform != null)
+                    titleTransform.localScale = Vector3.one * Mathf.Lerp(settledScale, approachScale, drift / approachTime);
 
                 yield return null;
             }

@@ -38,6 +38,9 @@ namespace Meniscus.Core
         [SerializeField] MoneyHudWidget moneyHudWidget;
         [SerializeField] PlayerInventory playerInventory;
         [SerializeField] DeskItemTray deskItemTray;
+        [Tooltip("Per-item desk models (e.g. spyglass for Bartender's Spectacles, bandana for Step Outside). " +
+                 "Populate via Tools ▸ Meniscus ▸ Wire Item Models; items with no entry use the placeholder box.")]
+        [SerializeField] ItemModelLibrary itemModels = new();
 
         [Header("Optional Coin Sources")]
         [SerializeField] Coin coinPrefab;
@@ -89,6 +92,7 @@ namespace Meniscus.Core
         public IReadOnlyList<Coin> PlayerCoins => playerCoins;
         public IReadOnlyList<Coin> EnemyCoins => enemyCoins;
         public CoinModelLibrary CoinModels => coinModels;
+        public ItemModelLibrary ItemModels => itemModels;
         public GlassManager GlassManager => glassManager;
         public EconomyManager EconomyManager => economyManager;
         public PlayerInventory Inventory => playerInventory;
@@ -258,6 +262,51 @@ namespace Meniscus.Core
             }
 
             BeginEnemyTurn();
+        }
+
+        /// <summary>
+        /// Recasts one of the player's coins one size up (Small→Medium→Large): more risk on the glass, but a
+        /// bigger payout — the Recast item's lever. Picks the largest coin that isn't already Gold so the
+        /// boost lands where it matters most, reconfigures its risk/payout for the current round, swaps in the
+        /// matching model, then re-packs the row (its footprint changed). No-op (warns) when every active
+        /// player coin is already Large. Used via TryUseItem on the player's turn, so no coin is mid-selection.
+        /// </summary>
+        public bool UpgradePlayerCoinOneSize()
+        {
+            Coin best = null;
+
+            for (var i = 0; i < playerCoins.Count; i++)
+            {
+                var coin = playerCoins[i];
+
+                if (coin == null || coin.IsSpent || !coin.gameObject.activeInHierarchy ||
+                    coin.size == CoinSize.Large)
+                    continue;
+
+                if (best == null || (int)coin.size > (int)best.size)
+                    best = coin;
+            }
+
+            if (best == null)
+            {
+                Debug.LogWarning("[GameManager] Recast had no upgradeable player coin (all already Gold).");
+                return false;
+            }
+
+            var newSize = best.size == CoinSize.Small ? CoinSize.Medium : CoinSize.Large;
+            var roundRiskMultiplier = GameConstants.GetRoundRiskMultiplier(currentRound);
+
+            best.Configure(
+                newSize,
+                GameConstants.GetRiskForSize(newSize) * roundRiskMultiplier,
+                GameConstants.GetBasePayoutForSize(newSize),
+                belongsToPlayer: true);
+            best.ApplyModel(coinModels.GetModelForSize(newSize), coinModels.ModelScale);
+            best.name = $"Player {GameConstants.GetDisplayNameForSize(newSize)} Coin (recast)";
+
+            // The coin's footprint grew, so re-pack the row edge-to-edge (as a fresh round would).
+            ArrangeCoinRow(TurnActor.Player, playerCoins);
+            return true;
         }
 
         void ResolveDrop(TurnActor actor, IReadOnlyList<Coin> coins)

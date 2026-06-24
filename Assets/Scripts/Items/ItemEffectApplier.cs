@@ -72,6 +72,20 @@ namespace Meniscus.Items
                         WarnMissing(item, nameof(GameManager));
                     break;
 
+                case ItemEffectKind.RoundPayoutMultiplier:
+                    if (economy != null)
+                        economy.SetRoundPayoutMultiplier(item.Magnitude);
+                    else
+                        WarnMissing(item, nameof(EconomyManager));
+                    break;
+
+                case ItemEffectKind.UpgradePlayerCoin:
+                    if (game != null)
+                        game.UpgradePlayerCoinOneSize();
+                    else
+                        WarnMissing(item, nameof(GameManager));
+                    break;
+
                 default:
                     Debug.LogWarning($"[ItemEffectApplier] Unhandled effect '{item.Effect}' for item '{item.Id}'.");
                     break;

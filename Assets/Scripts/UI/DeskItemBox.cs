@@ -31,6 +31,8 @@ namespace Meniscus.UI
         const int DescriptionWrapChars = 22;
         // Breathing room added around the measured text when sizing the backing plate.
         const float CardBackingPadding = 0.04f;
+        // Name given to the instantiated model child by ApplyBodyModel (mirrors Coin.ModelChildName).
+        const string ModelChildName = "Item Model";
 
         [SerializeField] TextMesh label;
         // The name + description card, parented above the box. Hidden at rest; shown only while selected.
@@ -44,6 +46,7 @@ namespace Meniscus.UI
         Vector3 restLocalPos;
         Coroutine flash;
         SelectionGlow glow;
+        GameObject activeModelInstance;
 
         public ItemDefinition Item { get; private set; }
         public int Count { get; private set; }
@@ -93,6 +96,134 @@ namespace Meniscus.UI
 
             RefreshCard();
             SetSelected(false);
+        }
+
+        /// <summary>
+        /// Swaps the placeholder cube body for an instantiated item model (e.g. the spyglass / bandana),
+        /// scaled to the box footprint and re-centred on it. Mirrors <see cref="Gameplay.Coin.ApplyModel"/>:
+        /// the cube's click collider is kept (so selection still works) and only its mesh is hidden, and a
+        /// null prefab leaves the placeholder cube showing. An optional <paramref name="materialOverride"/>
+        /// is forced onto the model's renderers so the painted look holds even if the FBX import has not
+        /// bound its own material.
+        /// </summary>
+        public void ApplyBodyModel(GameObject modelPrefab, Material materialOverride, Vector3 modelScale)
+        {
+            if (activeModelInstance != null)
+            {
+                DestroySafely(activeModelInstance);
+                activeModelInstance = null;
+            }
+
+            // Also clear any stale model child left by an editor preview or a reloaded domain, so a box
+            // never shows two stacked models.
+            for (var i = transform.childCount - 1; i >= 0; i--)
+            {
+                var child = transform.GetChild(i);
+
+                if (child.name == ModelChildName)
+                    DestroySafely(child.gameObject);
+            }
+
+            var instance = TryInstantiateModel(modelPrefab);
+
+            if (instance == null)
+            {
+                // No (or failed) model: keep the placeholder cube visible.
+                if (bodyRenderer != null)
+                    bodyRenderer.enabled = true;
+
+                return;
+            }
+
+            activeModelInstance = instance;
+            instance.name = ModelChildName;
+            instance.transform.localPosition = Vector3.zero;
+            instance.transform.localRotation = Quaternion.identity;
+
+            if (materialOverride != null)
+            {
+                var renderers = instance.GetComponentsInChildren<Renderer>();
+
+                // sharedMaterial (not material) so no per-instance material is leaked in edit-mode tests.
+                for (var i = 0; i < renderers.Length; i++)
+                    renderers[i].sharedMaterial = materialOverride;
+            }
+
+            FitModelToBox(instance, modelScale);
+
+            // The model carries the look now; hide the placeholder cube mesh but leave its collider so
+            // selecting the box (a raycast against the cube collider) is unchanged.
+            if (bodyRenderer != null)
+                bodyRenderer.enabled = false;
+        }
+
+        // Scales a freshly-instantiated model so its largest dimension matches the box size (times the
+        // library's optional uniform tuning), then shifts it so its measured centre sits on the box origin —
+        // so an FBX of any native unit size, or with an off-centre pivot, still sits coin-box-sized and
+        // centred on (and clickable via) the cube collider. The box container is unscaled, so the fit scale
+        // applies directly in local space.
+        void FitModelToBox(GameObject model, Vector3 tuning)
+        {
+            var multiplier = tuning == Vector3.zero
+                ? 1f
+                : Mathf.Max(tuning.x, Mathf.Max(tuning.y, tuning.z));
+            var target = DeskItemTrayBuilder.BoxSize * Mathf.Max(0.0001f, multiplier);
+
+            model.transform.localScale = Vector3.one;
+
+            var bounds = CalculateWorldRendererBounds(model);
+            var measured = Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
+            var fit = measured > 1e-5f ? target / measured : 1f;
+            model.transform.localScale = Vector3.one * fit;
+
+            var centered = CalculateWorldRendererBounds(model);
+            model.transform.position += transform.position - centered.center;
+        }
+
+        static Bounds CalculateWorldRendererBounds(GameObject root)
+        {
+            var renderers = root.GetComponentsInChildren<Renderer>();
+
+            if (renderers.Length == 0)
+                return new Bounds(root.transform.position, Vector3.zero);
+
+            var bounds = renderers[0].bounds;
+
+            for (var i = 1; i < renderers.Length; i++)
+                bounds.Encapsulate(renderers[i].bounds);
+
+            return bounds;
+        }
+
+        // Instantiating a model slot wired to a non-GameObject sub-asset (e.g. an FBX's Mesh) throws; that
+        // must never bubble up and abort the tray rebuild, so swallow it and fall back to the placeholder.
+        GameObject TryInstantiateModel(GameObject modelPrefab)
+        {
+            if (modelPrefab == null)
+                return null;
+
+            try
+            {
+                return Instantiate(modelPrefab, transform);
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogError(
+                    $"[DeskItemBox] Could not instantiate the model '{modelPrefab.name}' for item " +
+                    $"'{(Item != null ? Item.Id : "?")}'. The model slot is likely wired to a non-GameObject " +
+                    "sub-asset (e.g. an FBX Mesh) instead of the FBX's GameObject root. Showing the " +
+                    $"placeholder box instead. ({exception.GetType().Name}: {exception.Message})",
+                    this);
+                return null;
+            }
+        }
+
+        static void DestroySafely(UnityEngine.Object target)
+        {
+            if (Application.isPlaying)
+                Destroy(target);
+            else
+                DestroyImmediate(target);
         }
 
         public void SetCount(int count)

@@ -255,15 +255,35 @@ namespace Meniscus.UI
         // can slot it; Initialize binds it to this tray + item using the prefab's serialized parts.
         DeskItemBox CreateBox(ItemDefinition item)
         {
+            DeskItemBox box;
+
             if (boxPrefab != null)
             {
-                var instance = Instantiate(boxPrefab, transform, false);
-                instance.gameObject.name = $"Desk Item Box ({item.Id})";
-                instance.Initialize(this, item);
-                return instance;
+                box = Instantiate(boxPrefab, transform, false);
+                box.gameObject.name = $"Desk Item Box ({item.Id})";
+                box.Initialize(this, item);
+            }
+            else
+            {
+                box = DeskItemTrayBuilder.BuildBox(transform, this, item);
             }
 
-            return DeskItemTrayBuilder.BuildBox(transform, this, item);
+            ApplyItemModel(box, item);
+            return box;
+        }
+
+        // Show the wired 3D model for this item (e.g. spyglass for Bartender's Spectacles, bandana for Step
+        // Outside) in place of the placeholder cube. Items with no library entry keep the cube. Mirrors how
+        // coins resolve their per-size model from GameManager.CoinModels.
+        void ApplyItemModel(DeskItemBox box, ItemDefinition item)
+        {
+            var library = gameManager != null ? gameManager.ItemModels : null;
+
+            if (library == null || item == null)
+                return;
+
+            if (library.TryGetEntry(item.Id, out var entry))
+                box.ApplyBodyModel(entry.model, entry.material, library.ModelScale);
         }
 
         // Stacks sit to the left and right of centre, with a clear gap in the middle so the play area /
