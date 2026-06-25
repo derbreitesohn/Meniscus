@@ -1,0 +1,48 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "3982411485",
+    "Type": "Event",
+    "GUID": "{DD559C5B-05FB-4DD9-BF38-8719F7D69450}",
+    "Language": "SFX",
+    "Hash": "{AEC0F7E2-5238-E1CE-A705-120E1E4FD9FF}",
+    "ObjectPath": "Play_Cat_slurping_01",
+    "ShortName": "Play_Cat_slurping_01",
+    "Path": "Event/Play_Cat_slurping_01.bnk",
+    "Media": [
+     {
+      "Id": "329516252",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "Cat_slurping.wav",
+      "Path": "Media/329516252.wem",
+      "CachePath": "2B/{2BF02E23-5F8D-4666-CCE4-6FAA5AC54E6C}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "3982411485",
+      "Name": "Play_Cat_slurping_01",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Cat_slurping_01",
+      "GUID": "{DD559C5B-05FB-4DD9-BF38-8719F7D69450}",
+      "DurationType": "OneShot",
+      "DurationMin": "2.8792708",
+      "DurationMax": "2.8792708",
+      "MediaRefs": [
+       {
+        "Id": "329516252"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{F22EE9B8-5E92-6ACE-84BB-8A7D171FD87A}"
+ }
+}

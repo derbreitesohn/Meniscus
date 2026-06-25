@@ -1,0 +1,33 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "1521579580",
+    "Type": "Event",
+    "GUID": "{5950F187-B6A3-4700-8BDB-61B9544D6B6A}",
+    "Language": "SFX",
+    "Hash": "{1FA67A33-8B76-A4F9-E364-906DAD0139A1}",
+    "ObjectPath": "Stop_Cat_purring_yawning",
+    "ShortName": "Stop_Cat_purring_yawning",
+    "Path": "Event/Stop_Cat_purring_yawning.bnk",
+    "Events": [
+     {
+      "Id": "1521579580",
+      "Name": "Stop_Cat_purring_yawning",
+      "ObjectPath": "\\Events\\Default Work Unit\\Stop_Cat_purring_yawning",
+      "GUID": "{5950F187-B6A3-4700-8BDB-61B9544D6B6A}",
+      "MaxAttenuation": "0",
+      "DurationType": "OneShot",
+      "DurationMin": "0",
+      "DurationMax": "0"
+     }
+    ]
+   }
+  ],
+  "FileHash": "{896F59DC-EDC5-430F-3035-DE6FA267DEB1}"
+ }
+}

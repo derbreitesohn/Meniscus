@@ -13,7 +13,7 @@
 							<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 						</Reference>
 						<Reference Name="OutputBus">
-							<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+							<ObjectRef Name="ambience_bus" ID="{C468332A-3A32-490A-B696-7BD59A778FB6}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 						</Reference>
 					</ReferenceList>
 					<ChildrenList>
@@ -198,52 +198,6 @@
 						<Property Name="OverrideColor" Type="bool" Value="True"/>
 					</PropertyList>
 					<ChildrenList>
-						<Folder Name="glass" ID="{693EAD9F-B64A-4C45-ACAF-12C04FD83539}" ShortID="251645189">
-							<ChildrenList>
-								<SwitchContainer Name="glass_down" ID="{E6FC773F-54D6-4AEB-92E9-7937AD3A02EA}" ShortID="949477552">
-									<ReferenceList>
-										<Reference Name="Conversion">
-											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
-										</Reference>
-										<Reference Name="OutputBus">
-											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
-										</Reference>
-									</ReferenceList>
-									<ChildrenList>
-										<RandomSequenceContainer Name="glass01" ID="{752E6F96-4D26-425F-9108-B3C1B0E804F9}" ShortID="450128936">
-											<ReferenceList>
-												<Reference Name="Conversion">
-													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
-												</Reference>
-												<Reference Name="OutputBus">
-													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
-												</Reference>
-											</ReferenceList>
-										</RandomSequenceContainer>
-										<RandomSequenceContainer Name="glass02" ID="{FE3E0E60-3F1A-44B2-B485-9F4E9B786FB9}" ShortID="747314482">
-											<ReferenceList>
-												<Reference Name="Conversion">
-													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
-												</Reference>
-												<Reference Name="OutputBus">
-													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
-												</Reference>
-											</ReferenceList>
-										</RandomSequenceContainer>
-									</ChildrenList>
-									<GroupingInfo>
-										<GroupingBehaviorList>
-											<GroupingBehavior>
-												<ItemRef Name="glass02" ID="{FE3E0E60-3F1A-44B2-B485-9F4E9B786FB9}"/>
-											</GroupingBehavior>
-											<GroupingBehavior>
-												<ItemRef Name="glass01" ID="{752E6F96-4D26-425F-9108-B3C1B0E804F9}"/>
-											</GroupingBehavior>
-										</GroupingBehaviorList>
-									</GroupingInfo>
-								</SwitchContainer>
-							</ChildrenList>
-						</Folder>
 						<Folder Name="water" ID="{AB459CDE-F56F-4D20-98C4-D394C8C227C6}" ShortID="136597860">
 							<ChildrenList>
 								<RandomSequenceContainer Name="spill" ID="{80D49BD2-ACC6-4F20-8DB9-816F62976908}" ShortID="464791511">
@@ -252,7 +206,7 @@
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 										</Reference>
 										<Reference Name="OutputBus">
-											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+											<ObjectRef Name="sfx_bus" ID="{7DF6BF5C-F7AB-40CF-A26B-87E10AE93800}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 										</Reference>
 									</ReferenceList>
 									<ChildrenList>
@@ -374,13 +328,14 @@
 									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 								</Reference>
 								<Reference Name="OutputBus">
-									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+									<ObjectRef Name="sfx_bus" ID="{7DF6BF5C-F7AB-40CF-A26B-87E10AE93800}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 								</Reference>
 							</ReferenceList>
 							<ChildrenList>
 								<RandomSequenceContainer Name="coinflip" ID="{6E7F11D8-E2BD-49EE-BE58-01154F582E65}" ShortID="351959859">
 									<PropertyList>
 										<Property Name="OverrideEffect" Type="bool" Value="True"/>
+										<Property Name="OverrideOutput" Type="bool" Value="True"/>
 									</PropertyList>
 									<ReferenceList>
 										<Reference Name="Conversion">
@@ -543,6 +498,7 @@
 								</RandomSequenceContainer>
 								<RandomSequenceContainer Name="coin_into_water" ID="{3ED3A0A9-F983-42F0-9A79-7E9DB8702388}" ShortID="225140312">
 									<PropertyList>
+										<Property Name="OverrideOutput" Type="bool" Value="True"/>
 										<Property Name="Volume" Type="Real64">
 											<ValueList>
 												<Value>12</Value>
@@ -554,7 +510,7 @@
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 										</Reference>
 										<Reference Name="OutputBus">
-											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+											<ObjectRef Name="sfx_bus" ID="{7DF6BF5C-F7AB-40CF-A26B-87E10AE93800}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 										</Reference>
 									</ReferenceList>
 									<ChildrenList>
@@ -597,11 +553,6 @@
 								<RandomSequenceContainer Name="coins_on_wood" ID="{D4488FB1-202B-4199-9CCD-52184C4E94F2}" ShortID="673239196">
 									<PropertyList>
 										<Property Name="3DSpatialization" Type="int16" Value="1"/>
-										<Property Name="Inclusion" Type="bool">
-											<ValueList>
-												<Value>False</Value>
-											</ValueList>
-										</Property>
 										<Property Name="OverridePositioning" Type="bool" Value="True"/>
 									</PropertyList>
 									<ReferenceList>
@@ -711,7 +662,7 @@
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 										</Reference>
 										<Reference Name="OutputBus">
-											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+											<ObjectRef Name="sfx_bus" ID="{7DF6BF5C-F7AB-40CF-A26B-87E10AE93800}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 										</Reference>
 									</ReferenceList>
 									<ChildrenList>
@@ -768,7 +719,7 @@
 							<PropertyList>
 								<Property Name="Volume" Type="Real64">
 									<ValueList>
-										<Value>-6</Value>
+										<Value>-12</Value>
 									</ValueList>
 								</Property>
 							</PropertyList>
@@ -777,7 +728,7 @@
 									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 								</Reference>
 								<Reference Name="OutputBus">
-									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+									<ObjectRef Name="ui_bus" ID="{A5689C06-1D54-426D-B18F-A479B0E8A918}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 								</Reference>
 							</ReferenceList>
 							<ChildrenList>
@@ -804,7 +755,7 @@
 									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 								</Reference>
 								<Reference Name="OutputBus">
-									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+									<ObjectRef Name="ui_bus" ID="{A5689C06-1D54-426D-B18F-A479B0E8A918}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 								</Reference>
 							</ReferenceList>
 							<ChildrenList>
@@ -841,7 +792,7 @@
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 										</Reference>
 										<Reference Name="OutputBus">
-											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+											<ObjectRef Name="character_bus" ID="{A4C8932F-19FB-4003-B30A-8ADC4C82B2D7}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 										</Reference>
 									</ReferenceList>
 									<ChildrenList>
@@ -863,7 +814,7 @@
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 										</Reference>
 										<Reference Name="OutputBus">
-											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+											<ObjectRef Name="character_bus" ID="{A4C8932F-19FB-4003-B30A-8ADC4C82B2D7}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 										</Reference>
 									</ReferenceList>
 									<ChildrenList>
@@ -885,7 +836,7 @@
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 										</Reference>
 										<Reference Name="OutputBus">
-											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+											<ObjectRef Name="character_bus" ID="{A4C8932F-19FB-4003-B30A-8ADC4C82B2D7}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 										</Reference>
 									</ReferenceList>
 									<ChildrenList>
@@ -907,7 +858,7 @@
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 										</Reference>
 										<Reference Name="OutputBus">
-											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+											<ObjectRef Name="character_bus" ID="{A4C8932F-19FB-4003-B30A-8ADC4C82B2D7}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 										</Reference>
 									</ReferenceList>
 									<ChildrenList>
@@ -929,7 +880,7 @@
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 										</Reference>
 										<Reference Name="OutputBus">
-											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+											<ObjectRef Name="character_bus" ID="{A4C8932F-19FB-4003-B30A-8ADC4C82B2D7}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 										</Reference>
 									</ReferenceList>
 									<ChildrenList>
@@ -945,6 +896,33 @@
 										<ActiveSource Name="Fee_Brummen_05" ID="{C521C7D1-9B42-491C-A02F-2BD2AFE108CE}" Platform="Linked"/>
 									</ActiveSourceList>
 								</Sound>
+								<Sound Name="dogBite02" ID="{AB574A46-3BEB-47CE-8715-1EBCF74C2141}" ShortID="481157099">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="character_bus" ID="{A4C8932F-19FB-4003-B30A-8ADC4C82B2D7}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="dogBite02" ID="{7504DC12-9748-493A-A211-C2A7EF26F17A}">
+											<PropertyList>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimBegin" Type="Real64" Value="0.91943"/>
+												<Property Name="TrimEnd" Type="Real64" Value="1.20672"/>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>dogBite02.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="537655871"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="dogBite02" ID="{7504DC12-9748-493A-A211-C2A7EF26F17A}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
 							</ChildrenList>
 						</Folder>
 						<Folder Name="Taro" ID="{DC801CE6-F77B-4DDC-8EE4-6A4698EA038E}" ShortID="598681762">
@@ -955,7 +933,7 @@
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 										</Reference>
 										<Reference Name="OutputBus">
-											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+											<ObjectRef Name="character_bus" ID="{A4C8932F-19FB-4003-B30A-8ADC4C82B2D7}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 										</Reference>
 									</ReferenceList>
 									<ChildrenList>
@@ -977,7 +955,7 @@
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 										</Reference>
 										<Reference Name="OutputBus">
-											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+											<ObjectRef Name="character_bus" ID="{A4C8932F-19FB-4003-B30A-8ADC4C82B2D7}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 										</Reference>
 									</ReferenceList>
 									<ChildrenList>
@@ -999,7 +977,7 @@
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 										</Reference>
 										<Reference Name="OutputBus">
-											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+											<ObjectRef Name="character_bus" ID="{A4C8932F-19FB-4003-B30A-8ADC4C82B2D7}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 										</Reference>
 									</ReferenceList>
 									<ChildrenList>
@@ -1021,7 +999,7 @@
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
 										</Reference>
 										<Reference Name="OutputBus">
-											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+											<ObjectRef Name="character_bus" ID="{A4C8932F-19FB-4003-B30A-8ADC4C82B2D7}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 										</Reference>
 									</ReferenceList>
 									<ChildrenList>
@@ -1039,41 +1017,44 @@
 								</Sound>
 							</ChildrenList>
 						</Folder>
-						<Folder Name="Main" ID="{4104475D-CB31-4587-8BEB-75ADDD577DA1}" ShortID="455883407"/>
-						<Sound Name="gibberish_04" ID="{47F624C2-2042-4084-91FF-7F8142505471}" ShortID="32268792">
-							<PropertyList>
-								<Property Name="Pitch" Type="int32">
-									<ValueList>
-										<Value>-520</Value>
-									</ValueList>
-								</Property>
-								<Property Name="Volume" Type="Real64">
-									<ValueList>
-										<Value>12</Value>
-									</ValueList>
-								</Property>
-							</PropertyList>
-							<ReferenceList>
-								<Reference Name="Conversion">
-									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
-								</Reference>
-								<Reference Name="OutputBus">
-									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
-								</Reference>
-							</ReferenceList>
+						<Folder Name="Main" ID="{4104475D-CB31-4587-8BEB-75ADDD577DA1}" ShortID="455883407">
 							<ChildrenList>
-								<AudioFileSource Name="gibberish_04" ID="{F6FF66ED-AEA8-444B-A6BF-65445A9066CF}">
-									<Language>SFX</Language>
-									<AudioFile>gibberish_04.wav</AudioFile>
-									<MediaIDList>
-										<MediaID ID="317320729"/>
-									</MediaIDList>
-								</AudioFileSource>
+								<Sound Name="gibberish_04" ID="{47F624C2-2042-4084-91FF-7F8142505471}" ShortID="32268792">
+									<PropertyList>
+										<Property Name="Pitch" Type="int32">
+											<ValueList>
+												<Value>-520</Value>
+											</ValueList>
+										</Property>
+										<Property Name="Volume" Type="Real64">
+											<ValueList>
+												<Value>12</Value>
+											</ValueList>
+										</Property>
+									</PropertyList>
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="character_bus" ID="{A4C8932F-19FB-4003-B30A-8ADC4C82B2D7}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="gibberish_04" ID="{F6FF66ED-AEA8-444B-A6BF-65445A9066CF}">
+											<Language>SFX</Language>
+											<AudioFile>gibberish_04.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="317320729"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="gibberish_04" ID="{F6FF66ED-AEA8-444B-A6BF-65445A9066CF}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
 							</ChildrenList>
-							<ActiveSourceList>
-								<ActiveSource Name="gibberish_04" ID="{F6FF66ED-AEA8-444B-A6BF-65445A9066CF}" Platform="Linked"/>
-							</ActiveSourceList>
-						</Sound>
+						</Folder>
 					</ChildrenList>
 				</Folder>
 				<SwitchContainer Name="music" ID="{C1E60124-BB65-4956-88FA-0AC78442A2C9}" ShortID="118230711">
@@ -1089,7 +1070,7 @@
 							<ObjectRef Name="None" ID="{B80BFC4A-01BB-43CD-8AE1-7D1C322427DF}" WorkUnitID="{0F3CDAEA-CB48-4465-89EA-DEBCABAD91B3}"/>
 						</Reference>
 						<Reference Name="OutputBus">
-							<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+							<ObjectRef Name="ambience_bus" ID="{C468332A-3A32-490A-B696-7BD59A778FB6}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
 						</Reference>
 						<Reference Name="SwitchGroupOrStateGroup">
 							<ObjectRef Name="MusicState" ID="{A953B08C-76B6-4D13-9E95-874027D35B29}" WorkUnitID="{0F3CDAEA-CB48-4465-89EA-DEBCABAD91B3}"/>

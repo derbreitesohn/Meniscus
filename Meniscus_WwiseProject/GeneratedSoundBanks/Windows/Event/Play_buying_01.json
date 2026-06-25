@@ -10,7 +10,7 @@
     "Type": "Event",
     "GUID": "{95A3CF50-E972-46EA-B099-3C3BB3BF515E}",
     "Language": "SFX",
-    "Hash": "{F70EC9FE-A109-23F1-4ED4-3B794266F1C3}",
+    "Hash": "{65DA29E5-60DC-DA64-38D2-1C1598371283}",
     "ObjectPath": "Play_buying_01",
     "ShortName": "Play_buying_01",
     "Path": "Event/Play_buying_01.bnk",
@@ -43,6 +43,6 @@
     ]
    }
   ],
-  "FileHash": "{91269F47-3D15-0EC7-1CE8-A38C3B624374}"
+  "FileHash": "{018C637C-93C8-7653-7F59-9EDF20BA6A0E}"
  }
 }

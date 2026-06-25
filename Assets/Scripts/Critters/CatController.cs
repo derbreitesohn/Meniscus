@@ -23,6 +23,12 @@ public class CatController : MonoBehaviour
     public Vector3 areaCenterOffset = Vector3.zero;
     public Vector3 areaSize = new Vector3(2f, 0f, 2f);
 
+    [Header("Audio")]
+    public AK.Wwise.Event playMiau;
+    public AK.Wwise.Event playPurring;
+    public AK.Wwise.Event stopPurring;
+    public AK.Wwise.Event playSlurping;
+
     private Animator animator;
     public Vector3 startPosition;
     private bool isWalking = false;
@@ -38,6 +44,14 @@ public class CatController : MonoBehaviour
         if (startPosition == Vector3.zero)
             startPosition = transform.position;
         wanderRoutine = StartCoroutine(WanderRoutine());
+
+        // Purring loops the whole time the cat is present; stopped in OnDestroy.
+        playPurring?.Post(gameObject);
+    }
+
+    void OnDestroy()
+    {
+        stopPurring?.Post(gameObject);
     }
 
     IEnumerator WanderRoutine()
@@ -114,6 +128,7 @@ public class CatController : MonoBehaviour
         if (!isWalking)
         {
             animator.SetTrigger("drink");
+            playSlurping?.Post(gameObject);
         }
     }
 
@@ -139,6 +154,9 @@ public class CatController : MonoBehaviour
     {
         isSummoned = true;
         isWalking = true;
+
+        // The cat meows when called over.
+        playMiau?.Post(gameObject);
 
         // Stand a little back from the glass on whichever side Taro is already on, at his own (floor) height.
         Vector3 fromGlass = transform.position - glassWorldPos;
@@ -166,6 +184,7 @@ public class CatController : MonoBehaviour
         // The drink trigger only transitions from Cat_Idle, so clearing isWalkingCat above lets it fire; the
         // trigger is sticky, so it still plays even if Walk→Idle takes a frame.
         animator.SetTrigger("drink");
+        playSlurping?.Post(gameObject);
         onDrinkStart?.Invoke();
 
         yield return new WaitForSeconds(drinkHoldSeconds);

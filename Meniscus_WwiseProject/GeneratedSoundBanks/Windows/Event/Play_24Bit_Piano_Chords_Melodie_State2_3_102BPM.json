@@ -10,7 +10,7 @@
     "Type": "Event",
     "GUID": "{ECF0AA0C-AF4E-49A1-A6CD-2098B8FE756D}",
     "Language": "SFX",
-    "Hash": "{F13E228E-0C73-2D84-3A88-71A66F63E602}",
+    "Hash": "{52458637-9595-D1AA-F0DB-0A8384E00E0B}",
     "ObjectPath": "Play_24Bit_Piano_Chords_Melodie_State2_3_102BPM",
     "ShortName": "Play_24Bit_Piano_Chords_Melodie_State2_3_102BPM",
     "Path": "Event/Play_24Bit_Piano_Chords_Melodie_State2_3_102BPM.bnk",
@@ -94,6 +94,6 @@
     ]
    }
   ],
-  "FileHash": "{411570CF-A338-EF50-A39F-5BF866B3C6A3}"
+  "FileHash": "{6F903CDE-152E-2491-5529-09EE9024DF58}"
  }
 }

@@ -1,0 +1,46 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "687576550",
+    "Type": "Event",
+    "GUID": "{B84755AC-8CBF-4D4F-9CD3-547FF9B48FD2}",
+    "Language": "SFX",
+    "Hash": "{872792F1-07EC-81AA-4A06-FCABA265B043}",
+    "ObjectPath": "Play_Cat_purring_yawning",
+    "ShortName": "Play_Cat_purring_yawning",
+    "Path": "Event/Play_Cat_purring_yawning.bnk",
+    "Media": [
+     {
+      "Id": "736334305",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "Cat_purring_yawning.wav",
+      "Path": "Media/736334305.wem",
+      "CachePath": "C5/{C555164A-06A5-E423-6F95-0B0CB4A8E115}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "687576550",
+      "Name": "Play_Cat_purring_yawning",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Cat_purring_yawning",
+      "GUID": "{B84755AC-8CBF-4D4F-9CD3-547FF9B48FD2}",
+      "DurationType": "Infinite",
+      "MediaRefs": [
+       {
+        "Id": "736334305"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{403666C2-386E-E469-E00F-164295EF653C}"
+ }
+}

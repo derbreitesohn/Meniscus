@@ -16,6 +16,10 @@ namespace AK
         static const AkUniqueID PLAY_24BIT_PIANO_CHORDS_MELODIE_STATE2_3_102BPM = 2739229492U;
         static const AkUniqueID PLAY_BAR_AMBIENCE01 = 3708788113U;
         static const AkUniqueID PLAY_BUYING_01 = 1534786092U;
+        static const AkUniqueID PLAY_CAT_MIAU = 2220998033U;
+        static const AkUniqueID PLAY_CAT_PURRING_YAWNING = 687576550U;
+        static const AkUniqueID PLAY_CAT_SLURPING = 1793514961U;
+        static const AkUniqueID PLAY_CAT_SLURPING_01 = 3982411485U;
         static const AkUniqueID PLAY_COINDROP01_INTO_WATER = 3586401116U;
         static const AkUniqueID PLAY_COINFLIP = 4084283492U;
         static const AkUniqueID PLAY_COINS_ON_WOOD = 4117578692U;
@@ -26,6 +30,7 @@ namespace AK
         static const AkUniqueID PLAY_PIANO_CHORDS_STATE1_82BPM = 271372744U;
         static const AkUniqueID PLAY_SPILL = 1363090524U;
         static const AkUniqueID PLAY_WATER = 441572235U;
+        static const AkUniqueID STOP_CAT_PURRING_YAWNING = 1521579580U;
     } // namespace EVENTS
 
     namespace STATES
