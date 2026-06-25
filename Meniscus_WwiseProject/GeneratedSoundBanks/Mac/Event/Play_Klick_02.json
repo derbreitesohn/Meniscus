@@ -1,0 +1,48 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Mac",
+  "BasePlatform": "Mac",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "716827835",
+    "Type": "Event",
+    "GUID": "{3C7C6F07-1CE9-4A73-9C62-B34853341A7D}",
+    "Language": "SFX",
+    "Hash": "{515AD91D-BD5E-4350-9661-A165C0D7ED27}",
+    "ObjectPath": "Play_Klick_02",
+    "ShortName": "Play_Klick_02",
+    "Path": "Event/Play_Klick_02.bnk",
+    "Media": [
+     {
+      "Id": "984785647",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "Klick_02.wav",
+      "Path": "Media/984785647.wem",
+      "CachePath": "B0/{B06740E3-B234-3608-133B-3474182D4666}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "716827835",
+      "Name": "Play_Klick_02",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Klick_02",
+      "GUID": "{3C7C6F07-1CE9-4A73-9C62-B34853341A7D}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.09607",
+      "DurationMax": "0.09607",
+      "MediaRefs": [
+       {
+        "Id": "984785647"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{FBE71B26-BD3C-CD1A-B127-3653EF56BB8C}"
+ }
+}

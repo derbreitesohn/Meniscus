@@ -18,6 +18,7 @@ namespace AK
         static const AkUniqueID PLAY_COINDROP01_INTO_WATER = 3586401116U;
         static const AkUniqueID PLAY_COINFLIP = 4084283492U;
         static const AkUniqueID PLAY_COINS_ON_WOOD = 4117578692U;
+        static const AkUniqueID PLAY_KLICK_02 = 716827835U;
         static const AkUniqueID PLAY_PAGECLOSE = 895213161U;
         static const AkUniqueID PLAY_PAGEFLIP = 1627151722U;
         static const AkUniqueID PLAY_PIANO_CHORDS_STATE1_82BPM = 271372744U;

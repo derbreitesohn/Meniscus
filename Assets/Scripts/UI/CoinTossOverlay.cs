@@ -25,6 +25,8 @@ namespace Meniscus.UI
         [SerializeField] Button goldButton;
         [SerializeField] Button copperButton;
 
+        AK.Wwise.Event coinFlipEvent;
+
         [Header("3D Coin Staging")]
         [Tooltip("Distance in front of the camera at which the coin tumbles.")]
         [SerializeField] float coinDistance = 1.2f;
@@ -37,9 +39,6 @@ namespace Meniscus.UI
         [Tooltip("Tint multiplied onto the rear face to make it read as copper.")]
         [SerializeField] Color copperTint = new(0.80f, 0.46f, 0.20f, 1f);
         [SerializeField] int flipFullTurns = 5;
-
-        [Header("Audio")]
-        [SerializeField] AK.Wwise.Event coinflip;
 
         Action<TurnActor> onDecided;
         Coroutine routine;
@@ -111,9 +110,10 @@ namespace Meniscus.UI
         /// model (the gold coin), the rear one tinted copper; <paramref name="decidedCallback"/> fires with
         /// the actor who won the toss once it settles. A null model falls back to a styled cylinder.
         /// </summary>
-        public void Show(GameObject modelPrefab, Vector3 modelScale, Action<TurnActor> decidedCallback)
+        public void Show(GameObject modelPrefab, Vector3 modelScale, Action<TurnActor> decidedCallback, AK.Wwise.Event flipEvent)
         {
             onDecided = decidedCallback;
+            coinFlipEvent = flipEvent;
             coinModelPrefab = modelPrefab;
             coinModelScale = modelScale == Vector3.zero ? Vector3.one : modelScale;
 
@@ -179,6 +179,8 @@ namespace Meniscus.UI
             // Ignore a second click while the coin is already spinning.
             if (routine != null)
                 return;
+
+            coinFlipEvent?.Post(gameObject);
 
             SetButtonsVisible(false);
 

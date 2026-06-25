@@ -1,6 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WwiseDocument Type="WorkUnit" ID="{42FB2AFF-BF73-4EF9-B200-3016F47B0C7C}" SchemaVersion="133">
 	<Effects>
-		<WorkUnit Name="Default Work Unit" ID="{42FB2AFF-BF73-4EF9-B200-3016F47B0C7C}" PersistMode="Standalone"/>
+		<WorkUnit Name="Default Work Unit" ID="{42FB2AFF-BF73-4EF9-B200-3016F47B0C7C}" PersistMode="Standalone">
+			<ChildrenList>
+				<Effect Name="New_RoomVerb" ID="{4EB52297-4336-4D57-9E47-F6279C4ADDA4}" PluginName="Wwise RoomVerb" CompanyID="0" PluginID="118" PluginType="3">
+					<PropertyList>
+						<Property Name="Density" Type="Real32" Value="0"/>
+						<Property Name="Diffusion" Type="Real32" Value="0"/>
+						<Property Name="DryLevel" Type="Real32" Value="0"/>
+						<Property Name="ERLevel" Type="Real32" Value="0"/>
+						<Property Name="HFDamping" Type="Real32" Value="0.5"/>
+						<Property Name="InputLFELevel" Type="Real32" Value="0"/>
+						<Property Name="LFELevel" Type="Real32" Value="0"/>
+						<Property Name="PreDelay" Type="Real32" Value="0"/>
+						<Property Name="Quality" Type="int32" Value="2"/>
+						<Property Name="ReverbLevel" Type="Real32" Value="0"/>
+						<Property Name="RoomShape" Type="Real32" Value="0"/>
+						<Property Name="StereoWidth" Type="Real32" Value="0"/>
+					</PropertyList>
+				</Effect>
+			</ChildrenList>
+		</WorkUnit>
 	</Effects>
 </WwiseDocument>

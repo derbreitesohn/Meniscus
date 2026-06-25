@@ -10,7 +10,7 @@
     "Type": "Event",
     "GUID": "{8E0BFB2D-D248-4C9B-BCC6-F59B021DC201}",
     "Language": "SFX",
-    "Hash": "{12010C74-8D5B-4F96-A6BA-2D98CB2C11B0}",
+    "Hash": "{9123CD47-A1EF-2C4D-2BA2-1FCE21E8C1A0}",
     "ObjectPath": "Play_coinflip",
     "ShortName": "Play_coinflip",
     "Path": "Event/Play_coinflip.bnk",
@@ -22,7 +22,7 @@
       "Location": "Loose",
       "ShortName": "coinflip02.wav",
       "Path": "Media/10235593.wem",
-      "CachePath": "53/{53207343-2334-3269-B929-E30A9A73B8A4}.wem"
+      "CachePath": "0A/{0A93A2D6-26C0-96F6-9FD1-E97B5F97ACE0}.wem"
      },
      {
       "Id": "529103067",
@@ -31,7 +31,7 @@
       "Location": "Loose",
       "ShortName": "coinflip03.wav",
       "Path": "Media/529103067.wem",
-      "CachePath": "6D/{6DFAC4F2-91BA-3FBE-DD06-1AAA458CE091}.wem"
+      "CachePath": "CF/{CFCE9566-AAF1-7E54-6ED7-CD569813E465}.wem"
      },
      {
       "Id": "532640387",
@@ -40,7 +40,7 @@
       "Location": "Loose",
       "ShortName": "coinflip05.wav",
       "Path": "Media/532640387.wem",
-      "CachePath": "CC/{CC08CD93-C30E-E7A9-8366-3ED13F995088}.wem"
+      "CachePath": "16/{163762F4-4103-F28D-4BF5-1CCC807258EF}.wem"
      },
      {
       "Id": "995319830",
@@ -49,9 +49,21 @@
       "Location": "Loose",
       "ShortName": "coinflip06.wav",
       "Path": "Media/995319830.wem",
-      "CachePath": "5C/{5C494EB7-CAD9-ABC4-B19C-CDBFF9513B6B}.wem"
+      "CachePath": "50/{5093550E-14E6-AFB3-607A-1F8FA5C19A47}.wem"
      }
     ],
+    "Plugins": {
+     "Custom": [
+      {
+       "Id": "215942917",
+       "Name": "Time Stretch (Custom)",
+       "ObjectPath": "\\Containers\\Default Work Unit\\sfx\\coins\\coinflip\\[Effect Slot [0]: (Time Stretch)]\\Time Stretch (Custom)",
+       "GUID": "{B15B4097-BAEE-4536-8A7A-B10A3D72C943}",
+       "LibName": "Wwise Time Stretch",
+       "LibId": "8519683"
+      }
+     ]
+    },
     "Events": [
      {
       "Id": "4084283492",
@@ -59,8 +71,8 @@
       "ObjectPath": "\\Events\\Default Work Unit\\Play_coinflip",
       "GUID": "{8E0BFB2D-D248-4C9B-BCC6-F59B021DC201}",
       "DurationType": "OneShot",
-      "DurationMin": "1.6834375",
-      "DurationMax": "2.995375",
+      "DurationMin": "0.50622",
+      "DurationMax": "0.62299",
       "MediaRefs": [
        {
         "Id": "10235593"
@@ -74,11 +86,18 @@
        {
         "Id": "995319830"
        }
-      ]
+      ],
+      "PluginRefs": {
+       "Custom": [
+        {
+         "Id": "215942917"
+        }
+       ]
+      }
      }
     ]
    }
   ],
-  "FileHash": "{2683440C-DD07-CD19-E87E-D304AFB304BD}"
+  "FileHash": "{412D1E06-ED5D-0B8E-C95D-A953CD4A0C6F}"
  }
 }

@@ -80,6 +80,8 @@ namespace Meniscus.Core
         [SerializeField, Min(0f)] float coinFlyStagger = 0.05f;
 
         [Header("Audio")]
+        [SerializeField] AK.Wwise.Event coinFlip;
+
       
 
 
@@ -208,7 +210,8 @@ namespace Meniscus.Core
             coinTossOverlay.Show(
                 coinModels.GetModelForSize(CoinSize.Large),
                 coinModels.ModelScale,
-                OnCoinTossDecided);
+                OnCoinTossDecided,
+                coinFlip);
         }
 
         void OnCoinTossDecided(TurnActor starter)
