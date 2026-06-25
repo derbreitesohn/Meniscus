@@ -73,7 +73,8 @@ namespace Meniscus.UI
         [SerializeField, Min(0f)] float boxFadeSeconds = 0.25f;
 
         [Header("Audio")]
-        [Tooltip("Undertale-style voice blip posted every few revealed characters. Leave empty for silent text.")]
+        [Tooltip("Undertale-style voice blip posted every few revealed characters. Injected at runtime by the " +
+                 "GameManager (this box has no inspector of its own); see SetVoice. Empty = silent text.")]
         [SerializeField] AK.Wwise.Event dealerVoiceBlip;
 
         Canvas canvas;
@@ -104,6 +105,10 @@ namespace Meniscus.UI
             if (canvas != null)
                 canvas.enabled = false;
         }
+
+        /// <summary>Inject the typewriter voice blip. The GameManager owns the event so it stays
+        /// inspector-assignable (this box is built at runtime); it's posted every few characters as a line types.</summary>
+        public void SetVoice(AK.Wwise.Event voice) => dealerVoiceBlip = voice;
 
         /// <summary>
         /// Play a sequence of lines, calling <paramref name="onComplete"/> once the last box is dismissed. If

@@ -84,8 +84,10 @@ namespace Meniscus.Gameplay
             return root.AddComponent<DealerMonologue>();
         }
 
-        /// <summary>Wake-up head lift, then the intro monologue, then <paramref name="onDone"/> (start the round).</summary>
-        public void PlayIntro(CameraController camera, DialogueController dialogue, Action onDone)
+        /// <summary>Wake-up head lift, then the intro monologue, then <paramref name="onDone"/> (start the round).
+        /// <paramref name="wakeUpSound"/> is posted as the head lifts (supplied by the GameManager so it stays
+        /// inspector-assignable on a scene object). </summary>
+        public void PlayIntro(CameraController camera, DialogueController dialogue, AK.Wwise.Event wakeUpSound, Action onDone)
         {
             if (playing)
                 return;
@@ -99,7 +101,7 @@ namespace Meniscus.Gameplay
             playing = true;
             ClearFade();
             ClearEyelids();
-            routine = StartCoroutine(IntroRoutine(camera, dialogue, onDone));
+            routine = StartCoroutine(IntroRoutine(camera, dialogue, wakeUpSound, onDone));
         }
 
         /// <summary>The losing monologue, then a dim to black; <paramref name="onDone"/> brings up the end screen.</summary>
@@ -120,7 +122,7 @@ namespace Meniscus.Gameplay
             routine = StartCoroutine(OutroRoutine(camera, dialogue, onDone));
         }
 
-        IEnumerator IntroRoutine(CameraController camera, DialogueController dialogue, Action onDone)
+        IEnumerator IntroRoutine(CameraController camera, DialogueController dialogue, AK.Wwise.Event wakeUpSound, Action onDone)
         {
             camera?.BeginWakeUp();
             BuildEyelids();
@@ -128,6 +130,7 @@ namespace Meniscus.Gameplay
             yield return WaitUnscaled(wakeHoldSeconds);
 
             var risen = false;
+            wakeUpSound?.Post(gameObject);   // the groggy wake as the head lifts off the table
             if (camera != null) camera.PlayWakeUp(() => risen = true);
             else risen = true;
 

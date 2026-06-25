@@ -96,6 +96,8 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0f)] float treatsShakeFreq = 22f;
         [SerializeField, Min(0f)] float treatsShakeAmp = 0.02f;
         [SerializeField, Range(0f, 45f)] float treatsShakeAngle = 16f;
+        [Tooltip("Wwise event for the treats rattling as they're shaken to call Taro over. Empty = silent.")]
+        [SerializeField] AK.Wwise.Event treatsShakeSound;
         [Tooltip("How far back from the glass Taro stands to drink (metres).")]
         [SerializeField, Min(0f)] float catStandoff = 0.6f;
         [Tooltip("How long Taro holds the drink pose.")]
@@ -128,8 +130,10 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0.05f)] float whistleFlySeconds = 0.55f;
         [Tooltip("Lift of the pickup arc (camera-local up). Bigger = a more pronounced arch up to the face.")]
         [SerializeField, Min(0f)] float whistleFlyArc = 0.2f;
-        [Tooltip("Beat held at the mouth as the whistle is blown (audio added later).")]
+        [Tooltip("Beat held at the mouth as the whistle is blown.")]
         [SerializeField, Min(0f)] float whistleBlowSeconds = 0.35f;
+        [Tooltip("Wwise event for the whistle blow, posted as it reaches the mouth. Empty = silent.")]
+        [SerializeField] AK.Wwise.Event whistleBlowSound;
         [Tooltip("Optional explicit floor marker where the dog stands to bark at the dealer. If set, it wins " +
                  "outright — drop an empty on open floor beside the dealer and the dog goes exactly there. " +
                  "(The controller is created at runtime, so this can only be set in code.)")]
@@ -169,6 +173,8 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0f)] float holdBlackSeconds = 0.55f;
         [Tooltip("How fast the blackout lifts again onto the dealer's turn.")]
         [SerializeField, Min(0.01f)] float uncoverSeconds = 0.35f;
+        [Tooltip("Wwise event for the cloth being pulled up over the face. Empty = silent.")]
+        [SerializeField] AK.Wwise.Event bandanaPullSound;
 
         [Header("Tschick — light a cigarette (Steady Hand, SafeZoneBonus)")]
         [Tooltip("The cigarette pack model. If empty, the box wired for 'steady_hand' in the item library is " +
@@ -195,13 +201,15 @@ namespace Meniscus.Gameplay
         [Tooltip("Orientation of the cigarette while it's drawn from the pack (camera-local euler). Dial this " +
                  "in for the model's own axes.")]
         [SerializeField] Vector3 cigDrawnEuler = new(0f, 0f, 70f);
-        [Tooltip("Where the cigarette rests at the lips, close to the camera, for the light-up.")]
-        [SerializeField] Vector3 cigMouthLocalPos = new(0.015f, -0.135f, 0.32f);
-        [Tooltip("Orientation of the cigarette at the lips (camera-local euler).")]
-        [SerializeField] Vector3 cigMouthEuler = new(0f, 0f, 12f);
+        [Tooltip("Where the cigarette rests at the lips, close to the camera, for the light-up. Filter end sits " +
+                 "down near the lens; the rod leads away and up from here.")]
+        [SerializeField] Vector3 cigMouthLocalPos = new(0.02f, -0.13f, 0.36f);
+        [Tooltip("Orientation of the cigarette at the lips (camera-local euler). Y yaw swings the burning tip " +
+                 "into the table toward the enemy; Z roll tilts it up so the lit end rides higher.")]
+        [SerializeField] Vector3 cigMouthEuler = new(0f, 40f, 15f);
         [SerializeField, Min(0.01f)] float cigaretteHeldSize = 0.17f;
         [Tooltip("Which end of the cigarette lights — flip if the flame sits on the lips end instead of the tip.")]
-        [SerializeField] bool flipCigaretteTip;
+        [SerializeField] bool flipCigaretteTip = true;
         [Tooltip("Fine nudge of the flame off the auto-detected tip (cigarette-local metres).")]
         [SerializeField] Vector3 cigaretteTipLocalOffset = Vector3.zero;
 
@@ -213,6 +221,10 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0f)] float dragSeconds = 0.7f;            // the pull — ember brightens
         [SerializeField, Min(0f)] float exhaleHoldSeconds = 1.5f;      // hold on the exhaled smoke
         [SerializeField, Min(0.05f)] float cigLowerSeconds = 0.5f;     // lower the cigarette out of frame
+        [Tooltip("Wwise event for the lighter strike as the cigarette is lit. Empty = silent.")]
+        [SerializeField] AK.Wwise.Event cigaretteLightSound;
+        [Tooltip("Wwise event for the exhale as the smoke is blown out. Empty = silent.")]
+        [SerializeField] AK.Wwise.Event cigaretteExhaleSound;
 
         [Header("Effect banner (floating text)")]
         [SerializeField, Min(0f)] float bannerFadeSeconds = 0.25f;
@@ -836,6 +848,7 @@ namespace Meniscus.Gameplay
             }
 
             // Shake the treats in the air until Taro starts drinking (with a safety timeout).
+            treatsShakeSound?.Post(gameObject);   // rattle the bag
             var waited = 0f;
             while (!drinking && waited < maxSummonWait)
             {
@@ -967,7 +980,8 @@ namespace Meniscus.Gameplay
                 prop.SetLocalPositionAndRotation(whistleMouthLocalPos, endRot);
             }
 
-            // The blow (audio later) — a short beat held at the mouth.
+            // The blow — a short beat held at the mouth.
+            whistleBlowSound?.Post(gameObject);
             for (var t = 0f; t < whistleBlowSeconds; t += Time.deltaTime)
                 yield return null;
 
@@ -1248,6 +1262,7 @@ namespace Meniscus.Gameplay
             {
                 var from = bandanaHeldLocalPos - Vector3.up * bandanaRaiseFrom;
                 bandana.transform.SetLocalPositionAndRotation(from, heldRot);
+                bandanaPullSound?.Post(gameObject);   // cloth drawn up over the face
                 yield return AnimateProp(bandana, from, bandanaHeldLocalPos, heldRot, bandanaRaiseSeconds, easeOut: true);
             }
 
@@ -1374,6 +1389,7 @@ namespace Meniscus.Gameplay
             {
                 var tipLocal = CigaretteTipLocal(cig, flipCigaretteTip) + cigaretteTipLocalOffset;
                 fire = CigaretteFireVfx.Create(cig.transform, tipLocal);
+                cigaretteLightSound?.Post(gameObject);   // strike of the lighter
                 yield return fire.Strike(flareSeconds);
                 fire.BeginSmoke();
             }
@@ -1394,6 +1410,7 @@ namespace Meniscus.Gameplay
             // Exhale.
             fire?.SetEmber(1f);
             fire?.Puff(1.5f);
+            cigaretteExhaleSound?.Post(gameObject);
 
             for (var t = 0f; t < exhaleHoldSeconds; t += Time.deltaTime)
                 yield return null;

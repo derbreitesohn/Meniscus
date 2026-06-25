@@ -89,6 +89,11 @@ namespace Meniscus.Core
         [Header("Audio")]
         [SerializeField] AK.Wwise.Event coinFlip;
         [SerializeField] AK.Wwise.Event loseSound;
+        [Tooltip("Posted as the head lifts off the table in the opening wake-up (DealerMonologue intro). Empty = silent.")]
+        [SerializeField] AK.Wwise.Event wakeUpSound;
+        [Tooltip("The Dealer's typewriter voice blip, posted every few characters as his monologue types. " +
+                 "Injected into the runtime dialogue box (which has no inspector of its own). Empty = silent text.")]
+        [SerializeField] AK.Wwise.Event dialogueVoice;
 
       
 
@@ -181,7 +186,7 @@ namespace Meniscus.Core
             hasPlayedOpeningIntro = true;
 
             if (playOpeningIntro && ShouldPlayIntroMonologue())
-                dealerMonologue.PlayIntro(cameraController, dialogueController, StartRound);
+                dealerMonologue.PlayIntro(cameraController, dialogueController, wakeUpSound, StartRound);
             else if (playOpeningIntro && ShouldPlaySeatingIntro())
                 seatingIntro.Play(cameraController, StartRound);
             else
@@ -1109,6 +1114,11 @@ namespace Meniscus.Core
             // tests keep the null path (instant StartRound / plain end screen) and never spawn a stray canvas.
             if (dialogueController == null && Application.isPlaying)
                 dialogueController = DialogueController.CreateRuntimeFallback();
+
+            // The dialogue box is created at runtime (no inspector of its own), so inject the Dealer's voice
+            // from here — where it stays inspector-assignable, like coinFlip / loseSound / wakeUpSound.
+            if (dialogueController != null)
+                dialogueController.SetVoice(dialogueVoice);
 
             if (dealerMonologue == null)
                 dealerMonologue = FindAnyObjectByType<DealerMonologue>();
