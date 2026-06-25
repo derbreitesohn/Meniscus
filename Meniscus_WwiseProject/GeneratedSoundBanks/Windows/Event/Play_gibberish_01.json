@@ -6,14 +6,14 @@
   "SoundBankVersion": "172",
   "SoundBanks": [
    {
-    "Id": "2180380556",
+    "Id": "2180380553",
     "Type": "Event",
-    "GUID": "{3300FF2F-D564-4CF3-97D8-541DF1B75CBE}",
+    "GUID": "{B72FCFAE-5DBF-4C92-AAE7-7E1A43921B63}",
     "Language": "SFX",
-    "Hash": "{80506D8B-9FAF-85BA-8A6E-9FA8139BDA98}",
-    "ObjectPath": "Play_gibberish_04",
-    "ShortName": "Play_gibberish_04",
-    "Path": "Event/Play_gibberish_04.bnk",
+    "Hash": "{3F3B5778-841A-2670-8F7A-4106FBC38B46}",
+    "ObjectPath": "Play_gibberish_01",
+    "ShortName": "Play_gibberish_01",
+    "Path": "Event/Play_gibberish_01.bnk",
     "Media": [
      {
       "Id": "317320729",
@@ -27,10 +27,10 @@
     ],
     "Events": [
      {
-      "Id": "2180380556",
-      "Name": "Play_gibberish_04",
-      "ObjectPath": "\\Events\\Default Work Unit\\Play_gibberish_04",
-      "GUID": "{3300FF2F-D564-4CF3-97D8-541DF1B75CBE}",
+      "Id": "2180380553",
+      "Name": "Play_gibberish_01",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_gibberish_01",
+      "GUID": "{B72FCFAE-5DBF-4C92-AAE7-7E1A43921B63}",
       "DurationType": "Infinite",
       "MediaRefs": [
        {
@@ -41,6 +41,6 @@
     ]
    }
   ],
-  "FileHash": "{27ED2DFC-E45C-33E1-F18B-B1639E8BDF42}"
+  "FileHash": "{1B665AE8-643C-4E3B-6994-9EF59E93A3F2}"
  }
 }

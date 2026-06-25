@@ -1,0 +1,3 @@
+Event	ID	Name			Wwise Object Path	Notes
+	3471892474	Stop_gibberish_04			\Default Work Unit\Stop_gibberish_04	
+

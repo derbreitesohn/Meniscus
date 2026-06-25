@@ -94,9 +94,11 @@ namespace Meniscus.Core
         [SerializeField] AK.Wwise.Event loseSound;
         [Tooltip("Posted as the head lifts off the table in the opening wake-up (DealerMonologue intro). Empty = silent.")]
         [SerializeField] AK.Wwise.Event wakeUpSound;
-        [Tooltip("The Dealer's typewriter voice blip, posted every few characters as his monologue types. " +
-                 "Injected into the runtime dialogue box (which has no inspector of its own). Empty = silent text.")]
-        [SerializeField] AK.Wwise.Event dialogueVoice;
+        [Tooltip("Looping voice gibberish that plays while the Dealer's monologue types (started per line, " +
+                 "stopped when the line finishes). Injected into the runtime dialogue box. Empty = silent text.")]
+        [SerializeField] AK.Wwise.Event dialogueVoiceLoop;
+        [Tooltip("Stops the looping voice gibberish. Injected into the runtime dialogue box alongside the loop.")]
+        [SerializeField] AK.Wwise.Event dialogueVoiceStop;
 
         [Header("Dealer Close-Ups")]
         [Tooltip("Frame a tight close-up of the dealer while the coin tumbles each round (he plays his " +
@@ -1210,7 +1212,7 @@ namespace Meniscus.Core
             // The dialogue box is created at runtime (no inspector of its own), so inject the Dealer's voice
             // from here — where it stays inspector-assignable, like coinFlip / loseSound / wakeUpSound.
             if (dialogueController != null)
-                dialogueController.SetVoice(dialogueVoice);
+                dialogueController.SetVoice(dialogueVoiceLoop, dialogueVoiceStop);
 
             if (dealerMonologue == null)
                 dealerMonologue = FindAnyObjectByType<DealerMonologue>();

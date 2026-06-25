@@ -10,7 +10,7 @@
     "Type": "Event",
     "GUID": "{3300FF2F-D564-4CF3-97D8-541DF1B75CBE}",
     "Language": "SFX",
-    "Hash": "{737704E1-73AE-D333-CAED-A2BD16CFA335}",
+    "Hash": "{80506D8B-9FAF-85BA-8A6E-9FA8139BDA98}",
     "ObjectPath": "Play_gibberish_04",
     "ShortName": "Play_gibberish_04",
     "Path": "Event/Play_gibberish_04.bnk",
@@ -22,7 +22,7 @@
       "Location": "Loose",
       "ShortName": "gibberish_04.wav",
       "Path": "Media/317320729.wem",
-      "CachePath": "B8/{B84D0D6D-4F06-FC67-D8EB-97A10BC9747E}.wem"
+      "CachePath": "F2/{F26E5BD3-3CAC-E40D-F9C5-A36D63B09426}.wem"
      }
     ],
     "Events": [
@@ -31,9 +31,7 @@
       "Name": "Play_gibberish_04",
       "ObjectPath": "\\Events\\Default Work Unit\\Play_gibberish_04",
       "GUID": "{3300FF2F-D564-4CF3-97D8-541DF1B75CBE}",
-      "DurationType": "OneShot",
-      "DurationMin": "13.075072",
-      "DurationMax": "13.075072",
+      "DurationType": "Infinite",
       "MediaRefs": [
        {
         "Id": "317320729"
@@ -43,6 +41,6 @@
     ]
    }
   ],
-  "FileHash": "{7BA5F775-2CFA-CCBC-E066-4C9C545AAA8B}"
+  "FileHash": "{7B9A7B6F-A96C-512C-133B-2EBC798B9499}"
  }
 }

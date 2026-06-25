@@ -58,7 +58,7 @@ namespace Meniscus.UI
 
     /// <summary>
     /// Undertale-style dialogue box: a bottom-of-screen panel that reveals each line one character at a time
-    /// (with an optional voice blip per few characters) and waits for a click / key before advancing. A press
+    /// (with a looping voice gibberish while it types) and waits for a click / key before advancing. A press
     /// while a line is still typing completes it instantly; the next press advances. Lines that carry a
     /// <see cref="DialogueCue"/> hand off to an <c>interlude</c> coroutine (the monologue uses this to nod the
     /// camera) before the next box appears. The 3D scene stays visible above the box, so the speaker reads as
@@ -69,13 +69,16 @@ namespace Meniscus.UI
     {
         [Header("Typewriter")]
         [SerializeField, Min(1f)] float charactersPerSecond = 45f;
-        [SerializeField, Min(1)] int blipEveryChars = 2;
         [SerializeField, Min(0f)] float boxFadeSeconds = 0.25f;
 
         [Header("Audio")]
-        [Tooltip("Undertale-style voice blip posted every few revealed characters. Injected at runtime by the " +
-                 "GameManager (this box has no inspector of its own); see SetVoice. Empty = silent text.")]
-        [SerializeField] AK.Wwise.Event dealerVoiceBlip;
+        [Tooltip("Looping voice gibberish that plays WHILE a line types. Started as the line begins, stopped " +
+                 "when it finishes (or is skipped). Injected at runtime by the GameManager (this box has no " +
+                 "inspector of its own); see SetVoice. Empty = silent text.")]
+        [SerializeField] AK.Wwise.Event dealerVoiceLoop;
+        [Tooltip("Stops the looping voice gibberish. Posted when a line finishes typing, is skipped, or the " +
+                 "dialogue ends. Injected at runtime by the GameManager; see SetVoice.")]
+        [SerializeField] AK.Wwise.Event dealerVoiceStop;
 
         Canvas canvas;
         CanvasGroup group;
@@ -83,6 +86,7 @@ namespace Meniscus.UI
         Text hintText;
         Coroutine routine;
         bool playing;
+        bool voicePlaying;   // guards against double Start / orphaned Stop
 
         public bool IsPlaying => playing;
 
@@ -106,9 +110,34 @@ namespace Meniscus.UI
                 canvas.enabled = false;
         }
 
-        /// <summary>Inject the typewriter voice blip. The GameManager owns the event so it stays
-        /// inspector-assignable (this box is built at runtime); it's posted every few characters as a line types.</summary>
-        public void SetVoice(AK.Wwise.Event voice) => dealerVoiceBlip = voice;
+        /// <summary>Inject the typewriter voice loop + its stop. The GameManager owns the events so they stay
+        /// inspector-assignable (this box is built at runtime); the loop plays while a line types and is stopped
+        /// when it finishes.</summary>
+        public void SetVoice(AK.Wwise.Event voiceLoop, AK.Wwise.Event voiceStop)
+        {
+            dealerVoiceLoop = voiceLoop;
+            dealerVoiceStop = voiceStop;
+        }
+
+        // Start the talking gibberish loop (once), if it isn't already going.
+        void StartVoice()
+        {
+            if (voicePlaying)
+                return;
+
+            dealerVoiceLoop?.Post(gameObject);
+            voicePlaying = true;
+        }
+
+        // Stop the talking gibberish loop, if it's going. Safe to call any number of times.
+        void StopVoice()
+        {
+            if (!voicePlaying)
+                return;
+
+            dealerVoiceStop?.Post(gameObject);
+            voicePlaying = false;
+        }
 
         /// <summary>
         /// Play a sequence of lines, calling <paramref name="onComplete"/> once the last box is dismissed. If
@@ -150,6 +179,9 @@ namespace Meniscus.UI
                 StopCoroutine(routine);
                 routine = null;
             }
+
+            // Never leave the gibberish looping if we were torn down mid-line.
+            StopVoice();
         }
 
         void BuildUi()
@@ -181,7 +213,7 @@ namespace Meniscus.UI
             bodyText.lineSpacing = 1.05f;
 
             hintText = RuntimeUiFactory.CreateText(
-                canvas.transform, "Dialogue Hint", "click to continue  ▼",
+                canvas.transform, "Dialogue Hint", "click to continue  \u25bc",
                 new Vector2(360f, -398f), new Vector2(320f, 28f), 17,
                 new Color(0.78f, 0.62f, 0.36f, 0.8f), TextAnchor.MiddleRight);
             hintText.enabled = false;
@@ -227,7 +259,8 @@ namespace Meniscus.UI
             onComplete?.Invoke();
         }
 
-        // Reveal one line character by character; a press completes it instantly, the next press returns.
+        // Reveal one line character by character; a press completes it instantly, the next press returns. The
+        // voice gibberish loops while the line types and is stopped the moment it's complete (or skipped).
         IEnumerator ShowLine(string text)
         {
             text ??= string.Empty;
@@ -236,13 +269,17 @@ namespace Meniscus.UI
 
             var shown = 0;
             var acc = 0f;
-            var sinceBlip = 0;
             var complete = text.Length == 0;
 
             if (complete)
             {
                 bodyText.text = text;
                 if (hintText != null) hintText.enabled = true;
+            }
+            else
+            {
+                // The dealer starts talking as the line begins to type.
+                StartVoice();
             }
 
             while (true)
@@ -257,35 +294,20 @@ namespace Meniscus.UI
                         bodyText.text = text;
                         shown = text.Length;
                         complete = true;
+                        StopVoice();                 // talking stops the instant the line is done
                         if (hintText != null) hintText.enabled = true;
                         yield return null;
                         continue;
                     }
 
                     acc += Time.unscaledDeltaTime * charactersPerSecond;
-                    var next = Mathf.Min(text.Length, Mathf.FloorToInt(acc));
-
-                    while (shown < next)
-                    {
-                        var c = text[shown];
-                        shown++;
-
-                        if (!char.IsWhiteSpace(c))
-                        {
-                            sinceBlip++;
-                            if (sinceBlip >= blipEveryChars)
-                            {
-                                dealerVoiceBlip?.Post(gameObject);
-                                sinceBlip = 0;
-                            }
-                        }
-                    }
-
+                    shown = Mathf.Min(text.Length, Mathf.FloorToInt(acc));
                     bodyText.text = text.Substring(0, shown);
 
                     if (shown >= text.Length)
                     {
                         complete = true;
+                        StopVoice();                 // talking stops when the line finishes typing
                         if (hintText != null) hintText.enabled = true;
                     }
                 }

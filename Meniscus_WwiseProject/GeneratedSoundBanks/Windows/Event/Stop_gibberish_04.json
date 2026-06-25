@@ -1,0 +1,33 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "3471892474",
+    "Type": "Event",
+    "GUID": "{44FA7CEA-FF35-4C09-80EC-85F8B3236EB0}",
+    "Language": "SFX",
+    "Hash": "{33161BED-4419-A795-BB56-93B00CFAD7D9}",
+    "ObjectPath": "Stop_gibberish_04",
+    "ShortName": "Stop_gibberish_04",
+    "Path": "Event/Stop_gibberish_04.bnk",
+    "Events": [
+     {
+      "Id": "3471892474",
+      "Name": "Stop_gibberish_04",
+      "ObjectPath": "\\Events\\Default Work Unit\\Stop_gibberish_04",
+      "GUID": "{44FA7CEA-FF35-4C09-80EC-85F8B3236EB0}",
+      "MaxAttenuation": "0",
+      "DurationType": "OneShot",
+      "DurationMin": "0",
+      "DurationMax": "0"
+     }
+    ]
+   }
+  ],
+  "FileHash": "{29FBD17A-43E5-236E-ADAE-AF584B3963D3}"
+ }
+}
