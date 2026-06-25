@@ -54,7 +54,8 @@ namespace Meniscus.Gameplay
                  "shot from reliably telegraphing an overflow.")]
         [SerializeField, Range(0f, 1f)] float baitChanceWhenSafe = 0.34f;
 
-        [SerializeField] AK.Wwise.Event coinIntoWater;   // assign Play_Coin_IntoWater in the Inspector
+        [SerializeField] AK.Wwise.Event coinIntoWater; 
+        [SerializeField] AK.Wwise.Event waterSpill; 
 
         // The coin shrinks to its cup-fit size early in the carry — begun just after pickup and finished
         // well before the coin nears the glass — so a full-size coin is never over/inside the cup and can

@@ -38,6 +38,9 @@ namespace Meniscus.UI
         [SerializeField] Color copperTint = new(0.80f, 0.46f, 0.20f, 1f);
         [SerializeField] int flipFullTurns = 5;
 
+        [Header("Audio")]
+        [SerializeField] AK.Wwise.Event coinflip;
+
         Action<TurnActor> onDecided;
         Coroutine routine;
 

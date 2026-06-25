@@ -1,5 +1,6 @@
 Event	ID	Name			Wwise Object Path	Notes
 	271372744	Play_Piano_Chords_State1_82BPM			\Default Work Unit\Play_Piano_Chords_State1_82BPM	
+	1363090524	Play_spill			\Default Work Unit\Play_spill	
 	3586401116	Play_coindrop01_into_water			\Default Work Unit\Play_coindrop01_into_water	
 	3708788113	Play_bar_ambience01			\Default Work Unit\Play_bar_ambience01	
 
@@ -17,6 +18,10 @@ Effect plug-ins	ID	Name	Type				Notes
 
 In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
 	91653063	bar_ambience01	.cache\6A\{6A99C526-8B18-DE0F-5B44-BF7308BC3F42}.wem		\Containers\Default Work Unit\ambience\bar_ambience01		5839044
+	99939701	waterspill02	.cache\30\{300B4E28-3D5F-0176-C2A0-9017AA90EAAA}.wem		\Containers\Default Work Unit\sfx\water\spill\waterspill02		37390
 	438190318	coindrop01_into_water	.cache\77\{7787D35F-E4B7-0FFA-D48D-969B20332BB4}.wem		\Containers\Default Work Unit\sfx\coins\coin_into_water\coindrop01_into_water		51160
+	635209950	waterspill03	.cache\37\{37A12CEC-7273-7D87-30E9-6BF439CFE8A7}.wem		\Containers\Default Work Unit\sfx\water\spill\waterspill03		81316
+	673909405	waterspill04	.cache\F6\{F6052E7C-8BB5-C5E5-42F8-B287D5FF264D}.wem		\Containers\Default Work Unit\sfx\water\spill\waterspill04		78626
+	745158164	waterspill01	.cache\80\{80FA09AF-2E9E-B03A-6994-4CCECF1C0A71}.wem		\Containers\Default Work Unit\sfx\water\spill\waterspill01		123232
 	1002545419	Piano_Chords_State1_82BPM	.cache\9A\{9A6FFE82-F668-F069-1B98-1713A97DC42D}.wem		\Containers\Default Work Unit\music\Piano_Chords_State1_82BPM		4495708
 

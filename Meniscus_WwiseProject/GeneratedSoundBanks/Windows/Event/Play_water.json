@@ -1,0 +1,84 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "441572235",
+    "Type": "Event",
+    "GUID": "{7B53993B-279A-4316-ABEC-0F68FAA84DA4}",
+    "Language": "SFX",
+    "Hash": "{B851BA4B-FF5B-CCA7-8485-EB2D15BE1CCC}",
+    "ObjectPath": "Play_water",
+    "ShortName": "Play_water",
+    "Path": "Event/Play_water.bnk",
+    "Media": [
+     {
+      "Id": "99939701",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "waterspill02.wav",
+      "Path": "Media/99939701.wem",
+      "CachePath": "30/{300B4E28-3D5F-0176-C2A0-9017AA90EAAA}.wem"
+     },
+     {
+      "Id": "635209950",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "waterspill03.wav",
+      "Path": "Media/635209950.wem",
+      "CachePath": "37/{37A12CEC-7273-7D87-30E9-6BF439CFE8A7}.wem"
+     },
+     {
+      "Id": "673909405",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "waterspill04.wav",
+      "Path": "Media/673909405.wem",
+      "CachePath": "F6/{F6052E7C-8BB5-C5E5-42F8-B287D5FF264D}.wem"
+     },
+     {
+      "Id": "745158164",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "waterspill01.wav",
+      "Path": "Media/745158164.wem",
+      "CachePath": "80/{80FA09AF-2E9E-B03A-6994-4CCECF1C0A71}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "441572235",
+      "Name": "Play_water",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_water",
+      "GUID": "{7B53993B-279A-4316-ABEC-0F68FAA84DA4}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.38847",
+      "DurationMax": "1.28267",
+      "MediaRefs": [
+       {
+        "Id": "99939701"
+       },
+       {
+        "Id": "635209950"
+       },
+       {
+        "Id": "673909405"
+       },
+       {
+        "Id": "745158164"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{9AA68719-3632-6223-9477-25691313775F}"
+ }
+}
