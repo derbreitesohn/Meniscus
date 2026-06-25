@@ -1,0 +1,48 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "3837257645",
+    "Type": "Event",
+    "GUID": "{127574D3-5A91-4EFB-B46D-05B6CAFC69D5}",
+    "Language": "SFX",
+    "Hash": "{A27C36C8-7037-FD65-E998-1C60BDF4B66A}",
+    "ObjectPath": "Play_Fee_brummen_01",
+    "ShortName": "Play_Fee_brummen_01",
+    "Path": "Event/Play_Fee_brummen_01.bnk",
+    "Media": [
+     {
+      "Id": "426030523",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "Fee_brummen_01.wav",
+      "Path": "Media/426030523.wem",
+      "CachePath": "21/{21FAE747-3620-09A4-F4C5-26079A920E93}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "3837257645",
+      "Name": "Play_Fee_brummen_01",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Fee_brummen_01",
+      "GUID": "{127574D3-5A91-4EFB-B46D-05B6CAFC69D5}",
+      "DurationType": "OneShot",
+      "DurationMin": "1.11812",
+      "DurationMax": "1.11812",
+      "MediaRefs": [
+       {
+        "Id": "426030523"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{3BA6250E-4185-06A0-6287-3F353E59F101}"
+ }
+}

@@ -10,7 +10,7 @@
     "Type": "Event",
     "GUID": "{160472AB-FEDD-4B3C-9017-C6A68BE5F6E4}",
     "Language": "SFX",
-    "Hash": "{76DFFBD9-08D2-B040-B2A1-EBD66BB13D8B}",
+    "Hash": "{39156F4E-8F8B-9484-D019-6AD637EE86F1}",
     "ObjectPath": "Play_Cat_Miau",
     "ShortName": "Play_Cat_Miau",
     "Path": "Event/Play_Cat_Miau.bnk",
@@ -43,6 +43,6 @@
     ]
    }
   ],
-  "FileHash": "{E2123338-55F0-8AE9-4D46-D106C43B10C0}"
+  "FileHash": "{A48CB36A-06DA-0F47-24F5-7D685FF39016}"
  }
 }

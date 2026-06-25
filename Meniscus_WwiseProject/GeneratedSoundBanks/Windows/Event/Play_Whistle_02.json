@@ -1,0 +1,48 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "2662538193",
+    "Type": "Event",
+    "GUID": "{3CC80753-4F1B-4B1F-B7BA-CC9879489033}",
+    "Language": "SFX",
+    "Hash": "{F4779E5E-7D04-F921-FE40-2C16921AE2B8}",
+    "ObjectPath": "Play_Whistle_02",
+    "ShortName": "Play_Whistle_02",
+    "Path": "Event/Play_Whistle_02.bnk",
+    "Media": [
+     {
+      "Id": "244878967",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "Whistle_02.wav",
+      "Path": "Media/244878967.wem",
+      "CachePath": "0B/{0B1BDBFE-CFF4-C096-D495-E16962C13B50}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "2662538193",
+      "Name": "Play_Whistle_02",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Whistle_02",
+      "GUID": "{3CC80753-4F1B-4B1F-B7BA-CC9879489033}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.49922916",
+      "DurationMax": "0.49922916",
+      "MediaRefs": [
+       {
+        "Id": "244878967"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{22A123BE-428D-395E-E11E-5D66CED9E4EB}"
+ }
+}
