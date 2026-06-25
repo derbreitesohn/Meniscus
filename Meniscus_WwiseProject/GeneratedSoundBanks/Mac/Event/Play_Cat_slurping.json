@@ -10,7 +10,7 @@
     "Type": "Event",
     "GUID": "{E31315C2-D3FB-4AE6-B4AA-FFC1A0E2B85A}",
     "Language": "SFX",
-    "Hash": "{3A4BA7DC-7E85-85B6-FD1B-9558E7E68A89}",
+    "Hash": "{DE8EB003-7FDA-3A6F-0271-546CC1FAE8B7}",
     "ObjectPath": "Play_Cat_slurping",
     "ShortName": "Play_Cat_slurping",
     "Path": "Event/Play_Cat_slurping.bnk",
@@ -43,6 +43,6 @@
     ]
    }
   ],
-  "FileHash": "{21B9B562-5C9A-4B8C-B8B5-CF3EF0B76AAA}"
+  "FileHash": "{9F1A409F-4CC2-8533-2CB4-D7D98329F457}"
  }
 }

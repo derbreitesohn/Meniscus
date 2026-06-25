@@ -1,0 +1,48 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "4251896040",
+    "Type": "Event",
+    "GUID": "{D313A408-5D9D-46D5-84B2-A0212F54C886}",
+    "Language": "SFX",
+    "Hash": "{B5C43984-BC6A-29B1-D5BC-0867CA9176C9}",
+    "ObjectPath": "Play_dogBite02",
+    "ShortName": "Play_dogBite02",
+    "Path": "Event/Play_dogBite02.bnk",
+    "Media": [
+     {
+      "Id": "537655871",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "dogBite02.wav",
+      "Path": "Media/537655871.wem",
+      "CachePath": "45/{4537CB7C-FC95-4BC7-BCF6-7BF82A1B32A4}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "4251896040",
+      "Name": "Play_dogBite02",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_dogBite02",
+      "GUID": "{D313A408-5D9D-46D5-84B2-A0212F54C886}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.28729",
+      "DurationMax": "0.28729",
+      "MediaRefs": [
+       {
+        "Id": "537655871"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{471FEFEF-BB4B-EDE6-0827-D6EC2EF72178}"
+ }
+}

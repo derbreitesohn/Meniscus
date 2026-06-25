@@ -1,0 +1,3 @@
+Event	ID	Name			Wwise Object Path	Notes
+	4251896040	Play_dogBite02			\Default Work Unit\Play_dogBite02	
+

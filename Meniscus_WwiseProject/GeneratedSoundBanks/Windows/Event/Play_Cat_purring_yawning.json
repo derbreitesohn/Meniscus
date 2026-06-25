@@ -10,7 +10,7 @@
     "Type": "Event",
     "GUID": "{B84755AC-8CBF-4D4F-9CD3-547FF9B48FD2}",
     "Language": "SFX",
-    "Hash": "{872792F1-07EC-81AA-4A06-FCABA265B043}",
+    "Hash": "{BBB04A66-90C9-E64D-D74D-30105F0EFF3F}",
     "ObjectPath": "Play_Cat_purring_yawning",
     "ShortName": "Play_Cat_purring_yawning",
     "Path": "Event/Play_Cat_purring_yawning.bnk",
@@ -41,6 +41,6 @@
     ]
    }
   ],
-  "FileHash": "{403666C2-386E-E469-E00F-164295EF653C}"
+  "FileHash": "{0024AC01-EA1A-089C-A3B8-A6132F5FBB1B}"
  }
 }
