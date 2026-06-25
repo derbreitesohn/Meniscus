@@ -25,6 +25,7 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0f)] float revealSeconds = 0.9f;        // black lifts to reveal the glass in the void
         [SerializeField, Min(0f)] float promptDelay = 1.2f;          // beat before the restart prompt appears
         [SerializeField] Color voidColor = new Color(0.02f, 0.01f, 0.01f, 1f);
+       AK.Wwise.Event loseSound;
 
         readonly List<Renderer> hiddenRenderers = new();
         readonly List<Canvas> hiddenCanvases = new();
@@ -50,12 +51,13 @@ namespace Meniscus.Gameplay
         }
 
         /// <summary>Start the orbit, fade the world to black, reveal the spilling glass alone, show the prompt.</summary>
-        public void Begin(GameManager gameManager, CameraController cameraController, string title)
+        public void Begin(GameManager gameManager, CameraController cameraController, string title,  AK.Wwise.Event lose)
         {
             if (active)
                 return;
 
             active = true;
+            loseSound = lose;
             glass = FindAnyObjectByType<GlassVisualController>();
 
             cameraController?.BeginGlassOrbit();
@@ -99,7 +101,9 @@ namespace Meniscus.Gameplay
             // Hidden under full black so the cut is never seen: strip the world to the glass, void the backdrop.
             HideWorldExceptGlass();
             DarkenBackdrop();
-            glass?.FreezeAtMaxSpill();                        // freeze at the peak: rivulets run to full, then hold
+            glass?.FreezeAtMaxSpill();     
+            
+               loseSound?.Post(gameObject);                   // freeze at the peak: rivulets run to full, then hold
 
             yield return Fade(1f, 0f, revealSeconds);         // lift the black: the frozen, spilled-over glass remains
 

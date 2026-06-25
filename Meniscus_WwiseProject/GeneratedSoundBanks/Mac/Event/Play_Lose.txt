@@ -1,0 +1,12 @@
+Event	ID	Name			Wwise Object Path	Notes
+	3796466245	Play_Lose			\Default Work Unit\Play_Lose	
+
+State Group	ID	Name			Wwise Object Path	Notes
+	1021618141	MusicState			\Default Work Unit\MusicState	
+
+State	ID	Name	State Group			Notes
+	391998042	Tense	MusicState			
+	748895195	None	MusicState			
+	1874288895	Idle	MusicState			
+	2135990474	Chritical	MusicState			
+

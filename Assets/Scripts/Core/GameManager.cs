@@ -65,6 +65,7 @@ namespace Meniscus.Core
 
         [Header("Audio")]
         [SerializeField] AK.Wwise.Event coinFlip;
+         [SerializeField] AK.Wwise.Event loseSound;
 
       
 
@@ -480,7 +481,7 @@ namespace Meniscus.Core
             // through to the unchanged end-screen path below.
             if (outcome == MatchOutcome.PlayerLost && lossSequence != null)
             {
-                lossSequence.Begin(this, cameraController, "YOU LOST");
+                lossSequence.Begin(this, cameraController, "YOU LOST", loseSound);
                 return;
             }
 

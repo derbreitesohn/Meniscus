@@ -397,6 +397,10 @@ MonoBehaviour:
     valueGuidInternal: 
     WwiseObjectReference: {fileID: 11400000, guid: 9b7c8b533a4164fd4b7dc881f8e5d883, type: 2}
   auftaktDauer: 1
+  uiClick:
+    idInternal: 0
+    valueGuidInternal: 
+    WwiseObjectReference: {fileID: 11400000, guid: 3bd1f5d0072bf4a269f41174a11b7dfa, type: 2}
 --- !u!1 &299517085
 GameObject:
   m_ObjectHideFlags: 0
