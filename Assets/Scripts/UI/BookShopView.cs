@@ -21,6 +21,10 @@ namespace Meniscus.UI
     {
         [SerializeField] Camera worldCamera;
 
+        [Tooltip("Uniform size of the whole held book — pages, printed menu and item pictures. 1 = the " +
+                 "original size; raise it to hold a bigger book closer to a billboard in front of the camera.")]
+        [SerializeField, Min(0.1f)] float bookScale = 1.3f;
+
         [Header("Held Placement (relative to the camera)")]
         [Tooltip("Metres in front of the camera the open book is held.")]
         [SerializeField] float holdDistance = 0.62f;
@@ -138,6 +142,7 @@ namespace Meniscus.UI
         readonly Dictionary<ItemDefinition, Text> rowBadges = new();
 
         // Left-page ticket references, refreshed on select/buy.
+        Image ticketIcon;
         Text ticketName;
         Text ticketDesc;
         Text ticketCostOwn;
@@ -386,6 +391,11 @@ namespace Meniscus.UI
             else
                 BuildProp();
 
+            // Scale the whole held book (prop + printed menu + pictures) up uniformly so the pages and
+            // their images read larger. Done on the root so every child — including the world-space menu
+            // canvas — grows together and the menu stays within the page.
+            root.localScale = Vector3.one * Mathf.Max(0.1f, bookScale);
+
             // A page-sized sheet hung on the spine, swept across the spread during a flip. Prefer an
             // authored sheet under the prop (built by Tools > Meniscus > Author Book Shop, so it too can
             // carry a model/material); otherwise build it over the prop at runtime. Either way it pivots
@@ -506,6 +516,15 @@ namespace Meniscus.UI
                 canvas, "Title Rule", new Vector2(pageTextWidth, 3f * v),
                 new Vector2(leftCenter, top - 180f * v), RuleColor);
 
+            // Selected item picture (baked thumbnail), upper-right of the order page beside the name.
+            // Hidden until an item with a baked icon is selected (see RefreshTicket).
+            ticketIcon = RuntimeUiFactory.CreateImage(
+                canvas, "Ticket Thumb", new Vector2(180f * v, 180f * v),
+                new Vector2(leftCenter + pageTextWidth * 0.5f - 100f * v, top - 300f * v), Color.white)
+                .GetComponent<Image>();
+            ticketIcon.preserveAspect = true;
+            ticketIcon.enabled = false;
+
             // Selected item name.
             ticketName = RuntimeUiFactory.CreateText(
                 canvas, "Ticket Name", "",
@@ -562,7 +581,7 @@ namespace Meniscus.UI
 
             var headerPad = 130f * v;   // space at the top of the page for the arrows + indicator
             var footerPad = 110f * v;   // space at the bottom for the page indicator
-            var rowHeight = 150f * v;   // readable rows; ≈ 5 rows fit the list area
+            var rowHeight = 168f * v;   // taller rows so the picture + description beneath read large
             var arrow = 70f * v;
 
             var listDepthPx = (top * 2f) - headerPad - footerPad;
@@ -645,39 +664,68 @@ namespace Meniscus.UI
                     rightListContainer, $"{item.Id} Row BG", rowSize, new Vector2(0f, rowY), RowTransparent);
                 rowBackgrounds[item] = background.GetComponent<Image>();
 
+                // The whole row is one transparent button with an empty label: the picture, name and
+                // description below are drawn as its children, and clicks on those bubble up to the button.
                 var row = RuntimeUiFactory.CreateButton(
-                    background.transform, $"{item.Id} Order", item.DisplayName, rowSize,
+                    background.transform, $"{item.Id} Order", "", rowSize,
                     Vector2.zero, F(38), () => OnSelect(captured),
                     normalColor: RowTransparent,
                     highlightedColor: RowHover,
                     pressedColor: RowPressed,
-                    labelColor: InkColor,
-                    labelAlignment: TextAnchor.MiddleLeft,
-                    labelPadding: new Vector2(60f, 0f));
+                    labelColor: InkColor);
 
-                // ▸ selection pointer in the left margin (hidden until selected).
-                var pointer = RuntimeUiFactory.CreateText(
-                    row.transform, "Pointer", "▸",
-                    new Vector2(-rowWidthPx * 0.5f + 24f, 0f), new Vector2(40f, rowSize.y), F(40), InkColor,
-                    TextAnchor.MiddleCenter, bold: true);
-                pointer.gameObject.SetActive(false);
-                rowPointers[item] = pointer.gameObject;
+                // Left: the baked "screenshot" of the item's model (hidden until a thumbnail is baked).
+                var thumbSize = rowSize.y * 0.92f;
+                var thumb = RuntimeUiFactory.CreateImage(
+                    row.transform, "Thumb", new Vector2(thumbSize, thumbSize),
+                    new Vector2(-rowWidthPx * 0.5f + 10f + thumbSize * 0.5f, 0f), Color.white);
+                var thumbImage = thumb.GetComponent<Image>();
+                thumbImage.raycastTarget = false;
+                var icon = shopManager != null ? shopManager.IconFor(item) : null;
 
-                // Price.
+                if (icon != null)
+                {
+                    thumbImage.sprite = icon;
+                    thumbImage.preserveAspect = true;
+                }
+                else
+                {
+                    thumb.SetActive(false);
+                }
+
+                // Text block: name (upper) and small description (beneath), between the picture and price.
+                const float priceColumnWidth = 120f;
+                var textLeft = -rowWidthPx * 0.5f + thumbSize + 26f;
+                var textWidth = Mathf.Max(40f, rowWidthPx * 0.5f - priceColumnWidth - textLeft);
+                var textCenterX = textLeft + textWidth * 0.5f;
+
+                RuntimeUiFactory.CreateText(
+                    row.transform, "Name", item.DisplayName,
+                    new Vector2(textCenterX, rowSize.y * 0.22f), new Vector2(textWidth, rowSize.y * 0.5f),
+                    F(38), InkColor, TextAnchor.MiddleLeft, bold: true).raycastTarget = false;
+
+                RuntimeUiFactory.CreateText(
+                    row.transform, "Desc", item.Description,
+                    new Vector2(textCenterX, -rowSize.y * 0.22f), new Vector2(textWidth, rowSize.y * 0.52f),
+                    F(24), InkSoftColor, TextAnchor.UpperLeft).raycastTarget = false;
+
+                // Price (upper-right) and the owned badge ✓×N beneath it (shown only when owned > 0).
                 RuntimeUiFactory.CreateText(
                     row.transform, "Price", $"${item.Cost}",
-                    new Vector2(-24f, 18f * v), rowSize, F(34), InkSoftColor, TextAnchor.MiddleRight);
+                    new Vector2(-24f, 18f * v), rowSize, F(34), InkSoftColor, TextAnchor.MiddleRight)
+                    .raycastTarget = false;
 
-                // Owned badge ✓×N (only shown when owned > 0).
                 var badge = RuntimeUiFactory.CreateText(
                     row.transform, "Owned Badge", "",
                     new Vector2(-24f, -28f * v), rowSize, F(26), InkSoftColor, TextAnchor.MiddleRight);
+                badge.raycastTarget = false;
                 rowBadges[item] = badge;
 
                 // Ruled line under each order.
                 RuntimeUiFactory.CreateImage(
                     row.transform, "Rule", new Vector2(rowWidthPx, 2f),
-                    new Vector2(0f, -rowHeightPx * 0.5f + 8f * v), RuleColor);
+                    new Vector2(0f, -rowHeightPx * 0.5f + 8f * v), RuleColor)
+                    .GetComponent<Image>().raycastTarget = false;
 
                 rowY -= rowHeightPx;
             }
@@ -838,6 +886,9 @@ namespace Meniscus.UI
                 ticketDesc.text = "";
                 ticketCostOwn.text = "";
 
+                if (ticketIcon != null)
+                    ticketIcon.enabled = false;
+
                 if (buyButton != null)
                 {
                     buyButton.gameObject.SetActive(false);
@@ -850,6 +901,13 @@ namespace Meniscus.UI
             var item = model.Selected;
             ticketName.text = item.DisplayName;
             ticketDesc.text = item.Description;
+
+            if (ticketIcon != null)
+            {
+                var icon = shopManager != null ? shopManager.IconFor(item) : null;
+                ticketIcon.sprite = icon;
+                ticketIcon.enabled = icon != null;
+            }
 
             var owned = shopManager != null ? shopManager.OwnedCount(item) : 0;
             var inCart = model.IsInCart(item);

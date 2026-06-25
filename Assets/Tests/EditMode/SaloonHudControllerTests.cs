@@ -1,4 +1,3 @@
-using Meniscus.Core;
 using Meniscus.UI;
 using NUnit.Framework;
 
@@ -7,22 +6,37 @@ namespace Meniscus.Tests.EditMode
     public class SaloonHudControllerTests
     {
         [Test]
-        public void BuildStatusLine_WithoutReveal_HasNoSpillSuffix()
+        public void BuildStatusLine_ShowsRoundProgressHeader()
         {
-            var line = SaloonHudController.BuildStatusLine(
-                GameState.PlayerTurn, 1, 3, 20f, 0, 0, 8, 8);
+            var line = SaloonHudController.BuildStatusLine(2, 3, "Your turn");
 
-            Assert.IsFalse(line.Contains("Spill"));
+            StringAssert.Contains("ROUND 2 / 3", line);
         }
 
         [Test]
-        public void BuildStatusLine_WithReveal_AppendsSpillPercent()
+        public void BuildStatusLine_ShowsTurnLabelWhenProvided()
         {
-            var line = SaloonHudController.BuildStatusLine(
-                GameState.PlayerTurn, 1, 3, 20f, 0, 0, 8, 8,
-                revealTrueOdds: true, trueSpillChance: 23.4f);
+            var line = SaloonHudController.BuildStatusLine(2, 3, "Dealer's turn");
 
-            Assert.IsTrue(line.Contains("Spill 23%"));
+            StringAssert.Contains("Dealer's turn", line);
+        }
+
+        [Test]
+        public void BuildStatusLine_OmitsSecondLineWhenTurnLabelEmpty()
+        {
+            var line = SaloonHudController.BuildStatusLine(2, 3, string.Empty);
+
+            Assert.IsFalse(line.Contains("\n"));
+        }
+
+        [Test]
+        public void BuildStatusLine_ShowsNoSpillOddsRiskOrMoney()
+        {
+            var line = SaloonHudController.BuildStatusLine(2, 3, "Your turn");
+
+            Assert.IsFalse(line.Contains("Spill"));
+            Assert.IsFalse(line.Contains("Risk"));
+            Assert.IsFalse(line.Contains("$"));
         }
     }
 }

@@ -24,6 +24,9 @@ namespace Meniscus.Items
             public GameObject model;
             [Tooltip("Optional material forced onto the model's renderers; leave empty to keep the model's own.")]
             public Material material;
+            [Tooltip("Editor-baked thumbnail of the model, shown in the buy menu. Filled by " +
+                     "Tools ▸ Meniscus ▸ Bake Item Thumbnails.")]
+            public Sprite icon;
         }
 
         [SerializeField] Entry[] entries = Array.Empty<Entry>();
@@ -71,5 +74,21 @@ namespace Meniscus.Items
 
         public GameObject GetModelForItem(string itemId) =>
             TryGetEntry(itemId, out var entry) ? entry.model : null;
+
+        /// <summary>
+        /// The buy-menu thumbnail for <paramref name="itemId"/>, or null when none has been baked. Looked
+        /// up independently of the model so a thumbnail can exist (or not) regardless of the model slot.
+        /// </summary>
+        public Sprite GetIcon(string itemId)
+        {
+            if (!string.IsNullOrEmpty(itemId) && entries != null)
+            {
+                for (var i = 0; i < entries.Length; i++)
+                    if (entries[i].itemId == itemId)
+                        return entries[i].icon;
+            }
+
+            return null;
+        }
     }
 }

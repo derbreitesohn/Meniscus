@@ -11,23 +11,14 @@ namespace Meniscus.Tests.EditMode
     public class PresentationPolishTests
     {
         [Test]
-        public void BuildStatusLine_HidesTrueSpillChanceButShowsReadableTableState()
+        public void BuildStatusLine_ShowsRoundAndTurnWithoutOddsOrMoney()
         {
-            var status = SaloonHudController.BuildStatusLine(
-                GameState.PlayerTurn,
-                2,
-                GameConstants.TotalRounds,
-                35f,
-                40,
-                120,
-                8,
-                7);
+            var status = SaloonHudController.BuildStatusLine(2, GameConstants.TotalRounds, "Your turn");
 
-            StringAssert.Contains("Round 2/3", status);
-            StringAssert.Contains("Risk Building", status);
-            StringAssert.Contains("Round $40", status);
-            StringAssert.Contains("Bank $120", status);
-            Assert.False(status.Contains("True Spill"));
+            StringAssert.Contains("ROUND 2 / 3", status);
+            StringAssert.Contains("Your turn", status);
+            Assert.False(status.Contains("Spill"));
+            Assert.False(status.Contains("$"));
         }
 
         [Test]

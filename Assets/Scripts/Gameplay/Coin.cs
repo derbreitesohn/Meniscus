@@ -39,9 +39,11 @@ namespace Meniscus.Gameplay
         bool hasCachedOriginalPosition;
         bool isSelected;
         bool isSpent;
+        bool isFlying;
         GameObject activeModelInstance;
         SelectionGlow glow;
         Coroutine rejectShake;
+        Coroutine flyIn;
 
         public bool IsSelected => isSelected;
         public bool IsSpent => isSpent;
@@ -72,6 +74,10 @@ namespace Meniscus.Gameplay
             // during the slow-motion verdict, matching the selection glow and the desk-item raise. Idle
             // when already settled, so a resting coin never fights layout that re-homes it.
             if (!Application.isPlaying || !hasCachedOriginalPosition)
+                return;
+
+            // The pile fly-in drives localPosition itself; don't let the lift spring fight it mid-flight.
+            if (isFlying)
                 return;
 
             var target = isSelected ? selectedYOffset : 0f;
@@ -129,6 +135,15 @@ namespace Meniscus.Gameplay
         {
             CacheOriginalPosition();
             isSelected = false;
+
+            // Cancel any in-flight pile fly-in so a recycled or spent coin can't get stuck mid-flight.
+            if (flyIn != null)
+            {
+                StopCoroutine(flyIn);
+                flyIn = null;
+            }
+            isFlying = false;
+
             liftSpring.Snap(0f);
             transform.localPosition = originalLocalPosition;
             glow?.SetActive(false);
@@ -183,6 +198,65 @@ namespace Meniscus.Gameplay
             hasCachedOriginalPosition = true;
             isSelected = false;
             liftSpring.Snap(0f);
+        }
+
+        /// <summary>
+        /// Sends the coin flying in from <paramref name="startWorld"/> (the shared pile) to its current
+        /// resting slot — set first via <see cref="SetRestingLocalPosition"/> — after <paramref name="delay"/>
+        /// seconds, easing over <paramref name="duration"/> with a small arc so it hops out of the pile.
+        /// Used for the "a fresh hand flies out of the pile" refill beat. Play-mode only; no-op when spent.
+        /// </summary>
+        public void FlyInFrom(Vector3 startWorld, float delay, float duration)
+        {
+            if (!Application.isPlaying || isSpent)
+                return;
+
+            CacheOriginalPosition();
+
+            if (flyIn != null)
+                StopCoroutine(flyIn);
+
+            flyIn = StartCoroutine(FlyInRoutine(startWorld, Mathf.Max(0f, delay), Mathf.Max(0.0001f, duration)));
+        }
+
+        IEnumerator FlyInRoutine(Vector3 startWorld, float delay, float duration)
+        {
+            isFlying = true;
+            isSelected = false;
+            liftSpring.Snap(0f);
+            glow?.SetActive(false);
+
+            var destinationLocal = originalLocalPosition;
+            var startLocal = transform.parent != null
+                ? transform.parent.InverseTransformPoint(startWorld)
+                : startWorld;
+
+            transform.localPosition = startLocal;
+
+            // Hold at the pile for the stagger delay so a refilled hand fans out one coin at a time.
+            var waited = 0f;
+            while (waited < delay)
+            {
+                waited += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                // OutBack eases in and settles just past the slot for a little "snap into place".
+                var eased = Easing.OutBack(t, 1.1f);
+                var pos = Vector3.LerpUnclamped(startLocal, destinationLocal, eased);
+                pos.y += Mathf.Sin(t * Mathf.PI) * 0.12f;   // a low arc out of the pile
+                transform.localPosition = pos;
+                yield return null;
+            }
+
+            transform.localPosition = destinationLocal;
+            isFlying = false;
+            flyIn = null;
         }
 
         public void MarkSpent()

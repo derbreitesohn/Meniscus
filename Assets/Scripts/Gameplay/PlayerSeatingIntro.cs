@@ -71,12 +71,6 @@ namespace Meniscus.Gameplay
             if (mouse == null || !mouse.leftButton.wasPressedThisFrame)
                 return;
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            // DEV: swallow clicks that land on the dev settings overlay (mirrors PlayerController).
-            if (Meniscus.Dev.DevSettingsPanel.IsPointerOverPanel)
-                return;
-#endif
-
             if (clickCamera == null)
                 clickCamera = Camera.main;
 

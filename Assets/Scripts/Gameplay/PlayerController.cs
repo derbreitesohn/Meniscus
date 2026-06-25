@@ -53,12 +53,6 @@ namespace Meniscus.Gameplay
             if (!mouse.leftButton.wasPressedThisFrame)
                 return;
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            // DEV: swallow clicks that land on the dev settings overlay. Remove with Assets/Scripts/Dev.
-            if (Meniscus.Dev.DevSettingsPanel.IsPointerOverPanel)
-                return;
-#endif
-
             ResolveReferences();
 
             if (gameManager == null)

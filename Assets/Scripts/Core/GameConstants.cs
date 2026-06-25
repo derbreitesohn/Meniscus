@@ -2,21 +2,31 @@ using UnityEngine;
 
 namespace Meniscus.Core
 {
-    // NOTE: The balance/feel values below were authored as `const`, but are intentionally plain
-    // `static` so the dev-only settings overlay (Meniscus.Dev.DevSettingsPanel) can mutate them at
-    // runtime to trial different values. The consuming code reads them live, so edits take effect
-    // immediately. MaxOverflowProbability stays `const` because it is used as a [Range] attribute
-    // argument (GlassManager), which requires a compile-time constant. Revert these to `const` when
-    // the dev overlay is removed.
+    // Balance / feel values for the whole game, kept as plain `static` fields so they read as one
+    // tunable table. (They are not `const`: the Vector3/Color entries below cannot be, and keeping the
+    // rest `static` keeps the table uniform.) Consuming code reads them live. MaxOverflowProbability is
+    // `const` because it is used as a [Range] attribute argument in GlassManager.
     public static class GameConstants
     {
         public static int TotalRounds = 3;
         public static int MinCoinsPerActor = 8;
         public static int MaxCoinsPerActor = 12;
-        public static int CoinsPerActor = 10;
-        public static int MaxEnemyCoinsPerTurn = 2;
+        public static int MaxEnemyCoinsPerTurn = 3;
         public static int MaxPlayerCoinsPerTurn = 3;
         public static int DeskCapacity = 8;
+
+        // ── Shared coin pile / hands ──────────────────────────────────────────────────────────────────
+        // Both actors draw from ONE shared reserve (SharedPileSize). Each turn the active actor's hand is
+        // topped back up to HandSize from that reserve *before* they pour, so a player can never be left
+        // empty-handed while the other still has coins — that was the old "I'm out, now I just watch the
+        // Dealer" dead time. When the shared pile is drained it simply refills itself (the round only ever
+        // ends on an overflow), so play never stalls. HandSize is the full hand each actor holds: it is
+        // dealt at round open and flung back to a fresh full hand from the pile only once it is FULLY spent
+        // (see GameManager.RefillHand) — coins deplete visibly (10 → … → 0 → a fresh 10 flies in) instead of
+        // trickling in. SharedPileSize is the reserve depth before it silently refills itself; it never
+        // blocks a refill, so no one is ever left empty-handed.
+        public static int HandSize = 10;
+        public static int SharedPileSize = 60;
 
         public static int MinGlassCapacity = 8;
         public static int MaxGlassCapacity = 15;
@@ -31,9 +41,12 @@ namespace Meniscus.Core
         public static bool IsValidDeposit(int amount) =>
             amount >= MinDeposit && amount <= MaxDeposit;
 
-        public static float SmallCoinRisk = 5f;
-        public static float MediumCoinRisk = 10f;
-        public static float LargeCoinRisk = 15f;
+        // Gentler than before (was 5/10/15) so each pour climbs the dome less and a round reaches more
+        // hands before anyone is forced over the brim — more press-your-luck, fewer instant busts. The
+        // glass still net-climbs because the smallest coin's risk stays above SurfaceSettlePerTurn.
+        public static float SmallCoinRisk = 3f;
+        public static float MediumCoinRisk = 6f;
+        public static float LargeCoinRisk = 9f;
 
         // Payouts skew hard by size so big coins are the high-roller play: Gold pays 5× a Copper. This is
         // the coin's raw value; the boldness factor below multiplies it by how dangerous the pour was.
@@ -74,9 +87,9 @@ namespace Meniscus.Core
         public static float DomeSafeZone = 10f;
         public static float DomeCapacity = 80f;
         public static float GlassStartFill = 15f;
-        // Kept below the smallest coin's risk (Copper = 5) so even all-Copper play still creeps the glass
+        // Kept below the smallest coin's risk (Copper = 3) so even all-Copper play still creeps the glass
         // up — otherwise two players could turtle on Copper forever and the round never resolves.
-        public static float SurfaceSettlePerTurn = 4f;
+        public static float SurfaceSettlePerTurn = 2f;
         public static float DomeRampExponent = 2.5f;
 
         // Kept only as the normaliser the danger visuals/HUD scale against (dome bulge, vignette, tension
@@ -112,10 +125,6 @@ namespace Meniscus.Core
                 CoinSize.Large => LargeCoinBasePayout,
                 _ => MediumCoinBasePayout
             };
-
-        // Each actor gets exactly the same number of coins every round. The per-round parameter is kept so
-        // callers (and a future scaling rule) need not change.
-        public static int GetCoinCountForRound(int round) => CoinsPerActor;
 
         // Round-to-round difficulty ramp: later rounds scale every coin's risk contribution up, so the
         // shared glass climbs toward the brim faster and the danger zone arrives sooner. Round 1 is

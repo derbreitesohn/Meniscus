@@ -66,6 +66,16 @@ namespace Meniscus.Core
         [SerializeField] float coinRowLocalZPlayer = -0.78f;
         [SerializeField] float coinRowLocalZEnemy = 1.12f;
 
+        [Header("Coin Pile (refill fly-in)")]
+        [Tooltip("Where a fresh hand flies in FROM — the shared coin pile. Leave empty to use a point above " +
+                 "the table centre (CoinPileFallbackLocalPosition, in the coin container's local space).")]
+        [SerializeField] Transform coinPileAnchor;
+        [SerializeField] Vector3 coinPileFallbackLocalPosition = new(0f, 1.45f, 0.17f);
+        [Tooltip("Seconds each coin takes to fly from the pile to its slot, and the launch gap between " +
+                 "successive coins so the hand fans out one at a time.")]
+        [SerializeField, Min(0.01f)] float coinFlyDuration = 0.45f;
+        [SerializeField, Min(0f)] float coinFlyStagger = 0.05f;
+
         [Header("Audio")]
       
 
@@ -78,6 +88,9 @@ namespace Meniscus.Core
         MatchOutcome lastMatchOutcome = MatchOutcome.None;
         int currentRound;
         int queuedEnemyForcedCoinCount;
+        // Coins left in the shared reserve both hands draw from. Refills itself when drained (see
+        // RefillHand / RestockSharedPile) so neither actor is ever left empty-handed mid-round.
+        int sharedPile;
 
         public event Action<GameState> StateChanged;
         public event Action<TurnActor, IReadOnlyList<Coin>> DropCommitted;
@@ -91,6 +104,7 @@ namespace Meniscus.Core
         public MatchOutcome LastMatchOutcome => lastMatchOutcome;
         public IReadOnlyList<Coin> PlayerCoins => playerCoins;
         public IReadOnlyList<Coin> EnemyCoins => enemyCoins;
+        public int SharedPileRemaining => sharedPile;
         public CoinModelLibrary CoinModels => coinModels;
         public ItemModelLibrary ItemModels => itemModels;
         public GlassManager GlassManager => glassManager;
@@ -389,17 +403,9 @@ namespace Meniscus.Core
             RemoveUnavailableCoins(playerCoins);
             RemoveUnavailableCoins(enemyCoins);
 
-            if (playerCoins.Count == 0)
-            {
-                if (enemyCoins.Count == 0)
-                {
-                    EnterRestockPhase("Both players ran out of coins.");
-                    return;
-                }
-
-                BeginEnemyTurn();
-                return;
-            }
+            // Top the hand back up from the shared pile (which refills itself) before the turn, so the
+            // player always has coins to pour and is never stranded watching the Dealer play out a pile.
+            RefillHand(TurnActor.Player);
 
             TransitionTo(GameState.PlayerTurn);
             cameraController?.SwitchCamera(CameraState.PlayerFocus);
@@ -410,17 +416,7 @@ namespace Meniscus.Core
             RemoveUnavailableCoins(playerCoins);
             RemoveUnavailableCoins(enemyCoins);
 
-            if (enemyCoins.Count == 0)
-            {
-                if (playerCoins.Count == 0)
-                {
-                    EnterRestockPhase("Both players ran out of coins.");
-                    return;
-                }
-
-                BeginPlayerTurn();
-                return;
-            }
+            RefillHand(TurnActor.Enemy);
 
             TransitionTo(GameState.EnemyTurn);
             cameraController?.SwitchCamera(CameraState.DealerFocus);
@@ -431,14 +427,86 @@ namespace Meniscus.Core
                 Debug.LogWarning("[GameManager] EnemyAI reference is missing. Enemy turn cannot progress.");
         }
 
-        void EnterRestockPhase(string reason)
+        /// <summary>
+        /// Refills the actor's hand from the shared pile, but ONLY once it has run fully dry — at which
+        /// point the pile flings out a brand-new full hand (<see cref="GameConstants.HandSize"/> coins,
+        /// each freshly rolled). A partially-spent hand is left as-is, so coins deplete visibly
+        /// (10 → … → 0 → a fresh 10 flies in) rather than trickling. The pile refills itself when drained
+        /// (<see cref="RestockSharedPile"/>), so a hand can always be filled — that is what guarantees
+        /// neither actor is ever left empty-handed mid-round. Re-packs the row, then plays the fly-in.
+        /// </summary>
+        void RefillHand(TurnActor actor)
         {
-            TransitionTo(GameState.RestockPhase);
-            cameraController?.SwitchCamera(CameraState.TableOverview);
+            var hand = actor == TurnActor.Player ? playerCoins : enemyCoins;
 
-            GenerateRoundCoinPools();
+            // Only deal a fresh hand once the current one is fully spent; never trickle into a partial hand.
+            if (hand.Count > 0)
+                return;
+
+            var handSize = Mathf.Max(1, GameConstants.HandSize);
+            var dealt = new List<Coin>();
+
+            while (hand.Count < handSize)
+            {
+                if (sharedPile <= 0)
+                    RestockSharedPile();
+
+                var coin = AcquireCoinForHand(actor, hand);
+
+                if (coin == null)
+                    break;   // safety net: could not produce a coin — avoid spinning forever
+
+                coin.gameObject.SetActive(true);
+                ConfigureCoinForRound(coin, actor, hand.Count);
+                hand.Add(coin);
+                dealt.Add(coin);
+                sharedPile--;
+            }
+
+            if (dealt.Count == 0)
+                return;
+
+            ArrangeCoinRow(actor, hand);
+            FlyHandInFromPile(actor, dealt);
+        }
+
+        // The shared reserve is bottomless by design: when it empties it just refills, because a round is
+        // meant to end on an overflow, not on running out of coins. The event lets the HUD/feel layer play a
+        // "fresh pile" beat; there is no state change, so the turn flow is never interrupted.
+        void RestockSharedPile()
+        {
+            sharedPile = Mathf.Max(1, GameConstants.SharedPileSize);
             HandsRestocked?.Invoke(currentRound, GetCurrentRisk());
-            BeginPlayerTurn();
+        }
+
+        /// <summary>
+        /// Play-mode-only flourish: sends a freshly-dealt hand flying out of the shared pile to the resting
+        /// slots <see cref="ArrangeCoinRow"/> just assigned, fanned out one coin at a time. No-op in
+        /// edit-mode / tests, where the coins simply appear at their slots.
+        /// </summary>
+        void FlyHandInFromPile(TurnActor actor, List<Coin> dealtCoins)
+        {
+            if (!Application.isPlaying)
+                return;
+
+            var pileWorld = ResolvePileWorldPosition(actor);
+
+            for (var i = 0; i < dealtCoins.Count; i++)
+            {
+                if (dealtCoins[i] != null)
+                    dealtCoins[i].FlyInFrom(pileWorld, i * coinFlyStagger, coinFlyDuration);
+            }
+        }
+
+        Vector3 ResolvePileWorldPosition(TurnActor actor)
+        {
+            if (coinPileAnchor != null)
+                return coinPileAnchor.position;
+
+            var container = ResolveSpawnRoot(actor);
+            return container != null
+                ? container.TransformPoint(coinPileFallbackLocalPosition)
+                : coinPileFallbackLocalPosition;
         }
 
         public void QueueEnemyForcedCoinCount(int coinCount)
@@ -552,22 +620,24 @@ namespace Meniscus.Core
             enemyCoins.Clear();
 
             PopulateSceneCoinListsIfEmpty();
-            PopulatePool(TurnActor.Player, handAuthoredPlayerCoins, playerCoins);
-            PopulatePool(TurnActor.Enemy, handAuthoredEnemyCoins, enemyCoins);
 
-            EnsurePoolHasTargetCoinCount(TurnActor.Player, playerCoins);
-            EnsurePoolHasTargetCoinCount(TurnActor.Enemy, enemyCoins);
+            // Idle every authored coin first; the opening deal re-activates only the coins it deals into a
+            // hand (recycling these before spawning runtime ones), so spares never float on the table.
+            DeactivateAll(handAuthoredPlayerCoins);
+            DeactivateAll(handAuthoredEnemyCoins);
 
-            // Coins were just (re)sized to this round's rolled sizes, so the authored row no longer fits;
-            // re-pack each actor's active coins edge-to-edge into one compact, centred row.
-            ArrangeCoinRow(TurnActor.Player, playerCoins);
-            ArrangeCoinRow(TurnActor.Enemy, enemyCoins);
+            // Open the round with a full shared reserve, then deal each actor a starting hand from it. Every
+            // turn afterwards tops the active hand back up (RefillHand), so both sides always have coins and
+            // neither is ever stranded. RefillHand re-packs each row edge-to-edge as it deals.
+            sharedPile = Mathf.Max(1, GameConstants.SharedPileSize);
+            RefillHand(TurnActor.Player);
+            RefillHand(TurnActor.Enemy);
 
             if (playerCoins.Count == 0)
-                Debug.LogWarning("[GameManager] Player coin pool is empty after generation.");
+                Debug.LogWarning("[GameManager] Player hand is empty after the opening deal.");
 
             if (enemyCoins.Count == 0)
-                Debug.LogWarning("[GameManager] Enemy coin pool is empty after generation.");
+                Debug.LogWarning("[GameManager] Enemy hand is empty after the opening deal.");
         }
 
         void PopulateSceneCoinListsIfEmpty()
@@ -591,57 +661,65 @@ namespace Meniscus.Core
                 "Run Tools ▸ Meniscus ▸ Set Up Coin References to wire them explicitly.");
         }
 
-        void PopulatePool(TurnActor actor, List<Coin> sourceCoins, List<Coin> targetPool)
+        static void DeactivateAll(List<Coin> coins)
         {
-            for (var i = sourceCoins.Count - 1; i >= 0; i--)
+            for (var i = 0; i < coins.Count; i++)
             {
-                if (sourceCoins[i] == null)
-                    sourceCoins.RemoveAt(i);
+                if (coins[i] == null)
+                    continue;
+
+                coins[i].ResetVisualSelection();
+                coins[i].gameObject.SetActive(false);
+            }
+        }
+
+        /// <summary>
+        /// Produces one coin to deal into <paramref name="actor"/>'s hand: prefer recycling an idle authored
+        /// coin (so the scene's hand-placed coins are reused), then an idle runtime coin already created for
+        /// this actor, and only spawn a fresh runtime coin when none are free. The caller activates and
+        /// configures it for the round.
+        /// </summary>
+        Coin AcquireCoinForHand(TurnActor actor, List<Coin> hand)
+        {
+            var authored = actor == TurnActor.Player ? handAuthoredPlayerCoins : handAuthoredEnemyCoins;
+            var recycledAuthored = FindIdleCoin(authored, hand);
+
+            if (recycledAuthored != null)
+                return recycledAuthored;
+
+            var wantsPlayerCoin = actor == TurnActor.Player;
+
+            for (var i = 0; i < generatedCoins.Count; i++)
+            {
+                var coin = generatedCoins[i];
+
+                if (coin != null && coin.isPlayerCoin == wantsPlayerCoin &&
+                    !coin.gameObject.activeSelf && !hand.Contains(coin))
+                    return coin;
             }
 
-            if (sourceCoins.Count == 0)
-                return;
+            var spawned = CreateRuntimeCoin(actor, hand.Count);
+            generatedCoins.Add(spawned);
+            return spawned;
+        }
 
-            var activeCoinCount = Mathf.Min(sourceCoins.Count, GameConstants.GetCoinCountForRound(currentRound));
-
-            for (var i = 0; i < sourceCoins.Count; i++)
+        // Returns an idle (deactivated, not-in-hand) coin from the list, pruning any null/destroyed entries
+        // it passes. Used to recycle authored coins back into a hand before spawning new runtime ones.
+        static Coin FindIdleCoin(List<Coin> coins, List<Coin> hand)
+        {
+            for (var i = coins.Count - 1; i >= 0; i--)
             {
-                var coin = sourceCoins[i];
-
-                if (i >= activeCoinCount)
+                if (coins[i] == null)
                 {
-                    coin.ResetVisualSelection();
-                    coin.gameObject.SetActive(false);
+                    coins.RemoveAt(i);
                     continue;
                 }
 
-                coin.gameObject.SetActive(true);
-                ConfigureCoinForRound(coin, actor, i);
-                targetPool.Add(coin);
+                if (!coins[i].gameObject.activeSelf && !hand.Contains(coins[i]))
+                    return coins[i];
             }
-        }
 
-        void EnsurePoolHasTargetCoinCount(TurnActor actor, List<Coin> targetPool)
-        {
-            var targetCount = GameConstants.GetCoinCountForRound(currentRound);
-            var missingCount = targetCount - targetPool.Count;
-
-            if (missingCount <= 0)
-                return;
-
-            GenerateRuntimeCoins(actor, targetPool, missingCount, targetPool.Count);
-        }
-
-        void GenerateRuntimeCoins(TurnActor actor, List<Coin> targetPool, int count, int startIndex)
-        {
-            for (var i = 0; i < count; i++)
-            {
-                var index = startIndex + i;
-                var coin = CreateRuntimeCoin(actor, index);
-                ConfigureCoinForRound(coin, actor, index);
-                generatedCoins.Add(coin);
-                targetPool.Add(coin);
-            }
+            return null;
         }
 
         Coin CreateRuntimeCoin(TurnActor actor, int index)
@@ -985,7 +1063,7 @@ namespace Meniscus.Core
             if (saloonHudController == null)
             {
                 saloonHudController = gameObject.AddComponent<SaloonHudController>();
-                saloonHudController.Configure(null, null, this, glassManager, economyManager);
+                saloonHudController.Configure(null, null, this);
             }
 
             if (moneyHudWidget == null)

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Meniscus.Core;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -7,11 +8,13 @@ namespace Meniscus.Editor
 {
     /// <summary>
     /// One-shot wiring for the desk item models. Run Tools ▸ Meniscus ▸ Wire Item Models once and it binds
-    /// the existing Spyglass / Bandana FBXs (and their painted materials) into the
-    /// <see cref="GameManager"/>'s <c>ItemModelLibrary</c> as real serialized references — so the spyglass
-    /// shows on Bartender's Spectacles and the bandana on Step Outside, with nothing placed in Resources and
-    /// nothing extra dragged by hand. Idempotent: re-running just refreshes the two entries. Can also be run
-    /// headlessly via <c>-executeMethod Meniscus.Editor.ItemModelWiring.WireItemModels</c>.
+    /// a model into every catalog item's row of the <see cref="GameManager"/>'s <c>ItemModelLibrary</c> as
+    /// real serialized references — the spyglass on "Spyglass", the bandana on "Bandana", the cat on
+    /// "Taro", a coin on the coin-themed items and a single clean glass on the drink items — with nothing
+    /// in Resources and nothing dragged by hand. Items that have their own object get a dedicated model;
+    /// the rest reuse a coin or glass so nothing is left showing the placeholder box. Idempotent: re-running
+    /// refreshes each entry in place, never duplicates rows, and leaves any baked icon untouched. Can also
+    /// be run headlessly via <c>-executeMethod Meniscus.Editor.ItemModelWiring.WireItemModels</c>.
     /// </summary>
     public static class ItemModelWiring
     {
@@ -19,24 +22,26 @@ namespace Meniscus.Editor
         // working even if the art is reorganised.
         const string SpyglassFbxGuid = "8d6e7694f7ea6494fa911a8842955029";
         const string BandanaFbxGuid = "1e6bd347bb7b444789c7d56712034dc3";
+        const string CatFbxGuid = "5dcc96e36a546064db6e62c16524a464";
         const string SpyglassMatGuid = "9b91b9e9bc45041ad916b749a2867e9f";
         const string BandanaMatGuid = "f6f6cfa1dfe7e41718fe48317c7b7220";
 
-        // item id (matches ShopCatalog) -> the model/material it should show on the desk.
-        const string SpectaclesItemId = "bartenders_spectacles";
-        const string StepOutsideItemId = "step_outside";
+        // The three coin FBXs (also used by the in-play CoinModelLibrary) and the glass sheet the desk
+        // glass-prop is extracted from.
+        const string SmallCoinFbxGuid = "8e28eec41df33c34e85e75dee8245bc7";
+        const string MediumCoinFbxGuid = "d3c007945f46fe74a93b2ee2d1b825bf";
+        const string BigCoinFbxGuid = "4e32d91ea09d0b940990447b018ea67d";
+        const string GlasTypesFbxGuid = "359d88fc9e1aa95479ad9455774a4c76";
+        const string BrownGlassMatGuid = "dea9e2be6b3f04e638e6b57141a3e4dc";
+
+        // The one glass shape (of several in the sheet) the play glass uses; picked by its stable local
+        // file id so the extracted prop matches the glass the player already sees.
+        const long GlassMeshFileId = 7765577175999339204L;
+        const string GlassItemPrefabPath = "Assets/Art/Models/Props/Glass_Item.prefab";
 
         [MenuItem("Tools/Meniscus/Wire Item Models")]
         public static void WireItemModels()
         {
-            var spyglass = Load<GameObject>(SpyglassFbxGuid, "Spyglass.fbx");
-            var bandana = Load<GameObject>(BandanaFbxGuid, "Bandana.fbx");
-            var spyglassMat = Load<Material>(SpyglassMatGuid, "Spyglass.mat");
-            var bandanaMat = Load<Material>(BandanaMatGuid, "Bandana.mat");
-
-            if (spyglass == null || bandana == null)
-                return; // Load already logged what was missing.
-
             var gameManager = FindGameManager();
 
             if (gameManager == null)
@@ -59,8 +64,17 @@ namespace Meniscus.Editor
             }
 
             var entries = library.FindPropertyRelative("entries");
-            UpsertEntry(entries, SpectaclesItemId, spyglass, spyglassMat);
-            UpsertEntry(entries, StepOutsideItemId, bandana, bandanaMat);
+            var wired = 0;
+
+            foreach (var binding in Bindings())
+            {
+                if (binding.Model == null)
+                    continue; // Load / EnsureGlassItemPrefab already logged what was missing.
+
+                UpsertEntry(entries, binding.ItemId, binding.Model, binding.Material);
+                wired++;
+            }
+
             serialized.ApplyModifiedProperties();
 
             EditorUtility.SetDirty(gameManager);
@@ -69,17 +83,136 @@ namespace Meniscus.Editor
             EditorSceneManager.SaveScene(scene);
 
             Debug.Log(
-                $"[Meniscus] Wired item models on '{gameManager.name}' in scene '{scene.name}' and saved: " +
-                $"{SpectaclesItemId} → Spyglass, {StepOutsideItemId} → Bandana.");
+                $"[Meniscus] Wired {wired} item model(s) on '{gameManager.name}' in scene '{scene.name}' and " +
+                "saved. Spyglass/Bandana/Taro show their own prop, coin items a coin, drink items a glass. " +
+                "Re-run after adding a catalog item, then bake thumbnails (Tools ▸ Meniscus ▸ Bake Item Thumbnails).");
+        }
+
+        readonly struct Binding
+        {
+            public readonly string ItemId;
+            public readonly GameObject Model;
+            public readonly Material Material;
+
+            public Binding(string itemId, GameObject model, Material material)
+            {
+                ItemId = itemId;
+                Model = model;
+                Material = material;
+            }
+        }
+
+        // Every catalog item paired with the art it should show. Shared FBXs are loaded once and reused
+        // across items that share a look (coins, glass). The cat and the coins/glass take no material
+        // override — they carry their own painted/glass materials and forcing one would flatten them.
+        static IEnumerable<Binding> Bindings()
+        {
+            var spyglass = Load<GameObject>(SpyglassFbxGuid, "Spyglass.fbx");
+            var bandana = Load<GameObject>(BandanaFbxGuid, "Bandana.fbx");
+            var cat = Load<GameObject>(CatFbxGuid, "Critter_cat.fbx");
+            var smallCoin = Load<GameObject>(SmallCoinFbxGuid, "Small_coin.fbx");
+            var mediumCoin = Load<GameObject>(MediumCoinFbxGuid, "Medium_coin.fbx");
+            var bigCoin = Load<GameObject>(BigCoinFbxGuid, "Big_coin.fbx");
+            var glass = EnsureGlassItemPrefab();
+
+            var spyglassMat = Load<Material>(SpyglassMatGuid, "Spyglass.mat");
+            var bandanaMat = Load<Material>(BandanaMatGuid, "Bandana.mat");
+
+            return new[]
+            {
+                // Object-named items get their own prop.
+                new Binding("bartenders_spectacles", spyglass, spyglassMat),  // "Spyglass"
+                new Binding("step_outside", bandana, bandanaMat),             // "Bandana"
+                new Binding("taro_laps", cat, null),                          // "Taro" (the cat)
+
+                // Coin-themed items reuse a coin.
+                new Binding("marked_coin", mediumCoin, null),
+                new Binding("loaded_dice", bigCoin, null),                    // "Lucky Coin"
+                new Binding("recast_coin", bigCoin, null),
+                new Binding("dealers_debt", smallCoin, null),
+
+                // Drink / pour-easing items reuse the single clean glass.
+                new Binding("happy_hour", glass, null),
+                new Binding("buy_the_house_a_round", glass, null),
+                new Binding("round_for_the_dealer", glass, null),
+                new Binding("steady_hand", glass, null),
+                new Binding("iron_grip", glass, null),
+            };
+        }
+
+        // Builds (once) a one-mesh glass prop from the multi-shape Glas_Types sheet so drink items show a
+        // single clean glass rather than the whole sheet of shapes. Returns the existing prefab on reruns.
+        static GameObject EnsureGlassItemPrefab()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(GlassItemPrefabPath);
+
+            if (existing != null)
+                return existing;
+
+            var fbxPath = AssetDatabase.GUIDToAssetPath(GlasTypesFbxGuid);
+
+            if (string.IsNullOrEmpty(fbxPath))
+            {
+                Debug.LogWarning(
+                    "[Meniscus] Wire Item Models: could not locate the Glas_Types FBX; drink items keep the " +
+                    "placeholder box until a glass model is wired by hand.");
+                return null;
+            }
+
+            Mesh glassMesh = null;
+            Mesh firstMesh = null;
+
+            foreach (var asset in AssetDatabase.LoadAllAssetsAtPath(fbxPath))
+            {
+                if (asset is Mesh mesh)
+                {
+                    firstMesh ??= mesh;
+
+                    if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(mesh, out _, out long localId)
+                        && localId == GlassMeshFileId)
+                    {
+                        glassMesh = mesh;
+                        break;
+                    }
+                }
+            }
+
+            glassMesh ??= firstMesh; // re-export safety: any glass beats none.
+
+            if (glassMesh == null)
+            {
+                Debug.LogWarning($"[Meniscus] Wire Item Models: '{fbxPath}' has no meshes; no glass prop built.");
+                return null;
+            }
+
+            var go = new GameObject("Glass_Item");
+
+            try
+            {
+                go.AddComponent<MeshFilter>().sharedMesh = glassMesh;
+                var meshRenderer = go.AddComponent<MeshRenderer>();
+                var material = Load<Material>(BrownGlassMatGuid, "Brown_Glass.mat");
+
+                if (material != null)
+                    meshRenderer.sharedMaterial = material;
+
+                var prefab = PrefabUtility.SaveAsPrefabAsset(go, GlassItemPrefabPath);
+                Debug.Log($"[Meniscus] Wire Item Models: built single-glass prop at '{GlassItemPrefabPath}'.");
+                return prefab;
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
         }
 
         // GameManager in any currently-open scene. Kept deliberately simple: rather than auto-opening
-        // scenes (and prompting to save unsaved work), the caller asks you to open Saloon.unity if none
-        // is loaded — you will have it open when wiring anyway.
+        // scenes (and prompting to save unsaved work), the caller opens Saloon.unity if none is loaded.
         static GameManager FindGameManager() => Object.FindAnyObjectByType<GameManager>();
 
         // Updates the entry for itemId in place, or appends one if absent, so re-running never duplicates
-        // and never clobbers entries for other items.
+        // and never clobbers entries for other items. Deliberately does NOT touch the icon slot, so baked
+        // thumbnails survive a re-wire.
         static void UpsertEntry(SerializedProperty entries, string itemId, GameObject model, Material material)
         {
             SerializedProperty target = null;

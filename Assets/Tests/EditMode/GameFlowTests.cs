@@ -33,12 +33,19 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void GetCoinCountForRound_GivesEachActorTenCoinsEveryRound()
+        public void OpeningDeal_DealsEachActorAFullHandFromTheSharedPile()
         {
-            Assert.AreEqual(10, GameConstants.GetCoinCountForRound(1));
-            Assert.AreEqual(10, GameConstants.GetCoinCountForRound(2));
-            Assert.AreEqual(10, GameConstants.GetCoinCountForRound(3));
-            Assert.AreEqual(10, GameConstants.CoinsPerActor);
+            var fixture = CreateGameFixture();
+            fixture.GameManager.StartMatch();
+
+            // Each actor opens with a full hand, dealt from the one shared reserve.
+            Assert.AreEqual(GameConstants.HandSize, fixture.GameManager.PlayerCoins.Count);
+            Assert.AreEqual(GameConstants.HandSize, fixture.GameManager.EnemyCoins.Count);
+            Assert.AreEqual(
+                GameConstants.SharedPileSize - 2 * GameConstants.HandSize,
+                fixture.GameManager.SharedPileRemaining);
+
+            fixture.Destroy();
         }
 
         [Test]
@@ -73,36 +80,74 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void BothHandsEmpty_TriggersRestockWithoutEndingRoundOrResettingGlass()
+        public void PlayerPoursWholeHand_IsRefilledFromTheSharedPile_NeverStrandedWatchingDealer()
         {
             var fixture = CreateGameFixture();
-            var observedStates = new List<GameState>();
-            fixture.GameManager.StateChanged += observedStates.Add;
+            fixture.GameManager.StartMatch();   // → PlayerTurn, both hands dealt
 
-            fixture.GameManager.StartMatch();
-            var playerHand = new List<Coin>(fixture.GameManager.PlayerCoins);
-            var enemyHand = new List<Coin>(fixture.GameManager.EnemyCoins);
+            // Pour the player's ENTIRE hand safely, then the Dealer pours its whole hand safely too.
+            PourWholeHandSafely(fixture, TurnActor.Player);
+            Assert.AreEqual(GameState.EnemyTurn, fixture.GameManager.CurrentState);
 
-            for (var i = 0; i < playerHand.Count; i++)
-                playerHand[i].riskContribution = i == 0 ? 39f : 0f;
+            PourWholeHandSafely(fixture, TurnActor.Enemy);
 
-            for (var i = 0; i < enemyHand.Count; i++)
-                enemyHand[i].riskContribution = 0f;
-
-            fixture.GameManager.TryPlayerDropSelectedCoins(playerHand);
-            fixture.GameManager.ExecuteEnemyDrop(enemyHand);
-
-            Assert.Contains(GameState.RestockPhase, observedStates);
-            Assert.AreEqual(1, fixture.GameManager.CurrentRound);
+            // Control returns to the player WITH a freshly refilled hand — never stranded empty-handed
+            // while the Dealer still has coins (the dead-time bug this whole change fixes).
             Assert.AreEqual(GameState.PlayerTurn, fixture.GameManager.CurrentState);
-            // Restock must NOT reset the glass: the danger built up this round persists (it stays above the
-            // brim fill a fresh round would open at).
-            Assert.Greater(fixture.GlassManager.CurrentOverflowProbability, GameConstants.GlassStartFill);
-            Assert.AreEqual(GameConstants.GetCoinCountForRound(1), fixture.GameManager.PlayerCoins.Count);
-            Assert.AreEqual(GameConstants.GetCoinCountForRound(1), fixture.GameManager.EnemyCoins.Count);
+            Assert.AreEqual(GameConstants.HandSize, fixture.GameManager.PlayerCoins.Count);
             Assert.AreEqual(MatchOutcome.None, fixture.GameManager.LastMatchOutcome);
 
             fixture.Destroy();
+        }
+
+        [Test]
+        public void SharedPile_RefillsItselfWhenDrained_SoHandsAreNeverEmpty()
+        {
+            var fixture = CreateGameFixture();
+            var restocks = 0;
+            fixture.GameManager.HandsRestocked += (round, risk) => restocks++;
+
+            fixture.GameManager.StartMatch();
+
+            // Play enough safe turns to drain the opening pile and force at least one self-refill. Every
+            // turn the active actor must start with a full hand — nobody is ever stranded.
+            var safeTurns = (GameConstants.SharedPileSize / GameConstants.HandSize) + 4;
+
+            for (var turn = 0; turn < safeTurns; turn++)
+            {
+                var actor = fixture.GameManager.CurrentState == GameState.PlayerTurn
+                    ? TurnActor.Player
+                    : TurnActor.Enemy;
+                var hand = actor == TurnActor.Player
+                    ? fixture.GameManager.PlayerCoins
+                    : fixture.GameManager.EnemyCoins;
+
+                Assert.AreEqual(GameConstants.HandSize, hand.Count, "A hand was not full at the start of a turn.");
+                PourWholeHandSafely(fixture, actor);
+            }
+
+            Assert.Greater(restocks, 0, "The shared pile never refilled itself despite being drained.");
+            Assert.AreEqual(MatchOutcome.None, fixture.GameManager.LastMatchOutcome);
+
+            fixture.Destroy();
+        }
+
+        // Zeroes the active actor's whole hand (so the pour cannot overflow) and pours all of it.
+        static void PourWholeHandSafely(GameFixture fixture, TurnActor actor)
+        {
+            fixture.GlassManager.SpillRollProvider = () => GameConstants.MaxOverflowProbability;
+
+            var hand = new List<Coin>(actor == TurnActor.Player
+                ? fixture.GameManager.PlayerCoins
+                : fixture.GameManager.EnemyCoins);
+
+            for (var i = 0; i < hand.Count; i++)
+                hand[i].riskContribution = 0f;
+
+            if (actor == TurnActor.Player)
+                fixture.GameManager.TryPlayerDropSelectedCoins(hand);
+            else
+                fixture.GameManager.ExecuteEnemyDrop(hand);
         }
 
         [Test]

@@ -39,6 +39,22 @@ namespace Meniscus.UI
         /// <summary>True when the desk cannot hold any more items.</summary>
         public bool IsDeskFull => playerInventory != null && playerInventory.IsFull;
 
+        /// <summary>
+        /// The editor-baked buy-menu thumbnail for <paramref name="item"/>, or null when none exists
+        /// (the menu then shows no picture for that row). Sourced from the same
+        /// <see cref="ItemModelLibrary"/> that drives the desk models, keyed by item id.
+        /// </summary>
+        public Sprite IconFor(ItemDefinition item)
+        {
+            if (item == null)
+                return null;
+
+            if (gameManager == null)
+                gameManager = FindAnyObjectByType<GameManager>();
+
+            return gameManager != null ? gameManager.ItemModels.GetIcon(item.Id) : null;
+        }
+
         /// <summary>How many of <paramref name="item"/> the player already owns.</summary>
         public int OwnedCount(ItemDefinition item)
         {
