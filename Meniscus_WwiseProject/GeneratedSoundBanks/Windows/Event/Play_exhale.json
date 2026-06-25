@@ -1,0 +1,48 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "2733383537",
+    "Type": "Event",
+    "GUID": "{AAB5C0A3-C9F5-4C66-9424-52EC1C078CF4}",
+    "Language": "SFX",
+    "Hash": "{440133FC-AF86-C4D5-D143-01CBE451FEB2}",
+    "ObjectPath": "Play_exhale",
+    "ShortName": "Play_exhale",
+    "Path": "Event/Play_exhale.bnk",
+    "Media": [
+     {
+      "Id": "581436907",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "exhale.wav",
+      "Path": "Media/581436907.wem",
+      "CachePath": "72/{72859E1A-6B1B-2BF0-E67B-6C4B23ABD9AE}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "2733383537",
+      "Name": "Play_exhale",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_exhale",
+      "GUID": "{AAB5C0A3-C9F5-4C66-9424-52EC1C078CF4}",
+      "DurationType": "OneShot",
+      "DurationMin": "1.54525",
+      "DurationMax": "1.54525",
+      "MediaRefs": [
+       {
+        "Id": "581436907"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{B97897AB-12F3-9189-0773-96727B4420D1}"
+ }
+}

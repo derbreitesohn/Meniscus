@@ -1,0 +1,48 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Mac",
+  "BasePlatform": "Mac",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "3321748351",
+    "Type": "Event",
+    "GUID": "{BDC63EA4-6470-41E9-8382-81667C4C18F5}",
+    "Language": "SFX",
+    "Hash": "{695ABEC6-73DE-8835-C491-E701DD9FFFAB}",
+    "ObjectPath": "Play_lighter",
+    "ShortName": "Play_lighter",
+    "Path": "Event/Play_lighter.bnk",
+    "Media": [
+     {
+      "Id": "349594478",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "lighter.wav",
+      "Path": "Media/349594478.wem",
+      "CachePath": "16/{164A8132-55F1-BF8A-BA17-FE0A9C171745}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "3321748351",
+      "Name": "Play_lighter",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_lighter",
+      "GUID": "{BDC63EA4-6470-41E9-8382-81667C4C18F5}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.60986865",
+      "DurationMax": "0.60986865",
+      "MediaRefs": [
+       {
+        "Id": "349594478"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{7B586BB9-F772-22C0-4ABD-A69E30897DA8}"
+ }
+}

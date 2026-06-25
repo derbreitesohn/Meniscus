@@ -1,0 +1,33 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "12206320",
+    "Type": "Event",
+    "GUID": "{2B77B080-1AEE-430E-885E-67C5C9749F4D}",
+    "Language": "SFX",
+    "Hash": "{D44F98A5-8D18-64CA-CCD9-D271A127A611}",
+    "ObjectPath": "Play_tschickpack",
+    "ShortName": "Play_tschickpack",
+    "Path": "Event/Play_tschickpack.bnk",
+    "Events": [
+     {
+      "Id": "12206320",
+      "Name": "Play_tschickpack",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_tschickpack",
+      "GUID": "{2B77B080-1AEE-430E-885E-67C5C9749F4D}",
+      "MaxAttenuation": "0",
+      "DurationType": "OneShot",
+      "DurationMin": "0",
+      "DurationMax": "0"
+     }
+    ]
+   }
+  ],
+  "FileHash": "{AFFB05AB-79FD-0BDF-F1BA-3982E329C375}"
+ }
+}
