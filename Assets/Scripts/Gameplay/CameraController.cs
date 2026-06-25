@@ -1100,8 +1100,20 @@ namespace Meniscus.Gameplay
             return bounds;
         }
 
-        // An extreme close-up looking at the dealer's face from the current side (dialogueShotYaw).
-        void DialogueFaceTarget(out Vector3 position, out Quaternion rotation)
+        // The live close-up target: a continuous gentle pan around the current centre, breathing in / out.
+        void UpdateDialogueShot(out Vector3 position, out Quaternion rotation)
+        {
+            dialoguePanPhase += Time.unscaledDeltaTime * dialoguePanSpeed;
+
+            var yaw = dialogueCenterYaw + Mathf.Sin(dialoguePanPhase) * dialoguePanAmplitude;
+            var distFraction = dialogueCenterDistFraction
+                               + Mathf.Sin(dialoguePanPhase * 0.6f) * dialogueDistBreathFraction;
+
+            ComposeFaceShot(yaw, distFraction, out position, out rotation);
+        }
+
+        // A close-up looking at the dealer's face from a given side (yaw) and distance (fraction of his height).
+        void ComposeFaceShot(float yawDeg, float distFraction, out Vector3 position, out Quaternion rotation)
         {
             float distance;
 
@@ -1109,7 +1121,7 @@ namespace Meniscus.Gameplay
             {
                 distance = Mathf.Max(
                     dialogueMinFaceDistance,
-                    dealerHeight > 0.01f ? dealerHeight * dialogueFaceDistanceFraction : dialogueMinFaceDistance);
+                    dealerHeight > 0.01f ? dealerHeight * distFraction : dialogueMinFaceDistance);
             }
             else
             {
@@ -1118,7 +1130,7 @@ namespace Meniscus.Gameplay
                 fwd.y = 0f;
                 fwd = fwd.sqrMagnitude > 1e-5f ? fwd.normalized : Vector3.forward;
                 focus = basePosition + fwd * dialogueSubjectDistance + Vector3.up * dialogueFaceHeight;
-                distance = Mathf.Max(dialogueMinFaceDistance, 0.5f);
+                distance = Mathf.Max(dialogueMinFaceDistance, 0.6f);
             }
 
             // Approach the face from the player's side of it, offset left / right by the yaw.
@@ -1131,7 +1143,7 @@ namespace Meniscus.Gameplay
             }
             toPlayer = toPlayer.sqrMagnitude > 1e-5f ? toPlayer.normalized : Vector3.back;
 
-            var horizontal = (Quaternion.AngleAxis(dialogueShotYaw, Vector3.up) * toPlayer).normalized;
+            var horizontal = (Quaternion.AngleAxis(yawDeg, Vector3.up) * toPlayer).normalized;
             var pitchRad = dialogueFacePitch * Mathf.Deg2Rad;
             var camDir = (horizontal * Mathf.Cos(pitchRad) + Vector3.up * Mathf.Sin(pitchRad)).normalized;
 

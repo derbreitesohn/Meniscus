@@ -168,6 +168,9 @@ namespace Meniscus.Gameplay
             if (camera == null || cue == DialogueCue.None)
                 yield break;
 
+            // Cut back to the player's initial POV so the nod reads as the player nodding from their seat;
+            // the next line resumes the dealer close-up.
+            camera.SuspendDialogueShotsToBase();
             camera.NodCamera(cue == DialogueCue.StrongNod);
             yield return WaitUnscaled(nodInterludeSeconds);
         }
