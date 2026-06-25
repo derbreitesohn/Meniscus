@@ -28,9 +28,13 @@ namespace Meniscus.UI
         [SerializeField] GameObject silverCoinModel;
         [SerializeField] GameObject goldCoinModel;
 
+
+
         [Header("Audio")]
         [SerializeField] AK.Wwise.Event auftakt;
         [SerializeField] float auftaktDauer = 2f;
+        [SerializeField] AK.Wwise.Event uiClick;
+
 
 
         GameSession session;
@@ -81,6 +85,7 @@ namespace Meniscus.UI
                 new Color(0.72f, 0.63f, 0.52f));
 
             RuntimeUiFactory.CreateButton(
+
                 canvas.transform,
                 "Play Button",
                 "PLAY",
@@ -92,6 +97,7 @@ namespace Meniscus.UI
                 normalColor: ButtonTransparent,
                 highlightedColor: ButtonHoverTint,
                 pressedColor: ButtonPressTint);
+                
 
             soundButtonLabel = RuntimeUiFactory.CreateButton(
                 canvas.transform,
@@ -121,8 +127,12 @@ namespace Meniscus.UI
             RefreshSoundLabel();
         }
 
-     void PlayGame()
+        void PlayClick() => uiClick?.Post(gameObject);
+
+
+        void PlayGame()
         {
+             PlayClick();
             if (auftakt != null && auftakt.IsValid())
             {
                 auftakt.Post(gameObject);
@@ -142,12 +152,15 @@ namespace Meniscus.UI
 
         void ToggleSound()
         {
+                 PlayClick();
             session.ToggleSound();
             RefreshSoundLabel();
         }
 
         void QuitGame()
+
         {
+                 PlayClick();
             Application.Quit();
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;

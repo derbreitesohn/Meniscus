@@ -379,6 +379,9 @@
 							</ReferenceList>
 							<ChildrenList>
 								<RandomSequenceContainer Name="coinflip" ID="{6E7F11D8-E2BD-49EE-BE58-01154F582E65}" ShortID="351959859">
+									<PropertyList>
+										<Property Name="OverrideEffect" Type="bool" Value="True"/>
+									</PropertyList>
 									<ReferenceList>
 										<Reference Name="Conversion">
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
@@ -399,6 +402,13 @@
 											</ReferenceList>
 											<ChildrenList>
 												<AudioFileSource Name="coinflip02" ID="{D6F734E7-0EB6-4989-9157-81C90D005627}">
+													<PropertyList>
+														<Property Name="FadeOutDuration" Type="Real64" Value="0.10527"/>
+														<Property Name="FadeOutShape" Type="int16" Value="9"/>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="1.25021"/>
+														<Property Name="TrimEnd" Type="Real64" Value="1.8013"/>
+													</PropertyList>
 													<Language>SFX</Language>
 													<AudioFile>coinflip02.wav</AudioFile>
 													<MediaIDList>
@@ -406,6 +416,23 @@
 													</MediaIDList>
 												</AudioFileSource>
 											</ChildrenList>
+											<ObjectLists>
+												<ObjectList Name="Effects">
+													<EffectSlot Name="" ID="{B2667788-BBEB-46D4-AA9C-E25A0BDBC1C8}" ShortID="729756869">
+														<ReferenceList>
+															<Reference Name="Effect">
+																<Custom>
+																	<Effect Name="Time Stretch (Custom)" ID="{AF032CB4-FA62-4107-83D5-1DEEDC4B5AEB}" ShortID="451038271" PluginName="Wwise Time Stretch" CompanyID="0" PluginID="130" PluginType="3">
+																		<PropertyList>
+																			<Property Name="TimeStretch" Type="Real32" Value="120"/>
+																		</PropertyList>
+																	</Effect>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</EffectSlot>
+												</ObjectList>
+											</ObjectLists>
 											<ActiveSourceList>
 												<ActiveSource Name="coinflip02" ID="{D6F734E7-0EB6-4989-9157-81C90D005627}" Platform="Linked"/>
 											</ActiveSourceList>
@@ -421,6 +448,12 @@
 											</ReferenceList>
 											<ChildrenList>
 												<AudioFileSource Name="coinflip03" ID="{60645DB5-F2D8-40B3-967D-C79A407D7450}">
+													<PropertyList>
+														<Property Name="FadeOutDuration" Type="Real64" Value="0.0278"/>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="0.72432"/>
+														<Property Name="TrimEnd" Type="Real64" Value="1.2905"/>
+													</PropertyList>
 													<Language>SFX</Language>
 													<AudioFile>coinflip03.wav</AudioFile>
 													<MediaIDList>
@@ -443,6 +476,12 @@
 											</ReferenceList>
 											<ChildrenList>
 												<AudioFileSource Name="coinflip05" ID="{6A961EAE-D65A-4A3A-9899-D171D7E94938}">
+													<PropertyList>
+														<Property Name="FadeOutDuration" Type="Real64" Value="0.03827"/>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="0.63783"/>
+														<Property Name="TrimEnd" Type="Real64" Value="1.14405"/>
+													</PropertyList>
 													<Language>SFX</Language>
 													<AudioFile>coinflip05.wav</AudioFile>
 													<MediaIDList>
@@ -465,6 +504,12 @@
 											</ReferenceList>
 											<ChildrenList>
 												<AudioFileSource Name="coinflip06" ID="{DE19661D-3C39-466F-B930-C180BBE99B27}">
+													<PropertyList>
+														<Property Name="FadeOutDuration" Type="Real64" Value="0.14465"/>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="0.98194"/>
+														<Property Name="TrimEnd" Type="Real64" Value="1.60493"/>
+													</PropertyList>
 													<Language>SFX</Language>
 													<AudioFile>coinflip06.wav</AudioFile>
 													<MediaIDList>
@@ -477,6 +522,24 @@
 											</ActiveSourceList>
 										</Sound>
 									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="Effects">
+											<EffectSlot Name="" ID="{6D1D0481-7552-40B7-907B-BECAB9265276}" ShortID="295303903">
+												<ReferenceList>
+													<Reference Name="Effect">
+														<Custom>
+															<Effect Name="Time Stretch (Custom)" ID="{B15B4097-BAEE-4536-8A7A-B10A3D72C943}" ShortID="215942917" PluginName="Wwise Time Stretch" CompanyID="0" PluginID="130" PluginType="3">
+																<PropertyList>
+																	<Property Name="TimeStretch" Type="Real32" Value="200"/>
+																	<Property Name="WindowSize" Type="int32" Value="256"/>
+																</PropertyList>
+															</Effect>
+														</Custom>
+													</Reference>
+												</ReferenceList>
+											</EffectSlot>
+										</ObjectList>
+									</ObjectLists>
 								</RandomSequenceContainer>
 								<RandomSequenceContainer Name="coin_into_water" ID="{3ED3A0A9-F983-42F0-9A79-7E9DB8702388}" ShortID="225140312">
 									<PropertyList>
@@ -695,12 +758,250 @@
 						<Property Name="Color" Type="int16" Value="14"/>
 						<Property Name="OverrideColor" Type="bool" Value="True"/>
 					</PropertyList>
+					<ChildrenList>
+						<Sound Name="Klick_02" ID="{0C3B86B3-58A0-4979-A0D1-BF41343B9CB0}" ShortID="637845965">
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="Klick_02" ID="{F265F1B6-9164-4FFD-9F8F-63C4D46E0469}">
+									<PropertyList>
+										<Property Name="LoopBegin" Type="Real64" Value="0.09432"/>
+										<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+										<Property Name="TrimBegin" Type="Real64" Value="0.09432"/>
+									</PropertyList>
+									<Language>SFX</Language>
+									<AudioFile>Klick_02.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="984785647"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="Klick_02" ID="{F265F1B6-9164-4FFD-9F8F-63C4D46E0469}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+					</ChildrenList>
 				</Folder>
 				<Folder Name="characters" ID="{233D0981-AC2A-454E-959C-FBE8CADD65FA}" ShortID="326887545">
 					<PropertyList>
 						<Property Name="Color" Type="int16" Value="8"/>
 						<Property Name="OverrideColor" Type="bool" Value="True"/>
 					</PropertyList>
+					<ChildrenList>
+						<Folder Name="Fee" ID="{05D1D085-36FA-4AFE-B819-2B6147C3052D}" ShortID="670219251">
+							<ChildrenList>
+								<Sound Name="Fee_brummen_01" ID="{45ECB265-B3D0-4592-9220-A12591DE752C}" ShortID="828628914">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="Fee_brummen_01" ID="{3548CA61-098B-43BC-9DCE-59E5B1B1A6BA}">
+											<Language>SFX</Language>
+											<AudioFile>Fee_brummen_01.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="426030523"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="Fee_brummen_01" ID="{3548CA61-098B-43BC-9DCE-59E5B1B1A6BA}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="Fee_Brummen_02" ID="{17E442E3-1E14-46A1-A2AD-573D330282FD}" ShortID="1067058739">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="Fee_Brummen_02" ID="{FEEBBF8F-F5F3-410B-8867-325786BB6C80}">
+											<Language>SFX</Language>
+											<AudioFile>Fee_Brummen_02.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="478977932"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="Fee_Brummen_02" ID="{FEEBBF8F-F5F3-410B-8867-325786BB6C80}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="Fee_Brummen_03" ID="{1099D078-1359-4284-8948-0689F0527E73}" ShortID="129870975">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="Fee_Brummen_03" ID="{1FFB1710-E833-4C75-A5C4-A18B78587F9A}">
+											<Language>SFX</Language>
+											<AudioFile>Fee_Brummen_03.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="548448450"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="Fee_Brummen_03" ID="{1FFB1710-E833-4C75-A5C4-A18B78587F9A}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="Fee_Brummen_04" ID="{5A53C10B-607A-490C-82E1-79D545548CC9}" ShortID="574072187">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="Fee_Brummen_04" ID="{1E3B15D3-2AA9-4050-9617-7DACB209C9D6}">
+											<Language>SFX</Language>
+											<AudioFile>Fee_Brummen_04.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="293981999"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="Fee_Brummen_04" ID="{1E3B15D3-2AA9-4050-9617-7DACB209C9D6}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="Fee_Brummen_05" ID="{5249FD0C-A821-4E7B-BB02-B4F3CB8A00AE}" ShortID="926938835">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="Fee_Brummen_05" ID="{C521C7D1-9B42-491C-A02F-2BD2AFE108CE}">
+											<Language>SFX</Language>
+											<AudioFile>Fee_Brummen_05.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="780360985"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="Fee_Brummen_05" ID="{C521C7D1-9B42-491C-A02F-2BD2AFE108CE}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+							</ChildrenList>
+						</Folder>
+						<Folder Name="Taro" ID="{DC801CE6-F77B-4DDC-8EE4-6A4698EA038E}" ShortID="598681762">
+							<ChildrenList>
+								<Sound Name="Cat_Miau2" ID="{4A20A420-161F-4E1D-82D3-ADFA0F0E0150}" ShortID="778963957">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="Cat_Miau2" ID="{50902AD7-3842-47F4-8306-902FEB749A51}">
+											<Language>SFX</Language>
+											<AudioFile>Cat_Miau2.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="250357718"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="Cat_Miau2" ID="{50902AD7-3842-47F4-8306-902FEB749A51}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="Cat_Miau" ID="{06C4E8A4-A517-46D0-80A3-48D3C479A887}" ShortID="490651435">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="Cat_Miau" ID="{124B6355-5F08-4381-9B5F-783CC9DF4AF7}">
+											<Language>SFX</Language>
+											<AudioFile>Cat_Miau.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="9029084"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="Cat_Miau" ID="{124B6355-5F08-4381-9B5F-783CC9DF4AF7}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="Cat_purring_yawning" ID="{3DF9F4B2-F166-4ADB-BBED-9F4AC35C7361}" ShortID="757117835">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="Cat_purring_yawning" ID="{F00D672B-320A-4442-AF30-27BC4411D84B}">
+											<Language>SFX</Language>
+											<AudioFile>Cat_purring_yawning.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="736334305"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="Cat_purring_yawning" ID="{F00D672B-320A-4442-AF30-27BC4411D84B}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+								<Sound Name="Cat_slurping" ID="{F22D0625-0602-4470-A8AF-607632E18220}" ShortID="349070721">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="Cat_slurping" ID="{DCA35D0E-2A2E-4D87-979C-826FC069175E}">
+											<Language>SFX</Language>
+											<AudioFile>Cat_slurping.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="329516252"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="Cat_slurping" ID="{DCA35D0E-2A2E-4D87-979C-826FC069175E}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+							</ChildrenList>
+						</Folder>
+						<Folder Name="Main" ID="{4104475D-CB31-4587-8BEB-75ADDD577DA1}" ShortID="455883407"/>
+					</ChildrenList>
 				</Folder>
 				<SwitchContainer Name="music" ID="{C1E60124-BB65-4956-88FA-0AC78442A2C9}" ShortID="118230711">
 					<PropertyList>
