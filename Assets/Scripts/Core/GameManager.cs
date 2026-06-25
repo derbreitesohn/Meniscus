@@ -614,6 +614,17 @@ namespace Meniscus.Core
             shopManager?.ShowShop();
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        /// <summary>
+        /// Debug-only (editor / development builds): force the match to end with <paramref name="outcome"/>,
+        /// driving the real end-of-match path — a PlayerLost runs the loss sequence and posts the lose
+        /// sting, a PlayerWon shows the end screen. Wired from the on-screen <see cref="UI.StateDebugMenu"/>;
+        /// never compiled into a release build.
+        /// </summary>
+        public void DebugForceOutcome(MatchOutcome outcome) =>
+            EnterGameOver($"[debug] forced {outcome}.", outcome);
+#endif
+
         void EnterGameOver(string reason, MatchOutcome outcome)
         {
             lastMatchOutcome = outcome;
