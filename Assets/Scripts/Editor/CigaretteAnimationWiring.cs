@@ -30,12 +30,11 @@ namespace Meniscus.Editor
         const string SingleCigMatGuid = "81f441b848b354e1fb0c60836f64c47f";    // Tschick_eine.mat
         const string SaloonSceneGuid = "99c9720ab356a0642a771bea13969a05";     // Saloon.unity
 
-        // The lit end is the outer tip, not the lips end; and the held cigarette points away and up — filter
-        // end down near the camera, burning tip leading into the table and a touch higher. Re-applied here (not
-        // just left to code defaults) because a controller already in the scene keeps its old serialized
-        // values — defaults only bite a fresh add. (Y yaw = swing into/out of screen, Z roll = up/down tilt.)
+        // The lit end is the outer tip, not the lips end. Y yaw swings the tip away from camera into the scene
+        // (70° = strongly forward, burning end clearly pointing at the dealer). Re-applied here (not left to
+        // code defaults) because a controller already in the scene keeps its old serialized values.
         static readonly bool LitTipIsFlipped = true;
-        static readonly Vector3 CigMouthEuler = new(0f, 40f, 15f);
+        static readonly Vector3 CigMouthEuler = new(5f, 70f, 10f);
         static readonly Vector3 CigMouthLocalPos = new(0.02f, -0.13f, 0.36f);
 
         [MenuItem("Tools/Meniscus/Wire Tschick Animation")]

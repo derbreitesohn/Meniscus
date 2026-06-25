@@ -205,8 +205,8 @@ namespace Meniscus.Gameplay
                  "down near the lens; the rod leads away and up from here.")]
         [SerializeField] Vector3 cigMouthLocalPos = new(0.02f, -0.13f, 0.36f);
         [Tooltip("Orientation of the cigarette at the lips (camera-local euler). Y yaw swings the burning tip " +
-                 "into the table toward the enemy; Z roll tilts it up so the lit end rides higher.")]
-        [SerializeField] Vector3 cigMouthEuler = new(0f, 40f, 15f);
+                 "away from camera toward the scene/enemy (90 = straight away); Z roll tilts the stick sideways.")]
+        [SerializeField] Vector3 cigMouthEuler = new(5f, 70f, 10f);
         [SerializeField, Min(0.01f)] float cigaretteHeldSize = 0.17f;
         [Tooltip("Which end of the cigarette lights — flip if the flame sits on the lips end instead of the tip.")]
         [SerializeField] bool flipCigaretteTip = true;
