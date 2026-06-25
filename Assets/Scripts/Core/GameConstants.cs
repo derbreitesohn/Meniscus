@@ -107,7 +107,11 @@ namespace Meniscus.Core
         // or lower GlassStartFill; more knife-edge from turn one → raise GlassStartFill or shrink the dome.
         public static float DomeSafeZone = 10f;
         public static float DomeCapacity = 80f;
-        public static float GlassStartFill = 15f;
+        // Opens right at the safe-zone floor so the first pours barely enter the dome: early overflow stays
+        // POSSIBLE (a pour pushes just above the floor) but vanishingly unlikely, and pays little (boldness
+        // floor). 15→10 alongside the steeper ramp to lengthen the safe opening. Raise toward DomeSafeZone+N
+        // for a tenser open.
+        public static float GlassStartFill = 10f;
         // Kept below the smallest coin's risk (Copper = 3) so even all-Copper play still creeps the glass
         // up — otherwise two players could turtle on Copper forever and the round never resolves.
         public static float SurfaceSettlePerTurn = 2f;
