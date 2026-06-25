@@ -246,7 +246,7 @@
 						</Folder>
 						<Folder Name="water" ID="{AB459CDE-F56F-4D20-98C4-D394C8C227C6}" ShortID="136597860">
 							<ChildrenList>
-								<SwitchContainer Name="waterspill" ID="{60FAC8D7-89B7-45AE-A3E3-72B0B7A64C70}" ShortID="165783326">
+								<RandomSequenceContainer Name="spill" ID="{80D49BD2-ACC6-4F20-8DB9-816F62976908}" ShortID="464791511">
 									<ReferenceList>
 										<Reference Name="Conversion">
 											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
@@ -267,6 +267,11 @@
 											</ReferenceList>
 											<ChildrenList>
 												<AudioFileSource Name="waterspill01" ID="{BF6B08D6-3CC7-40C6-8C51-6A076F746E26}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="1.14859"/>
+														<Property Name="TrimEnd" Type="Real64" Value="2.43126"/>
+													</PropertyList>
 													<Language>SFX</Language>
 													<AudioFile>waterspill01.wav</AudioFile>
 													<MediaIDList>
@@ -289,6 +294,11 @@
 											</ReferenceList>
 											<ChildrenList>
 												<AudioFileSource Name="waterspill02" ID="{D6664C5C-F1FA-47BF-B593-6805FB6691F6}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="0.27261"/>
+														<Property Name="TrimEnd" Type="Real64" Value="0.66108"/>
+													</PropertyList>
 													<Language>SFX</Language>
 													<AudioFile>waterspill02.wav</AudioFile>
 													<MediaIDList>
@@ -311,6 +321,11 @@
 											</ReferenceList>
 											<ChildrenList>
 												<AudioFileSource Name="waterspill03" ID="{67C15A5F-53D7-41DD-B4BD-F85F4DBDF2B0}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="0.10953"/>
+														<Property Name="TrimEnd" Type="Real64" Value="0.95556"/>
+													</PropertyList>
 													<Language>SFX</Language>
 													<AudioFile>waterspill03.wav</AudioFile>
 													<MediaIDList>
@@ -333,6 +348,11 @@
 											</ReferenceList>
 											<ChildrenList>
 												<AudioFileSource Name="waterspill04" ID="{AA24E4D6-8E07-46D5-991E-11C87B361980}">
+													<PropertyList>
+														<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+														<Property Name="TrimBegin" Type="Real64" Value="0.17193"/>
+														<Property Name="TrimEnd" Type="Real64" Value="0.98996"/>
+													</PropertyList>
 													<Language>SFX</Language>
 													<AudioFile>waterspill04.wav</AudioFile>
 													<MediaIDList>
@@ -345,23 +365,7 @@
 											</ActiveSourceList>
 										</Sound>
 									</ChildrenList>
-									<GroupingInfo>
-										<GroupingBehaviorList>
-											<GroupingBehavior>
-												<ItemRef Name="waterspill03" ID="{FA3BFD22-4646-45E7-8197-8EE257E4BBB2}"/>
-											</GroupingBehavior>
-											<GroupingBehavior>
-												<ItemRef Name="waterspill04" ID="{16746167-7954-4560-8906-21EBCF85D2B1}"/>
-											</GroupingBehavior>
-											<GroupingBehavior>
-												<ItemRef Name="waterspill02" ID="{C10C8FA7-7090-4CFD-88A9-3B5CDFEB0A3D}"/>
-											</GroupingBehavior>
-											<GroupingBehavior>
-												<ItemRef Name="waterspill01" ID="{43752FCA-524B-4DED-9CB8-DD0691077240}"/>
-											</GroupingBehavior>
-										</GroupingBehaviorList>
-									</GroupingInfo>
-								</SwitchContainer>
+								</RandomSequenceContainer>
 							</ChildrenList>
 						</Folder>
 						<SwitchContainer Name="coins" ID="{59950903-F3B2-4AED-8863-F1EC05C2C927}" ShortID="57390711">

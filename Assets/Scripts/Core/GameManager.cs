@@ -64,6 +64,8 @@ namespace Meniscus.Core
         [SerializeField] float coinRowLocalZEnemy = 1.12f;
 
         [Header("Audio")]
+        [SerializeField] AK.Wwise.Event coinFlip;
+
       
 
 
@@ -174,7 +176,8 @@ namespace Meniscus.Core
             coinTossOverlay.Show(
                 coinModels.GetModelForSize(CoinSize.Large),
                 coinModels.ModelScale,
-                OnCoinTossDecided);
+                OnCoinTossDecided,
+                coinFlip);
         }
 
         void OnCoinTossDecided(TurnActor starter)
