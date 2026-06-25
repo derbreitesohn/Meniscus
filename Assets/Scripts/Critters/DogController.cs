@@ -42,9 +42,6 @@ public class DogController : MonoBehaviour
         if (startPosition == Vector3.zero)
             startPosition = transform.position;
         wanderRoutine = StartCoroutine(WanderRoutine());
-
-        // The dog growls/brummt when it arrives (item selected).
-        playBrummen?.Post(gameObject);
     }
 
     IEnumerator WanderRoutine()
@@ -142,6 +139,9 @@ public class DogController : MonoBehaviour
         isSummoned = true;
         isWalking = true;
 
+        // The dog growls/brummt when it is called over (whistle used).
+        playBrummen?.Post(gameObject);
+
         // Walk to the spot the caller picked (already clear of the bar), keeping our own floor height.
         Vector3 stand = standWorldPos;
         stand.y = transform.position.y;
@@ -162,6 +162,7 @@ public class DogController : MonoBehaviour
         // No bark clip exists — the steal trigger (Dog_Steal) stands in for the bark; it only transitions
         // from Dog_Idle, so clearing isWalkingDog above lets it fire, and the trigger is sticky.
         animator.SetTrigger("steal");
+        playBite?.Post(gameObject);
         onArrive?.Invoke();
 
         yield return new WaitForSeconds(holdSeconds);
