@@ -10,7 +10,7 @@
     "Type": "Event",
     "GUID": "{0D9F3A58-C8E5-46F5-9707-1CC5526C698E}",
     "Language": "SFX",
-    "Hash": "{4F2DD2B3-B065-99A9-AA12-B3D2FBD8131A}",
+    "Hash": "{06F8FD7F-A92E-6154-0EB9-3CB29CE30538}",
     "ObjectPath": "Play_pageflip",
     "ShortName": "Play_pageflip",
     "Path": "Event/Play_pageflip.bnk",
@@ -43,6 +43,6 @@
     ]
    }
   ],
-  "FileHash": "{9BE34BBE-8BED-8B16-E482-C05048177F64}"
+  "FileHash": "{86A07452-041C-FA8F-8591-9E4E84E9FC9D}"
  }
 }

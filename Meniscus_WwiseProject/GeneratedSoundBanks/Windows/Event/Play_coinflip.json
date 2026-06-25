@@ -10,7 +10,7 @@
     "Type": "Event",
     "GUID": "{8E0BFB2D-D248-4C9B-BCC6-F59B021DC201}",
     "Language": "SFX",
-    "Hash": "{9123CD47-A1EF-2C4D-2BA2-1FCE21E8C1A0}",
+    "Hash": "{7D73C57F-7492-3E68-3B5E-E9A15B0E2C94}",
     "ObjectPath": "Play_coinflip",
     "ShortName": "Play_coinflip",
     "Path": "Event/Play_coinflip.bnk",
@@ -98,6 +98,6 @@
     ]
    }
   ],
-  "FileHash": "{412D1E06-ED5D-0B8E-C95D-A953CD4A0C6F}"
+  "FileHash": "{D76B09C0-35E1-2110-61E1-707A3C3EB12E}"
  }
 }

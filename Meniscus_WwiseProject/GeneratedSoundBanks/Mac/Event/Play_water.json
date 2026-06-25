@@ -10,7 +10,7 @@
     "Type": "Event",
     "GUID": "{7B53993B-279A-4316-ABEC-0F68FAA84DA4}",
     "Language": "SFX",
-    "Hash": "{B851BA4B-FF5B-CCA7-8485-EB2D15BE1CCC}",
+    "Hash": "{41227F18-8BE6-D03C-4812-065031A8BC80}",
     "ObjectPath": "Play_water",
     "ShortName": "Play_water",
     "Path": "Event/Play_water.bnk",
@@ -79,6 +79,6 @@
     ]
    }
   ],
-  "FileHash": "{7C834B44-443C-1AF5-EA38-FD7760076BFB}"
+  "FileHash": "{2ACA8F5C-139F-D155-683F-87225E9F79EB}"
  }
 }

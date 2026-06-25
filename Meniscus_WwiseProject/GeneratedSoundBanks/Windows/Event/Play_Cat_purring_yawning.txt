@@ -1,0 +1,3 @@
+Event	ID	Name			Wwise Object Path	Notes
+	687576550	Play_Cat_purring_yawning			\Default Work Unit\Play_Cat_purring_yawning	
+

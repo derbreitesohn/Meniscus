@@ -1,0 +1,48 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "2220998033",
+    "Type": "Event",
+    "GUID": "{160472AB-FEDD-4B3C-9017-C6A68BE5F6E4}",
+    "Language": "SFX",
+    "Hash": "{76DFFBD9-08D2-B040-B2A1-EBD66BB13D8B}",
+    "ObjectPath": "Play_Cat_Miau",
+    "ShortName": "Play_Cat_Miau",
+    "Path": "Event/Play_Cat_Miau.bnk",
+    "Media": [
+     {
+      "Id": "9029084",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "Cat_Miau.wav",
+      "Path": "Media/9029084.wem",
+      "CachePath": "25/{25E29702-CAC4-1052-C319-C09994687289}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "2220998033",
+      "Name": "Play_Cat_Miau",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Cat_Miau",
+      "GUID": "{160472AB-FEDD-4B3C-9017-C6A68BE5F6E4}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.88938415",
+      "DurationMax": "0.88938415",
+      "MediaRefs": [
+       {
+        "Id": "9029084"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{11C83495-D60A-6DE9-767C-5223E2861941}"
+ }
+}

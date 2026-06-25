@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{E33B0DE8-8FA6-464D-B859-11D132EEE225}",
     "Language": "SFX",
-    "Hash": "{9956EEB3-245A-328D-83AC-DE7DF0680960}",
+    "Hash": "{201ACB73-53D9-E40D-C454-8154B3565890}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\MeniscusSoundbank",
     "ShortName": "MeniscusSoundbank",
     "Path": "MeniscusSoundbank.bnk",
@@ -192,6 +192,6 @@
     ]
    }
   ],
-  "FileHash": "{B05A9569-4D90-BDAA-A6B5-9EBC10A40865}"
+  "FileHash": "{D2D7BD73-7B46-7DE5-A110-42DAE6DF0484}"
  }
 }

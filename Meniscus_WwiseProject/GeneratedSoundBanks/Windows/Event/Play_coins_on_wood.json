@@ -10,7 +10,7 @@
     "Type": "Event",
     "GUID": "{230E55CC-AB00-4765-ACB6-E0D703714AC2}",
     "Language": "SFX",
-    "Hash": "{7AD0A15D-26A7-272A-4ABD-BA9BCB0CA886}",
+    "Hash": "{80A5514B-8700-2C86-19B2-CBBD0875990F}",
     "ObjectPath": "Play_coins_on_wood",
     "ShortName": "Play_coins_on_wood",
     "Path": "Event/Play_coins_on_wood.bnk",
@@ -67,6 +67,6 @@
     ]
    }
   ],
-  "FileHash": "{308F08D7-814F-0681-D539-7EC22D43F707}"
+  "FileHash": "{29676141-4EF0-0171-C6EA-945931FF875C}"
  }
 }

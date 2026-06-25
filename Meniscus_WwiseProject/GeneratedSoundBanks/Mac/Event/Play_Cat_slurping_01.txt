@@ -1,0 +1,3 @@
+Event	ID	Name			Wwise Object Path	Notes
+	3982411485	Play_Cat_slurping_01			\Default Work Unit\Play_Cat_slurping_01	
+

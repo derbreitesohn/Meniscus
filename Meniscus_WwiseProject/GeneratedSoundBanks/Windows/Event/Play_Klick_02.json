@@ -10,7 +10,7 @@
     "Type": "Event",
     "GUID": "{3C7C6F07-1CE9-4A73-9C62-B34853341A7D}",
     "Language": "SFX",
-    "Hash": "{A8E08706-3D2A-339C-8582-34A57727B53C}",
+    "Hash": "{FA9CBA04-36C7-2DDF-EE7C-84330BF0FBA3}",
     "ObjectPath": "Play_Klick_02",
     "ShortName": "Play_Klick_02",
     "Path": "Event/Play_Klick_02.bnk",
@@ -43,6 +43,6 @@
     ]
    }
   ],
-  "FileHash": "{11A7B404-F586-5038-950A-38EB8B62A01C}"
+  "FileHash": "{F17A2FDF-14CC-B858-EE13-382FC500CE7D}"
  }
 }

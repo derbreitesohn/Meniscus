@@ -23,6 +23,10 @@ public class DogController : MonoBehaviour
     public Vector3 areaCenterOffset = Vector3.zero;
     public Vector3 areaSize = new Vector3(2f, 0f, 2f);
 
+    [Header("Audio")]
+    public AK.Wwise.Event playBrummen;
+    public AK.Wwise.Event playBite;
+
     private Animator animator;
     public Vector3 startPosition;
     private bool isWalking = false;
@@ -33,6 +37,9 @@ public class DogController : MonoBehaviour
         if (startPosition == Vector3.zero)
             startPosition = transform.position;
         StartCoroutine(WanderRoutine());
+
+        // The dog growls/brummt when it arrives (item selected).
+        playBrummen?.Post(gameObject);
     }
 
     IEnumerator WanderRoutine()
@@ -100,6 +107,7 @@ public class DogController : MonoBehaviour
         if (!isWalking)
         {
             animator.SetTrigger("steal");
+            playBite?.Post(gameObject);
         }
     }
 }

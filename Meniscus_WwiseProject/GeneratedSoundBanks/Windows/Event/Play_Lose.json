@@ -10,7 +10,7 @@
     "Type": "Event",
     "GUID": "{C0E8E3E8-E541-4D1C-9778-0CF2291BC8C2}",
     "Language": "SFX",
-    "Hash": "{7E0B3322-84FC-B134-FBFA-82D8E435E71B}",
+    "Hash": "{32B42BC0-5CF8-4312-1F50-CCBE527CC5AC}",
     "ObjectPath": "Play_Lose",
     "ShortName": "Play_Lose",
     "Path": "Event/Play_Lose.bnk",
@@ -77,6 +77,6 @@
     ]
    }
   ],
-  "FileHash": "{7E20C968-F9B1-A396-E65D-A7EA4470D06D}"
+  "FileHash": "{E644C44E-D432-3798-DC44-C9993FC8191E}"
  }
 }
