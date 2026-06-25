@@ -24,9 +24,11 @@ namespace Meniscus.Editor
         const string BandanaFbxGuid = "1e6bd347bb7b444789c7d56712034dc3";
         const string LeckerlisFbxGuid = "d8989f0d05b09466096d3c4f6031bc53";
         const string PfeifiFbxGuid = "946f48768b3134517960fe6b5221de38";
+        const string TschickBoxFbxGuid = "5d0f44e517efd4c4cacdbd49bc52fa64";
         const string SpyglassMatGuid = "9b91b9e9bc45041ad916b749a2867e9f";
         const string BandanaMatGuid = "f6f6cfa1dfe7e41718fe48317c7b7220";
         const string LeckerlisMatGuid = "cd533f3aa04ff40af83f2a5c896f071e";
+        const string TschickBoxMatGuid = "ed13c8d46d8c4491cbbafb647cfe1a2e";
 
         // The three coin FBXs (also used by the in-play CoinModelLibrary) and the glass sheet the desk
         // glass-prop is extracted from.
@@ -113,14 +115,15 @@ namespace Meniscus.Editor
             var bandana = Load<GameObject>(BandanaFbxGuid, "Bandana.fbx");
             var leckerlis = Load<GameObject>(LeckerlisFbxGuid, "Leckerlis.fbx");
             var pfeifi = Load<GameObject>(PfeifiFbxGuid, "Pfeifi.fbx");
+            var tschickBox = Load<GameObject>(TschickBoxFbxGuid, "Tschick_box.fbx");
             var smallCoin = Load<GameObject>(SmallCoinFbxGuid, "Small_coin.fbx");
             var mediumCoin = Load<GameObject>(MediumCoinFbxGuid, "Medium_coin.fbx");
             var bigCoin = Load<GameObject>(BigCoinFbxGuid, "Big_coin.fbx");
-            var glass = EnsureGlassItemPrefab();
 
             var spyglassMat = Load<Material>(SpyglassMatGuid, "Spyglass.mat");
             var bandanaMat = Load<Material>(BandanaMatGuid, "Bandana.mat");
             var leckerlisMat = Load<Material>(LeckerlisMatGuid, "Leckerlis.mat");
+            var tschickBoxMat = Load<Material>(TschickBoxMatGuid, "TschickPacherl.mat");
 
             return new[]
             {
@@ -129,15 +132,12 @@ namespace Meniscus.Editor
                 new Binding("step_outside", bandana, bandanaMat),             // "Bandana"
                 new Binding("taro_laps", leckerlis, leckerlisMat),            // "Taro" (the treats / Leckerlis)
                 new Binding("dog_whistle", pfeifi, null),                     // "Pfeifi" (the whistle)
+                new Binding("steady_hand", tschickBox, tschickBoxMat),        // "Tschick" (the cigarette pack)
 
                 // Coin-themed items reuse a coin.
                 new Binding("marked_coin", mediumCoin, null),
                 new Binding("loaded_dice", bigCoin, null),                    // "Lucky Coin"
                 new Binding("dealers_debt", smallCoin, null),
-
-                // Drink / pour-easing items reuse the single clean glass.
-                new Binding("round_for_the_dealer", glass, null),
-                new Binding("steady_hand", glass, null),
             };
         }
 

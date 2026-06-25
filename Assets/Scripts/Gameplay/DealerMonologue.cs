@@ -200,6 +200,9 @@ namespace Meniscus.Gameplay
                 case DialogueShot.DealerFront:
                     camera.FrameMonologueShot(dealerFrontPosition, dealerFrontRotation);
                     break;
+                case DialogueShot.MainCharacterFace:
+                    camera.FrameMonologueFace();
+                    break;
                 case DialogueShot.Keep:
                 default:
                     break;
@@ -366,8 +369,9 @@ namespace Meniscus.Gameplay
 
         // Seed copy (editable in the inspector). The two nods land on the lines the script marks *nodding*.
         // The camera leans into the dealer on "Well it's easy to…", pulls back, then — after a silent beat —
-        // pushes to a tight front close-up of his face on "Well, well. Too bad…" and holds it through his
-        // gloating before returning to the resting framing for the deal.
+        // cuts to a reaction close-up of the main character's face on "Well, well. Too bad…" (the pixel-exact
+        // CameraController.monologueFaceAnchor) and holds it through his gloating before returning to the
+        // resting framing for the deal.
         static DialogueLine[] BuildDefaultIntro() => new[]
         {
             new DialogueLine("Ah, so you're finally awake."),
@@ -380,7 +384,7 @@ namespace Meniscus.Gameplay
                              DialogueCue.Nod, DialogueShot.Default),
             new DialogueLine("Well, well. Too bad this place is locked up and there's nowhere to go. I took " +
                              "your horse too, and your gear. A lone lamb wouldn't make it far in the desert anyway.",
-                             DialogueCue.None, DialogueShot.DealerFront, pauseOnEnter: true),
+                             DialogueCue.None, DialogueShot.MainCharacterFace, pauseOnEnter: true),
             new DialogueLine("But I see that you might find this situation uncomfortable.",
                              DialogueCue.StrongNod),
             new DialogueLine("Ha, ha. So, let's make a deal.",

@@ -25,17 +25,13 @@ namespace Meniscus.Items
                     "Your next safe pour pays triple.",
                     70, ItemEffectKind.PayoutMultiplier, 3f),
                 ItemDefinition.Create(
-                    "steady_hand", "Steady Hand",
-                    "Shrug off 10 risk next round — every pour eases.",
+                    "steady_hand", "Tschick",
+                    "Light one up — steady your nerves and shrug off 10 risk next round.",
                     50, ItemEffectKind.SafeZoneBonus, 10f),
                 ItemDefinition.Create(
                     "dealers_debt", "Dealer's Debt",
                     "The dealer must pour two coins next turn.",
                     60, ItemEffectKind.ForceEnemyCoins, 2f),
-                ItemDefinition.Create(
-                    "round_for_the_dealer", "Round for the Dealer",
-                    "The dealer drinks — he overflows more easily next round.",
-                    55, ItemEffectKind.EnemySafeZonePenalty, 12f),
                 ItemDefinition.Create(
                     "bartenders_spectacles", "Spyglass",
                     "Reveal the true spill odds on the glass next round.",

@@ -16,10 +16,11 @@ namespace Meniscus.UI
     /// </summary>
     public enum DialogueShot
     {
-        Keep,           // leave the camera wherever it is
-        Default,        // return to the resting table framing
-        DealerCloseUp,  // lean-in close-up of the dealer
-        DealerFront     // tight, straight-on close-up of the dealer's face
+        Keep,               // leave the camera wherever it is
+        Default,            // return to the resting table framing
+        DealerCloseUp,      // lean-in close-up of the dealer
+        DealerFront,        // tight, straight-on close-up of the dealer's face
+        MainCharacterFace   // reaction close-up of the main character's face (uses the camera's face anchor)
     }
 
     /// <summary>

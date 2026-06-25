@@ -10,17 +10,6 @@ namespace Meniscus.Tests.EditMode
             catalog.Find(item => item != null && item.Id == id);
 
         [Test]
-        public void DefaultCatalog_ContainsRoundForTheDealer()
-        {
-            var beer = Find(ShopCatalog.CreateDefaultCatalog(), "round_for_the_dealer");
-
-            Assert.IsNotNull(beer);
-            Assert.AreEqual(ItemEffectKind.EnemySafeZonePenalty, beer.Effect);
-            Assert.AreEqual(55, beer.Cost);
-            Assert.AreEqual(12f, beer.Magnitude, 0.001f);
-        }
-
-        [Test]
         public void DefaultCatalog_ContainsBartendersSpectacles()
         {
             var specs = Find(ShopCatalog.CreateDefaultCatalog(), "bartenders_spectacles");
@@ -61,6 +50,7 @@ namespace Meniscus.Tests.EditMode
             Assert.IsNull(Find(catalog, "iron_grip"), "Iron Grip was removed from the catalog.");
             Assert.IsNull(Find(catalog, "buy_the_house_a_round"), "Buy a Round was removed from the catalog.");
             Assert.IsNull(Find(catalog, "happy_hour"), "Happy Hour was removed from the catalog.");
+            Assert.IsNull(Find(catalog, "round_for_the_dealer"), "Round for the Dealer was removed from the catalog.");
         }
 
         [Test]

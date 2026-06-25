@@ -30,8 +30,8 @@ namespace Meniscus.Tests.EditMode
         public void Apply_EnemySafeZonePenalty_AddsNegativeEnemyReliefImmediately()
         {
             var item = ItemDefinition.Create(
-                "round_for_the_dealer", "Round for the Dealer", "",
-                55, ItemEffectKind.EnemySafeZonePenalty, 12f);
+                "dog_whistle", "Pfeifi", "",
+                50, ItemEffectKind.EnemySafeZonePenalty, 12f);
 
             ItemEffectApplier.Apply(item, null, glassManager, null);
 

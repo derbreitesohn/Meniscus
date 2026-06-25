@@ -149,6 +149,14 @@ namespace Meniscus.Gameplay
         [Tooltip("How fast the loss orbit circles the glass, in degrees per second.")]
         [SerializeField] float orbitSpeed = 20f;
 
+        [Header("Monologue Face Close-Up")]
+        [Tooltip("Pixel-exact camera pose for the monologue's face close-up (the gloating beat — a reaction " +
+                 "shot of the main character's face). Assign an empty GameObject posed exactly where you want " +
+                 "the camera: frame the face in the Scene view, then GameObject ▸ Align With View on the empty " +
+                 "(parent it under the character's head bone if you want it to track the animation). If left " +
+                 "unassigned the shot simply holds the resting framing instead of diving toward the glass.")]
+        [SerializeField] Transform monologueFaceAnchor;
+
         float activeGlassYaw;   // live yaw for the glass close-up: front by default, side to bait / on overflow
         bool framingOverflow;   // the close-up uses its dramatic overflow pose (set by FocusOverflow)
         bool orbiting;          // the loss "death orbit" owns the camera until the match restarts
@@ -189,6 +197,7 @@ namespace Meniscus.Gameplay
         bool monologueFraming;         // the dealer monologue is holding a custom close-up (offset from base)
         Vector3 monologuePosOffset;    // its position offset from the base pose (base-local axes)
         Vector3 monologueRotOffset;    // its rotation offset from the base pose (camera space, degrees)
+        bool monologueUseFaceAnchor;   // the active monologue shot is the face close-up (uses monologueFaceAnchor)
 
         Vector3 lastFocusPosition;
         Quaternion lastFocusRotation = Quaternion.identity;
@@ -308,6 +317,24 @@ namespace Meniscus.Gameplay
             // Released (ClearMonologueShot) when the monologue ends so normal play returns to its framing.
             if (monologueFraming)
             {
+                // The face close-up uses its pixel-exact anchor if one is posed; otherwise it holds the
+                // resting pose so an unconfigured shot never dives toward the table / glass.
+                if (monologueUseFaceAnchor)
+                {
+                    if (monologueFaceAnchor != null)
+                    {
+                        position = monologueFaceAnchor.position;
+                        rotation = monologueFaceAnchor.rotation;
+                    }
+                    else
+                    {
+                        position = basePosition;
+                        rotation = baseRotation;
+                    }
+
+                    return true;
+                }
+
                 rotation = baseRotation * Quaternion.Euler(monologueRotOffset);
                 position = basePosition + baseRotation * monologuePosOffset;
                 return true;
@@ -904,11 +931,27 @@ namespace Meniscus.Gameplay
         {
             monologuePosOffset = positionOffset;
             monologueRotOffset = rotationOffset;
+            monologueUseFaceAnchor = false;
+            monologueFraming = true;
+        }
+
+        /// <summary>
+        /// Push to the monologue's face close-up — the pixel-exact <see cref="monologueFaceAnchor"/> pose
+        /// (a reaction shot of the main character's face). Blends in via the rig like any resting framing.
+        /// If no anchor is assigned the camera simply holds its resting framing rather than diving in.
+        /// </summary>
+        public void FrameMonologueFace()
+        {
+            monologueUseFaceAnchor = true;
             monologueFraming = true;
         }
 
         /// <summary>Release the monologue close-up so the camera blends back to its current state's framing.</summary>
-        public void ClearMonologueShot() => monologueFraming = false;
+        public void ClearMonologueShot()
+        {
+            monologueFraming = false;
+            monologueUseFaceAnchor = false;
+        }
 
         /// <summary>
         /// Kick a camera nod — a brief down-up pitch swing layered on top of the current framing, as if the

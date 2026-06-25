@@ -117,15 +117,16 @@ public class DogController : MonoBehaviour
     }
 
     /// <summary>
-    /// Calls the dog over to harass the dealer: pauses wandering, walks to a point a little back from
-    /// <paramref name="targetWorldPos"/> (the dealer's side of the table), turns to face it, and plays its
-    /// aggressive clip, holds for <paramref name="holdSeconds"/>, then resumes wandering.
-    /// <paramref name="onArrive"/> fires the moment the clip is triggered (so the caller can time the text /
-    /// camera shake to it). NOTE: the Dog_Animator has no bark clip, so this fires the `steal` trigger
-    /// (Dog_Steal) as the stand-in for the bark — swap to a `bark` trigger here once a bark clip is added.
-    /// Driven by the whistle (Pfeifi) item's use performance (see ItemUsePresentationController).
+    /// Calls the dog over to harass the dealer: pauses wandering, walks to <paramref name="standWorldPos"/>
+    /// (a floor spot the caller has already placed beside the dealer, clear of the bar), turns to face
+    /// <paramref name="faceWorldPos"/> (the dealer), plays its aggressive clip, holds for
+    /// <paramref name="holdSeconds"/>, then resumes wandering. <paramref name="onArrive"/> fires the moment the
+    /// clip is triggered (so the caller can time the text / camera shake to it). NOTE: the Dog_Animator has no
+    /// bark clip, so this fires the `steal` trigger (Dog_Steal) as the stand-in for the bark — swap to a `bark`
+    /// trigger here once a bark clip is added. Driven by the whistle (Pfeifi) item's use performance
+    /// (see ItemUsePresentationController).
     /// </summary>
-    public void SummonToHarass(Vector3 targetWorldPos, float standoff, float holdSeconds, System.Action onArrive = null)
+    public void SummonToHarass(Vector3 standWorldPos, Vector3 faceWorldPos, float holdSeconds, System.Action onArrive = null)
     {
         if (animator == null)
             animator = GetComponentInChildren<Animator>();
@@ -133,21 +134,16 @@ public class DogController : MonoBehaviour
         // Halt the wander (and any in-flight walk) outright so two coroutines never fight over the transform.
         StopAllCoroutines();
         isWalking = false;
-        StartCoroutine(HarassRoutine(targetWorldPos, standoff, holdSeconds, onArrive));
+        StartCoroutine(HarassRoutine(standWorldPos, faceWorldPos, holdSeconds, onArrive));
     }
 
-    IEnumerator HarassRoutine(Vector3 targetWorldPos, float standoff, float holdSeconds, System.Action onArrive)
+    IEnumerator HarassRoutine(Vector3 standWorldPos, Vector3 faceWorldPos, float holdSeconds, System.Action onArrive)
     {
         isSummoned = true;
         isWalking = true;
 
-        // Stand a little back from the dealer's side on whichever side the dog is already on, at its (floor) height.
-        Vector3 fromTarget = transform.position - targetWorldPos;
-        fromTarget.y = 0f;
-        if (fromTarget.sqrMagnitude < 1e-4f)
-            fromTarget = -transform.forward;
-
-        Vector3 stand = targetWorldPos + fromTarget.normalized * Mathf.Max(0.01f, standoff);
+        // Walk to the spot the caller picked (already clear of the bar), keeping our own floor height.
+        Vector3 stand = standWorldPos;
         stand.y = transform.position.y;
 
         yield return RotateTowards(stand - transform.position);
@@ -161,7 +157,7 @@ public class DogController : MonoBehaviour
         transform.position = stand;
         animator.SetBool("isWalkingDog", false);
 
-        yield return RotateTowards(targetWorldPos - transform.position);
+        yield return RotateTowards(faceWorldPos - transform.position);
 
         // No bark clip exists — the steal trigger (Dog_Steal) stands in for the bark; it only transitions
         // from Dog_Idle, so clearing isWalkingDog above lets it fire, and the trigger is sticky.

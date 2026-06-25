@@ -20,8 +20,9 @@ namespace Meniscus.Gameplay
     ///  • Coin items (<see cref="ItemEffectKind.PayoutMultiplier"/> = Marked / Lucky Coin,
     ///    <see cref="ItemEffectKind.ForceEnemyCoins"/> = Dealer's Debt) — a coin arcs into the glass and
     ///    splashes, with a line of text naming the effect (see <see cref="ItemEffectBanner"/>).
-    ///  • Round for the Dealer (<see cref="ItemEffectKind.EnemySafeZonePenalty"/>) — a bottle tips over the cup
-    ///    and pours a stream in (built, currently UNWIRED — no bottle model yet).
+    ///  • Generic EnemySafeZonePenalty beat (<see cref="ItemEffectKind.EnemySafeZonePenalty"/>) — a bottle tips
+    ///    over the cup and pours a stream in (built, currently UNWIRED — no bottle model yet; wire it to a
+    ///    future item with this effect).
     ///  • Taro (item id "taro_laps", a ReduceCurrentRisk) — shake the held Leckerlis treats to call Taro the
     ///    cat over; he laps the glass (<see cref="CatController.SummonToDrink"/> + the Cat_Drink clip) and the
     ///    whiskey settles. Keyed by id, since Buy a Round shares the ReduceCurrentRisk effect.
@@ -30,8 +31,13 @@ namespace Meniscus.Gameplay
     ///    already triggered.
     ///  • Pfeifi whistle (item id "dog_whistle", an EnemySafeZonePenalty) — the whistle flies to the mouth and
     ///    is blown; the dog runs to the dealer's side and barks (<see cref="DogController.SummonToHarass"/> +
-    ///    the Dog_Steal clip standing in for a bark), rattling the dealer. Keyed by id (Round for the Dealer
-    ///    shares EnemySafeZonePenalty).
+    ///    the Dog_Steal clip standing in for a bark), rattling the dealer. Keyed by id (its EnemySafeZonePenalty
+    ///    effect has no switch case, so the id routes it here).
+    ///  • Tschick (<see cref="ItemEffectKind.SafeZoneBonus"/> = Steady Hand) — a POV smoke ritual: the cigarette
+    ///    box rises into view, a single cigarette is drawn out of it, the box drops away as the cigarette swings
+    ///    up to the lips (close to camera), and it's lit — a spark/flame flare, a warm light and a glowing ember
+    ///    (see <see cref="CigaretteFireVfx"/>) — then a drag and a cloud of exhaled smoke as the nerves settle
+    ///    (the SafeZoneBonus relief was already applied on use).
     /// While a performance plays the <see cref="GameManager"/> holds an input lock so a pour can't cut it short.
     /// </summary>
     [DisallowMultipleComponent]
@@ -69,7 +75,7 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0.05f)] float coinSizeFraction = 0.6f;
         [SerializeField, Min(0.05f)] float coinSinkSeconds = 0.45f;
 
-        [Header("Bottle pour — Round for the Dealer")]
+        [Header("Bottle pour — EnemySafeZonePenalty (parked, unwired)")]
         [Tooltip("How high above the surface the bottle mouth pours from (metres).")]
         [SerializeField, Min(0f)] float pourHeight = 0.42f;
         [Tooltip("Bottle size as a multiple of the glass's surface radius (largest dimension).")]
@@ -102,7 +108,8 @@ namespace Meniscus.Gameplay
                  "'Whistle Prop Name' is found (even if inactive); failing that, the wired model is instantiated. " +
                  "It is picked up to the mouth POV-style, then put back exactly where it was.")]
         [SerializeField] Transform whistleSceneProp;
-        [Tooltip("Scene object name used as the whistle when none is assigned above.")]
+        [Tooltip("Scene object name used as the whistle when none is assigned above. Matched leniently: " +
+                 "case-insensitive, a 'Pfeifi (1)' clone, the German 'Pfeif…' stem, or 'whistle' all count.")]
         [SerializeField] string whistlePropName = "Pfeifi";
         [Tooltip("Where the whistle is held near the mouth (camera-local). Kept well past the camera near-plane " +
                  "so it doesn't clip / fill the view; a bit below centre, toward the lips.")]
@@ -121,8 +128,19 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0f)] float whistleFlyArc = 0.2f;
         [Tooltip("Beat held at the mouth as the whistle is blown (audio added later).")]
         [SerializeField, Min(0f)] float whistleBlowSeconds = 0.35f;
-        [Tooltip("How far back from the dealer's side the dog stops to bark.")]
-        [SerializeField, Min(0f)] float dogStandoff = 0.7f;
+        [Tooltip("Optional explicit floor marker where the dog stands to bark at the dealer. If set, it wins " +
+                 "outright — drop an empty on open floor beside the dealer (clear of the bar) and the dog goes " +
+                 "exactly there. If empty, the spot is computed from the bar's bounds (see below).")]
+        [SerializeField] Transform dogHarassSpot;
+        [Tooltip("Name of the table/bar object used to size the bar footprint so the dog clears it. Falls back " +
+                 "to 'Table' if not found.")]
+        [SerializeField] string tableObjectName = "Saloon Table";
+        [Tooltip("How far BEYOND the dealer-side edge of the bar the dog stands, so it clears the desk/rails and " +
+                 "ends up next to the dealer on open floor (metres).")]
+        [SerializeField, Min(0f)] float dogDeskClearance = 0.5f;
+        [Tooltip("Sideways offset toward whichever side the dog approached from, so it stands beside the dealer " +
+                 "rather than dead-centre in front of him (metres).")]
+        [SerializeField, Min(0f)] float dogLateralNudge = 0.7f;
         [SerializeField, Min(0f)] float dogHoldSeconds = 1.6f;
 
         [Header("Bandana — pull it over the camera (SkipTurn)")]
@@ -138,6 +156,50 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0f)] float holdBlackSeconds = 0.55f;
         [Tooltip("How fast the blackout lifts again onto the dealer's turn.")]
         [SerializeField, Min(0.01f)] float uncoverSeconds = 0.35f;
+
+        [Header("Tschick — light a cigarette (Steady Hand, SafeZoneBonus)")]
+        [Tooltip("The cigarette pack model. If empty, the box wired for 'steady_hand' in the item library is " +
+                 "used; assign here (Tools ▸ Meniscus ▸ Wire Tschick Animation) to drive the beat directly.")]
+        [SerializeField] GameObject cigaretteBoxModel;
+        [Tooltip("Material forced onto the pack model's renderers (leave empty to keep the model's own).")]
+        [SerializeField] Material cigaretteBoxMaterial;
+        [Tooltip("The single cigarette model that is drawn from the pack and lit.")]
+        [SerializeField] GameObject cigaretteModel;
+        [Tooltip("Material forced onto the single-cigarette renderers (leave empty to keep the model's own).")]
+        [SerializeField] Material cigaretteMaterial;
+
+        [Header("Tschick — poses (camera-local: x right, y up, z forward into the view)")]
+        [Tooltip("Resting pose of the pack when it's first raised into view.")]
+        [SerializeField] Vector3 boxHeldLocalPos = new(-0.17f, -0.19f, 0.52f);
+        [SerializeField] Vector3 boxHeldEuler = new(10f, 22f, -8f);
+        [SerializeField, Min(0.01f)] float boxHeldSize = 0.14f;
+        [Tooltip("How far below the held pose the pack starts — it rises up into view from here.")]
+        [SerializeField, Min(0f)] float boxStowDrop = 0.45f;
+        [Tooltip("Where the cigarette sits while still tucked in the pack (it slides out from here).")]
+        [SerializeField] Vector3 cigInPackLocalPos = new(-0.13f, -0.12f, 0.5f);
+        [Tooltip("Where the cigarette ends up once fully drawn out of the pack, before going to the lips.")]
+        [SerializeField] Vector3 cigDrawnLocalPos = new(-0.08f, 0.05f, 0.46f);
+        [Tooltip("Orientation of the cigarette while it's drawn from the pack (camera-local euler). Dial this " +
+                 "in for the model's own axes.")]
+        [SerializeField] Vector3 cigDrawnEuler = new(0f, 0f, 70f);
+        [Tooltip("Where the cigarette rests at the lips, close to the camera, for the light-up.")]
+        [SerializeField] Vector3 cigMouthLocalPos = new(0.015f, -0.135f, 0.32f);
+        [Tooltip("Orientation of the cigarette at the lips (camera-local euler).")]
+        [SerializeField] Vector3 cigMouthEuler = new(0f, 0f, 12f);
+        [SerializeField, Min(0.01f)] float cigaretteHeldSize = 0.17f;
+        [Tooltip("Which end of the cigarette lights — flip if the flame sits on the lips end instead of the tip.")]
+        [SerializeField] bool flipCigaretteTip;
+        [Tooltip("Fine nudge of the flame off the auto-detected tip (cigarette-local metres).")]
+        [SerializeField] Vector3 cigaretteTipLocalOffset = Vector3.zero;
+
+        [Header("Tschick — timing")]
+        [SerializeField, Min(0.05f)] float boxRaiseSeconds = 0.5f;     // pack rises into view
+        [SerializeField, Min(0.05f)] float cigDrawSeconds = 0.55f;     // single cigarette slides out
+        [SerializeField, Min(0.05f)] float toMouthSeconds = 0.6f;      // pack drops, cigarette to the lips
+        [SerializeField, Min(0.05f)] float flareSeconds = 0.5f;        // the strike of the lighter
+        [SerializeField, Min(0f)] float dragSeconds = 0.7f;            // the pull — ember brightens
+        [SerializeField, Min(0f)] float exhaleHoldSeconds = 1.5f;      // hold on the exhaled smoke
+        [SerializeField, Min(0.05f)] float cigLowerSeconds = 0.5f;     // lower the cigarette out of frame
 
         [Header("Effect banner (floating text)")]
         [SerializeField, Min(0f)] float bannerFadeSeconds = 0.25f;
@@ -155,6 +217,8 @@ namespace Meniscus.Gameplay
         CatController cat;
         DogController dog;
         Transform resolvedWhistle;
+        Bounds barBounds;
+        bool barBoundsResolved;
         bool playing;
 
         void OnEnable()
@@ -193,9 +257,9 @@ namespace Meniscus.Gameplay
             if (item == null || !Application.isPlaying || playing)
                 return;
 
-            // Taro and the whistle are keyed by id, not effect, because they summon a specific critter and
-            // share their effect with another item (Taro/Buy-a-Round = ReduceCurrentRisk; the whistle and
-            // Round for the Dealer = EnemySafeZonePenalty).
+            // Taro (ReduceCurrentRisk) and the whistle (EnemySafeZonePenalty) are keyed by id, not effect:
+            // they summon a specific critter, and their effects aren't handled in the switch below (they'd
+            // fall to default and get no performance), so the id routes them to their bespoke beat.
             if (item.Id == TaroItemId)
             {
                 StartCoroutine(PlayTaroDrink(item));
@@ -227,9 +291,16 @@ namespace Meniscus.Gameplay
                     StartCoroutine(PlayBandanaCover(item));
                     break;
 
-                // Round for the Dealer (EnemySafeZonePenalty) → PlayBottlePourReveal is built and parked, but
-                // left UNWIRED for now: there is no bottle model, so it would tip the generic glass prop and
-                // read as a glass pouring into a glass. Re-add the case once a bottle model is wired.
+                // Tschick / Steady Hand (SafeZoneBonus): draw a cigarette from the box and light it — a POV
+                // smoke ritual. SafeZoneBonus is unique to this item, so the effect kind routes it cleanly.
+                case ItemEffectKind.SafeZoneBonus:
+                    StartCoroutine(PlaySteadyHandSmoke(item));
+                    break;
+
+                // EnemySafeZonePenalty has no case here: PlayBottlePourReveal is built and parked, but left
+                // UNWIRED for now (there is no bottle model, so it would tip the generic glass prop and read
+                // as a glass pouring into a glass). Wire it to a future EnemySafeZonePenalty item once a bottle
+                // model exists — the whistle (dog_whistle) routes to its own beat by id above.
 
                 // Other items get their own bespoke beat here as they are built. Until then they simply
                 // apply their effect with no performance (the previous behaviour), so nothing regresses.
@@ -372,10 +443,8 @@ namespace Meniscus.Gameplay
             return camTransform == null ? null : CreateProp(item, camTransform, propHeldSize);
         }
 
-        // Instantiates the item's own wired model, strips colliders, applies its material, and wraps it in a
-        // pivot centred on its measured bounds (FBX pivots are often off-centre). A null <paramref name="parent"/>
-        // makes a free world prop (the caller then positions the pivot); a camera parent makes a held prop in
-        // camera-local space. Null when there's no wired model — the beat still plays without the prop.
+        // Instantiates the item's own wired model from the library and builds it into a prop. Null when
+        // there's no wired model — the beat still plays without the prop.
         GameObject CreateProp(ItemDefinition item, Transform parent, float targetSize)
         {
             var library = gameManager != null ? gameManager.ItemModels : null;
@@ -386,37 +455,50 @@ namespace Meniscus.Gameplay
             if (!library.TryGetEntry(item.Id, out var entry) || entry.model == null)
                 return null;
 
-            GameObject model;
+            return BuildProp(entry.model, entry.material, parent, targetSize, item.Id);
+        }
+
+        // Instantiates <paramref name="model"/>, strips colliders, forces <paramref name="material"/> onto its
+        // renderers (when given), and wraps it in a pivot centred on its measured bounds (FBX pivots are often
+        // off-centre). A null <paramref name="parent"/> makes a free world prop (the caller then positions the
+        // pivot); a camera parent makes a held prop in camera-local space. Null when no model is given, so a
+        // beat with a missing reference still plays without the prop.
+        GameObject BuildProp(GameObject model, Material material, Transform parent, float targetSize, string label = null)
+        {
+            if (model == null)
+                return null;
+
+            GameObject instance;
 
             try
             {
-                model = Instantiate(entry.model);
+                instance = Instantiate(model);
             }
             catch (System.Exception exception)
             {
-                Debug.LogWarning($"[ItemUsePresentation] Could not instantiate model for '{item.Id}': {exception.Message}");
+                Debug.LogWarning($"[ItemUsePresentation] Could not instantiate model '{model.name}': {exception.Message}");
                 return null;
             }
 
             // A prop is purely visual; strip any colliders the model brought along.
-            foreach (var modelCollider in model.GetComponentsInChildren<Collider>())
+            foreach (var modelCollider in instance.GetComponentsInChildren<Collider>())
                 Destroy(modelCollider);
 
-            if (entry.material != null)
+            if (material != null)
             {
-                var renderers = model.GetComponentsInChildren<Renderer>();
+                var renderers = instance.GetComponentsInChildren<Renderer>();
                 for (var i = 0; i < renderers.Length; i++)
-                    renderers[i].sharedMaterial = entry.material;
+                    renderers[i].sharedMaterial = material;
             }
 
-            var pivot = new GameObject($"Item Prop {item.Id}");
+            var pivot = new GameObject($"Item Prop {label ?? model.name}");
 
             if (parent != null)
                 pivot.transform.SetParent(parent, false);
 
-            model.transform.SetParent(pivot.transform, true);
+            instance.transform.SetParent(pivot.transform, true);
 
-            FitProp(model, pivot.transform, targetSize);
+            FitProp(instance, pivot.transform, targetSize);
             return pivot;
         }
 
@@ -518,8 +600,9 @@ namespace Meniscus.Gameplay
             }
         }
 
-        // Round for the Dealer: a bottle tips over the cup, pours a stream of liquid in (the glass ripples),
-        // and a line of text names the effect — then the bottle rights itself and leaves.
+        // Generic EnemySafeZonePenalty beat (parked, unwired — no bottle model yet): a bottle tips over the
+        // cup, pours a stream of liquid in (the glass ripples), and a line of text names the effect — then the
+        // bottle rights itself and leaves.
         IEnumerator PlayBottlePourReveal(ItemDefinition item)
         {
             ResolveReferences();
@@ -794,8 +877,8 @@ namespace Meniscus.Gameplay
             return cat;
         }
 
-        // Pfeifi (item id "dog_whistle", an EnemySafeZonePenalty — keyed by id, since Round for the Dealer
-        // shares that effect): the whistle flies up to the mouth and is blown (sound added later), which calls
+        // Pfeifi (item id "dog_whistle", an EnemySafeZonePenalty — keyed by id so it routes here rather than
+        // falling to the switch's default): the whistle flies up to the mouth and is blown (sound added later), which calls
         // the dog over to the dealer's side to bark at him (his Dog_Steal clip stands in for a bark — no bark
         // clip exists). A line of text + a camera kick sell that the dealer is rattled and will overflow more
         // easily next round (EnemySafeZonePenalty, applied on use — it has no live glass tell, so the text carries it).
@@ -831,6 +914,7 @@ namespace Meniscus.Gameplay
                 prop.gameObject.SetActive(true);
                 // Keep it where it sits on the desk, but now in camera space so we can lift it to the mouth.
                 prop.SetParent(camTransform, worldPositionStays: true);
+                Debug.Log($"[Meniscus] Whistle beat: picking up the authored scene object '{prop.name}'.");
             }
             else if (camTransform != null)
             {
@@ -839,6 +923,10 @@ namespace Meniscus.Gameplay
                 {
                     prop = instantiated.transform;
                     prop.localPosition = whistleDeskLocalOffset;
+                    Debug.LogWarning(
+                        $"[Meniscus] Whistle beat: no scene object resembling '{whistlePropName}' was found, so the " +
+                        "wired Pfeifi.fbx was instantiated in code instead. To use your placed prop, name it " +
+                        "'Pfeifi' (or assign it to the Item Use Presentation Controller's 'Whistle Scene Prop' field).");
                 }
             }
 
@@ -874,8 +962,10 @@ namespace Meniscus.Gameplay
 
             if (pup != null)
             {
-                var dealerSpot = ResolveDealerSpot(pup.transform.position.y);
-                pup.SummonToHarass(dealerSpot, dogStandoff, dogHoldSeconds, () => barking = true);
+                var floorY = pup.transform.position.y;
+                var dealerSpot = ResolveDealerSpot(floorY);
+                var standSpot = ResolveDogStandSpot(dealerSpot, floorY, pup.transform.position);
+                pup.SummonToHarass(standSpot, dealerSpot, dogHoldSeconds, () => barking = true);
             }
             else
             {
@@ -925,8 +1015,9 @@ namespace Meniscus.Gameplay
             playing = false;
         }
 
-        // The whistle to pick up: the assigned desk object, else a scene object named whistlePropName (found
-        // even if inactive), else null (the caller instantiates the wired model instead). Cached after first find.
+        // The whistle to pick up: the assigned desk object, else a scene object whose name looks like the
+        // authored whistle (found even if inactive), else null (the caller instantiates the wired model
+        // instead). Cached after first find.
         Transform ResolveWhistleProp()
         {
             if (whistleSceneProp != null)
@@ -935,20 +1026,41 @@ namespace Meniscus.Gameplay
             if (resolvedWhistle != null)
                 return resolvedWhistle;
 
-            if (!string.IsNullOrEmpty(whistlePropName))
+            // Name match is deliberately lenient (see IsWhistleName) so a hand-placed object is used even if
+            // it's named "pfeifi", the German "Pfeife", or a "Pfeifi (1)" clone — rather than silently
+            // instantiating the FBX. Inactive objects are included so it works before the scene is saved.
+            var transforms = FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (var i = 0; i < transforms.Length; i++)
             {
-                var transforms = FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-                for (var i = 0; i < transforms.Length; i++)
+                if (transforms[i] != null && IsWhistleName(transforms[i].name))
                 {
-                    if (transforms[i] != null && transforms[i].name == whistlePropName)
-                    {
-                        resolvedWhistle = transforms[i];
-                        return resolvedWhistle;
-                    }
+                    resolvedWhistle = transforms[i];
+                    return resolvedWhistle;
                 }
             }
 
             return null;
+        }
+
+        // True when a scene object's name reads as the authored whistle: a case-insensitive match on the
+        // configured whistlePropName (also matching a "Name (1)" clone), the German "Pfeif…" stem (covers
+        // Pfeife / Pfeifi / pfeifi), or "whistle" (an English rename). Lenient on purpose so the prop you
+        // placed in the scene is always preferred over instantiating one in code.
+        bool IsWhistleName(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return false;
+
+            var n = name.Trim().ToLowerInvariant();
+
+            if (!string.IsNullOrEmpty(whistlePropName))
+            {
+                var wanted = whistlePropName.Trim().ToLowerInvariant();
+                if (n == wanted || n.StartsWith(wanted))
+                    return true;
+            }
+
+            return n.StartsWith("pfeif") || n.Contains("whistle");
         }
 
         DogController ResolveDog()
@@ -992,6 +1104,73 @@ namespace Meniscus.Gameplay
                 return new Vector3(surface.x, floorY, surface.z);
 
             return new Vector3(0f, floorY, 0f);
+        }
+
+        // Where the dog actually stands to bark. The dealer's coins sit on the bar, so aiming the dog straight
+        // at that point parks it on top of the desk (it clips through). Instead stand it just BEYOND the bar's
+        // dealer-side edge, on open floor next to the dealer, nudged to whichever side the dog approached from
+        // (so it's beside him, not dead-centre). An explicit dogHarassSpot marker overrides the whole thing.
+        Vector3 ResolveDogStandSpot(Vector3 dealerSpot, float floorY, Vector3 dogPos)
+        {
+            if (dogHarassSpot != null)
+            {
+                var p = dogHarassSpot.position;
+                p.y = floorY;
+                return p;
+            }
+
+            // The side of the dealer to stand on — keep the dog on the side it's already wandering.
+            var side = dogPos.x >= dealerSpot.x ? 1f : -1f;
+
+            if (TryGetBarBounds(out var bar))
+            {
+                // Dealer is across the table from the player, so the dealer side is whichever face is further
+                // from the camera. Stand just past that face. Cameras look down +Z here, so that's max.z, but
+                // pick by the dealer spot to stay correct if the layout changes.
+                var camZ = Camera.main != null ? Camera.main.transform.position.z : bar.center.z;
+                var standZ = dealerSpot.z >= camZ ? bar.max.z + dogDeskClearance : bar.min.z - dogDeskClearance;
+                var standX = Mathf.Clamp(dealerSpot.x + side * dogLateralNudge,
+                                         bar.min.x - dogDeskClearance, bar.max.x + dogDeskClearance);
+                return new Vector3(standX, floorY, standZ);
+            }
+
+            // No bar found: push the spot away from the camera (past the dealer) and out to the side.
+            var away = Camera.main != null
+                ? (dealerSpot.z >= Camera.main.transform.position.z ? 1f : -1f)
+                : 1f;
+            return new Vector3(dealerSpot.x + side * dogLateralNudge,
+                               floorY,
+                               dealerSpot.z + away * (dogDeskClearance + 0.8f));
+        }
+
+        // World-space bounds of the bar (table + rails) so the dog can clear its whole footprint, not just the
+        // tabletop. Encapsulates every renderer under the named group; cached after the first resolve.
+        bool TryGetBarBounds(out Bounds bounds)
+        {
+            if (barBoundsResolved)
+            {
+                bounds = barBounds;
+                return barBounds.size != Vector3.zero;
+            }
+
+            barBoundsResolved = true;
+            var group = (!string.IsNullOrEmpty(tableObjectName) ? GameObject.Find(tableObjectName) : null)
+                        ?? GameObject.Find("Table");
+
+            if (group != null)
+            {
+                var renderers = group.GetComponentsInChildren<Renderer>();
+                if (renderers.Length > 0)
+                {
+                    var b = renderers[0].bounds;
+                    for (var i = 1; i < renderers.Length; i++)
+                        b.Encapsulate(renderers[i].bounds);
+                    barBounds = b;
+                }
+            }
+
+            bounds = barBounds;
+            return barBounds.size != Vector3.zero;
         }
 
         // Bandana (SkipTurn): pull the bandana up over the camera so the screen blacks out for a beat, then
@@ -1066,6 +1245,216 @@ namespace Meniscus.Gameplay
         {
             if (fade == null)
                 fade = ScreenFadeOverlay.Create();
+        }
+
+        // Tschick / Steady Hand (SafeZoneBonus): a first-person smoke ritual. The pack rises into view, a
+        // single cigarette is drawn from it, the pack drops away as the cigarette swings up to the lips
+        // (close to the camera), and it's lit — sparks, a flame and a glowing ember (CigaretteFireVfx) — then
+        // a drag brightens the cherry and a cloud of smoke is exhaled. The SafeZoneBonus relief was applied on
+        // use; the ritual is its tell (it has no live glass change), with a line of text naming it.
+        IEnumerator PlaySteadyHandSmoke(ItemDefinition item)
+        {
+            ResolveReferences();
+            playing = true;
+            gameManager?.SetItemPresentationActive(true);
+
+            var camTransform = Camera.main != null ? Camera.main.transform : null;
+
+            // No camera to stage the POV against — still name the effect so it doesn't read as instant.
+            if (camTransform == null)
+            {
+                yield return ShowEffectBanner(item, exhaleHoldSeconds);
+                gameManager?.SetItemPresentationActive(false);
+                playing = false;
+                yield break;
+            }
+
+            // The pack model: the wired box reference, or the library entry for this item as a fallback.
+            var boxModel = cigaretteBoxModel;
+            var boxMaterial = cigaretteBoxMaterial;
+
+            if (boxModel == null)
+            {
+                var library = gameManager != null ? gameManager.ItemModels : null;
+                if (library != null && library.TryGetEntry(item.Id, out var entry) && entry.model != null)
+                {
+                    boxModel = entry.model;
+                    boxMaterial = entry.material;
+                }
+            }
+
+            // 1. Raise the pack into view.
+            var box = BuildProp(boxModel, boxMaterial, camTransform, boxHeldSize, "tschick_box");
+            var boxRot = Quaternion.Euler(boxHeldEuler);
+            var boxStow = boxHeldLocalPos - Vector3.up * boxStowDrop;
+
+            if (box != null)
+                box.transform.SetLocalPositionAndRotation(boxStow, boxRot);
+
+            yield return AnimateProp(box, boxStow, boxHeldLocalPos, boxRot, boxRaiseSeconds, easeOut: true);
+
+            // 2. Draw a single cigarette up out of the pack.
+            var cig = BuildProp(cigaretteModel, cigaretteMaterial, camTransform, cigaretteHeldSize, "tschick_cig");
+            var cigDrawnRot = Quaternion.Euler(cigDrawnEuler);
+
+            if (cig != null)
+                cig.transform.SetLocalPositionAndRotation(cigInPackLocalPos, cigDrawnRot);
+
+            yield return AnimateProp(cig, cigInPackLocalPos, cigDrawnLocalPos, cigDrawnRot, cigDrawSeconds, easeOut: true);
+
+            // 3. Drop the pack away while the cigarette swings up to the lips, close to the camera.
+            var cigMouthRot = Quaternion.Euler(cigMouthEuler);
+            var boxExit = boxHeldLocalPos - Vector3.up * (boxStowDrop + 0.2f);
+            yield return MovePackAwayAndCigToMouth(
+                box, boxHeldLocalPos, boxExit, boxRot,
+                cig, cigDrawnLocalPos, cigMouthLocalPos, cigDrawnRot, cigMouthRot, toMouthSeconds);
+
+            if (box != null)
+                Destroy(box);
+
+            // 4. Light it: strike the lighter at the tip and catch the ember.
+            CigaretteFireVfx fire = null;
+
+            if (cig != null)
+            {
+                var tipLocal = CigaretteTipLocal(cig, flipCigaretteTip) + cigaretteTipLocalOffset;
+                fire = CigaretteFireVfx.Create(cig.transform, tipLocal);
+                yield return fire.Strike(flareSeconds);
+                fire.BeginSmoke();
+            }
+
+            // 5. The drag and the exhale — the nerves settle. Name the effect over it.
+            EnsureBanner();
+            banner.Show(DescribeEffect(item), GlassAnchorTransform(), Vector3.up * bannerWorldLift);
+            yield return FadeBanner(0f, 1f, bannerFadeSeconds);
+
+            // Draw on it: the cherry glows up as the player pulls.
+            for (var t = 0f; t < dragSeconds; t += Time.deltaTime)
+            {
+                var f = dragSeconds > 0f ? Mathf.Clamp01(t / dragSeconds) : 1f;
+                fire?.SetEmber(0.55f + 0.45f * Mathf.SmoothStep(0f, 1f, f));
+                yield return null;
+            }
+
+            // Exhale.
+            fire?.SetEmber(1f);
+            fire?.Puff(1.5f);
+
+            for (var t = 0f; t < exhaleHoldSeconds; t += Time.deltaTime)
+                yield return null;
+
+            yield return FadeBanner(1f, 0f, bannerFadeSeconds);
+            banner.Hide();
+
+            // 6. Lower the cigarette out of frame; the ember dies and lingering smoke clears on its own.
+            if (cig != null)
+            {
+                if (fire != null)
+                    StartCoroutine(fire.Extinguish(cigLowerSeconds));
+
+                var lowered = cigMouthLocalPos - Vector3.up * 0.45f;
+                yield return AnimateProp(cig, cigMouthLocalPos, lowered, cigMouthRot, cigLowerSeconds, easeOut: false);
+                Destroy(cig);
+            }
+
+            gameManager?.SetItemPresentationActive(false);
+            playing = false;
+        }
+
+        // Lower the pack out of frame while the cigarette travels from its drawn pose to the lips, both eased
+        // together so it reads as one motion (put the box down, bring the smoke up).
+        IEnumerator MovePackAwayAndCigToMouth(
+            GameObject box, Vector3 boxFrom, Vector3 boxTo, Quaternion boxRot,
+            GameObject cig, Vector3 cigFrom, Vector3 cigTo, Quaternion cigFromRot, Quaternion cigToRot, float seconds)
+        {
+            if (seconds > 0f)
+            {
+                for (var t = 0f; t < seconds; t += Time.deltaTime)
+                {
+                    var e = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / seconds));
+
+                    if (box != null)
+                        box.transform.SetLocalPositionAndRotation(Vector3.LerpUnclamped(boxFrom, boxTo, e), boxRot);
+
+                    if (cig != null)
+                        cig.transform.SetLocalPositionAndRotation(
+                            Vector3.LerpUnclamped(cigFrom, cigTo, e), Quaternion.Slerp(cigFromRot, cigToRot, e));
+
+                    yield return null;
+                }
+            }
+
+            if (box != null)
+                box.transform.SetLocalPositionAndRotation(boxTo, boxRot);
+
+            if (cig != null)
+                cig.transform.SetLocalPositionAndRotation(cigTo, cigToRot);
+        }
+
+        // The lit end of the held cigarette, in the prop pivot's local space: the far end along the model's
+        // longest local axis (a cigarette is long and thin, so that axis is its length). <paramref name="flip"/>
+        // picks the other end if the model points the other way. Robust to whatever axis the FBX was authored on.
+        static Vector3 CigaretteTipLocal(GameObject pivot, bool flip)
+        {
+            var filters = pivot.GetComponentsInChildren<MeshFilter>();
+            var worldToPivot = pivot.transform.worldToLocalMatrix;
+            var have = false;
+            var local = new Bounds(Vector3.zero, Vector3.zero);
+
+            foreach (var filter in filters)
+            {
+                if (filter.sharedMesh == null)
+                    continue;
+
+                var meshBounds = filter.sharedMesh.bounds;
+                var meshToPivot = worldToPivot * filter.transform.localToWorldMatrix;
+
+                for (var corner = 0; corner < 8; corner++)
+                {
+                    var sign = new Vector3(
+                        (corner & 1) == 0 ? -1f : 1f,
+                        (corner & 2) == 0 ? -1f : 1f,
+                        (corner & 4) == 0 ? -1f : 1f);
+                    var point = meshToPivot.MultiplyPoint3x4(meshBounds.center + Vector3.Scale(meshBounds.extents, sign));
+
+                    if (!have)
+                    {
+                        local = new Bounds(point, Vector3.zero);
+                        have = true;
+                    }
+                    else
+                    {
+                        local.Encapsulate(point);
+                    }
+                }
+            }
+
+            if (!have)
+                return Vector3.zero;
+
+            var extents = local.extents;
+            Vector3 axis;
+            float half;
+
+            if (extents.x >= extents.y && extents.x >= extents.z) { axis = Vector3.right; half = extents.x; }
+            else if (extents.y >= extents.z) { axis = Vector3.up; half = extents.y; }
+            else { axis = Vector3.forward; half = extents.z; }
+
+            return local.center + axis * (half * (flip ? -1f : 1f));
+        }
+
+        // Name what the item just did, hold for a beat, then clear — the no-camera fallback for the Tschick.
+        IEnumerator ShowEffectBanner(ItemDefinition item, float holdSeconds)
+        {
+            EnsureBanner();
+            banner.Show(DescribeEffect(item), GlassAnchorTransform(), Vector3.up * bannerWorldLift);
+            yield return FadeBanner(0f, 1f, bannerFadeSeconds);
+
+            for (var t = 0f; t < holdSeconds; t += Time.deltaTime)
+                yield return null;
+
+            yield return FadeBanner(1f, 0f, bannerFadeSeconds);
+            banner.Hide();
         }
 
         void EnsureScopeView()
