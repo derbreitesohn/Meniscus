@@ -135,8 +135,11 @@ namespace Meniscus.UI
              PlayClick();
             if (auftakt != null && auftakt.IsValid())
             {
-                auftakt.Post(gameObject);
-                StartCoroutine(LoadAfterDelay(auftaktDauer));
+                var playingId = auftakt.Post(gameObject);
+                if (playingId != AkUnitySoundEngine.AK_INVALID_PLAYING_ID)
+                    StartCoroutine(LoadAfterDelay(auftaktDauer));
+                else
+                    SceneManager.LoadScene(GameSceneName);
             }
             else
             {
