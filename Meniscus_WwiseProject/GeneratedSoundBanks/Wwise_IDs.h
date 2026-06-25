@@ -38,6 +38,7 @@ namespace AK
         static const AkUniqueID PLAY_SOMETHING = 2308135458U;
         static const AkUniqueID PLAY_SPILL = 1363090524U;
         static const AkUniqueID PLAY_TSCHICKPACK = 12206320U;
+        static const AkUniqueID PLAY_WAKINGUP = 250498332U;
         static const AkUniqueID PLAY_WATER = 441572235U;
         static const AkUniqueID PLAY_WHISTLE_02 = 2662538193U;
         static const AkUniqueID PLAY_ZOOM = 165455223U;
@@ -103,11 +104,6 @@ namespace AK
         } // namespace GLASSTYPE
 
     } // namespace SWITCHES
-
-    namespace GAME_PARAMETERS
-    {
-        static const AkUniqueID GLASSFILL = 3813969472U;
-    } // namespace GAME_PARAMETERS
 
     namespace BANKS
     {

@@ -1,0 +1,3 @@
+Event	ID	Name			Wwise Object Path	Notes
+	250498332	Play_wakingup			\Default Work Unit\Play_wakingup	
+

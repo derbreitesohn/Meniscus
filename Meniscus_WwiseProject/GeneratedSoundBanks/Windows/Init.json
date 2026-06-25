@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{701ECBBD-9C7B-4030-8CDB-749EE5D1C7B9}",
     "Language": "SFX",
-    "Hash": "{0F3A8F66-5B96-CE36-A0E9-BCE62FADB345}",
+    "Hash": "{6155298F-9EE5-D183-E3B9-108CD758D0C4}",
     "ObjectPath": "Init",
     "ShortName": "Init",
     "Path": "Init.bnk",
@@ -76,14 +76,6 @@
       "Name": "saloon_reverb",
       "ObjectPath": "\\Busses\\Default Work Unit\\Main Audio Bus\\saloon_reverb",
       "GUID": "{7AA4AC98-A418-465C-BBC0-9FC25FFA15D0}"
-     }
-    ],
-    "GameParameters": [
-     {
-      "Id": "3813969472",
-      "Name": "GlassFill",
-      "ObjectPath": "\\Game Parameters\\Default Work Unit\\GlassFill",
-      "GUID": "{947B0B65-75B9-4026-9DDA-4D00B3A102FD}"
      }
     ],
     "StateGroups": [
@@ -214,6 +206,6 @@
     ]
    }
   ],
-  "FileHash": "{BAE694B0-B86B-1E1B-F1EA-868061EAFE7D}"
+  "FileHash": "{A8F71E26-433F-1B56-2252-5D89B09FDA11}"
  }
 }

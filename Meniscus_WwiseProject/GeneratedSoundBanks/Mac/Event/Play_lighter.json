@@ -10,7 +10,7 @@
     "Type": "Event",
     "GUID": "{BDC63EA4-6470-41E9-8382-81667C4C18F5}",
     "Language": "SFX",
-    "Hash": "{695ABEC6-73DE-8835-C491-E701DD9FFFAB}",
+    "Hash": "{99CA9F83-561B-E914-3F5D-893F37A61FD7}",
     "ObjectPath": "Play_lighter",
     "ShortName": "Play_lighter",
     "Path": "Event/Play_lighter.bnk",
@@ -43,6 +43,6 @@
     ]
    }
   ],
-  "FileHash": "{7B586BB9-F772-22C0-4ABD-A69E30897DA8}"
+  "FileHash": "{741509BE-4DCD-4CD0-760A-DD575E2AAD4F}"
  }
 }

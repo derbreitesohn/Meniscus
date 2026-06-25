@@ -1,0 +1,48 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Mac",
+  "BasePlatform": "Mac",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "250498332",
+    "Type": "Event",
+    "GUID": "{711127F7-610A-4468-A922-67D09FA10090}",
+    "Language": "SFX",
+    "Hash": "{D4262088-3F7B-BC28-A7FD-135DF7507A73}",
+    "ObjectPath": "Play_wakingup",
+    "ShortName": "Play_wakingup",
+    "Path": "Event/Play_wakingup.bnk",
+    "Media": [
+     {
+      "Id": "585977108",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "wakingup.wav",
+      "Path": "Media/585977108.wem",
+      "CachePath": "80/{80A016E2-AD35-EC06-2347-E3BBC34E5396}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "250498332",
+      "Name": "Play_wakingup",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_wakingup",
+      "GUID": "{711127F7-610A-4468-A922-67D09FA10090}",
+      "DurationType": "OneShot",
+      "DurationMin": "4.54424",
+      "DurationMax": "4.54424",
+      "MediaRefs": [
+       {
+        "Id": "585977108"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{66491754-B67B-6BA7-2DBF-4A56B19D8216}"
+ }
+}

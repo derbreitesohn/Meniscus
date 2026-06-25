@@ -10,7 +10,7 @@
     "Type": "Event",
     "GUID": "{E80326A3-A387-4C83-8144-39F9B62BF376}",
     "Language": "SFX",
-    "Hash": "{390B9EAE-A4C2-BC59-26CC-C2E59B6DA4B2}",
+    "Hash": "{E0F70610-ACA8-04AF-929A-8BC0FB65BEF0}",
     "ObjectPath": "Play_something",
     "ShortName": "Play_something",
     "Path": "Event/Play_something.bnk",
@@ -43,6 +43,6 @@
     ]
    }
   ],
-  "FileHash": "{BC992343-271D-1F65-6A86-A3AF46BC61F9}"
+  "FileHash": "{D5564117-EBB8-9189-F2A8-E08710E8E762}"
  }
 }
