@@ -157,6 +157,8 @@ namespace Meniscus.UI
         // Right-page paging chrome.
         Button prevArrow;
         Button nextArrow;
+        Text prevArrowLabel;
+        Text nextArrowLabel;
         Text pageIndicator;
 
         // Geometry needed to rebuild the right page each turn (set in BuildMenuCanvas).
@@ -506,9 +508,18 @@ namespace Meniscus.UI
             var pageTextWidth = pageWidthPx - 70f;
 
             // Two parchment pages with a darkened spine gutter between them.
-            RuntimeUiFactory.CreateImage(canvas.transform, "Left Page Paper", new Vector2(pageWidthPx, pixelHeight), new Vector2(leftCenter, 0f), PaperColor);
-            RuntimeUiFactory.CreateImage(canvas.transform, "Right Page Paper", new Vector2(pageWidthPx, pixelHeight), new Vector2(rightCenter, 0f), PaperColor);
-            RuntimeUiFactory.CreateImage(canvas.transform, "Spine Gutter", new Vector2(8f, pixelHeight), Vector2.zero, RuleColor);
+            Decor(RuntimeUiFactory.CreateImage(canvas.transform, "Left Page Paper", new Vector2(pageWidthPx, pixelHeight), new Vector2(leftCenter, 0f), PaperColor));
+            Decor(RuntimeUiFactory.CreateImage(canvas.transform, "Right Page Paper", new Vector2(pageWidthPx, pixelHeight), new Vector2(rightCenter, 0f), PaperColor));
+
+            // A soft, layered spine shadow (wide+faint under narrow+dark) reads as a real gutter where the
+            // two leaves meet, instead of a single hard line.
+            Decor(RuntimeUiFactory.CreateImage(canvas.transform, "Spine Soft", new Vector2(36f, pixelHeight), Vector2.zero, new Color(0.20f, 0.12f, 0.06f, 0.07f)));
+            Decor(RuntimeUiFactory.CreateImage(canvas.transform, "Spine Mid", new Vector2(18f, pixelHeight), Vector2.zero, new Color(0.20f, 0.12f, 0.06f, 0.16f)));
+            Decor(RuntimeUiFactory.CreateImage(canvas.transform, "Spine Gutter", new Vector2(8f, pixelHeight), Vector2.zero, RuleColor));
+
+            // A ruled border inset on each leaf, like a printed ledger page.
+            BuildPageFrame(canvas.transform, leftCenter, pageWidthPx, pixelHeight);
+            BuildPageFrame(canvas.transform, rightCenter, pageWidthPx, pixelHeight);
 
             var top = pixelHeight * 0.5f;
 
@@ -532,14 +543,14 @@ namespace Meniscus.UI
             int F(float design) => Mathf.Max(1, Mathf.RoundToInt(design * v));
 
             // Title.
-            RuntimeUiFactory.CreateText(
+            InkShadow(RuntimeUiFactory.CreateText(
                 canvas, "Menu Title", "Saloon Menu",
                 new Vector2(leftCenter, top - 110f * v), new Vector2(pageTextWidth, 110f * v), F(64), InkColor,
-                TextAnchor.MiddleCenter, bold: true);
+                TextAnchor.MiddleCenter, bold: true), 3f);
 
-            RuntimeUiFactory.CreateImage(
+            Decor(RuntimeUiFactory.CreateImage(
                 canvas, "Title Rule", new Vector2(pageTextWidth, 3f * v),
-                new Vector2(leftCenter, top - 180f * v), RuleColor);
+                new Vector2(leftCenter, top - 180f * v), RuleColor));
 
             // Selected item picture (baked thumbnail), upper-right of the order page beside the name.
             // Hidden until an item with a baked icon is selected (see RefreshTicket).
@@ -555,6 +566,7 @@ namespace Meniscus.UI
                 canvas, "Ticket Name", "",
                 new Vector2(leftCenter, top - 270f * v), new Vector2(pageTextWidth, 100f * v), F(48), InkColor,
                 TextAnchor.UpperLeft, bold: true);
+            InkShadow(ticketName, 2.5f);
 
             // Description body.
             ticketDesc = RuntimeUiFactory.CreateText(
@@ -577,6 +589,7 @@ namespace Meniscus.UI
                 pressedColor: StampPressed,
                 labelColor: PaperColor);
             buyLabel = buyButton.transform.Find("Label").GetComponent<Text>();
+            InkShadow(buyLabel, 2f);
 
             var finishButton = RuntimeUiFactory.CreateButton(
                 canvas, "Finish Drink Button", "Finish Drink",
@@ -588,6 +601,7 @@ namespace Meniscus.UI
                 labelColor: PaperColor);
             finishButtonObject = finishButton.gameObject;
             finishLabel = finishButton.transform.Find("Label").GetComponent<Text>();
+            InkShadow(finishLabel, 2f);
 
             // Shown only while previewing mid-round (purchasing disabled); hidden during the shop phase.
             browseHint = RuntimeUiFactory.CreateText(
@@ -606,10 +620,20 @@ namespace Meniscus.UI
             var v = menuVy;
             int F(float design) => Mathf.Max(1, Mathf.RoundToInt(design * v));
 
-            var headerPad = 130f * v;   // space at the top of the page for the arrows + indicator
-            var footerPad = 110f * v;   // space at the bottom for the page indicator
+            // Running head mirroring the left page's "Saloon Menu" title + rule, so the open spread reads
+            // as a real two-page book rather than a list bolted onto a blank leaf.
+            InkShadow(RuntimeUiFactory.CreateText(
+                canvas.transform, "Right Page Title", "Goods",
+                new Vector2(rightCenter, top - 110f * v), new Vector2(pageTextWidth, 110f * v), F(64), InkColor,
+                TextAnchor.MiddleCenter, bold: true), 3f);
+
+            Decor(RuntimeUiFactory.CreateImage(
+                canvas.transform, "Right Title Rule", new Vector2(pageTextWidth, 3f * v),
+                new Vector2(rightCenter, top - 180f * v), RuleColor));
+
+            var headerPad = 200f * v;   // top: the running head + rule
+            var footerPad = 165f * v;   // bottom: the page navigator (arrows + indicator)
             var rowHeight = 168f * v;   // taller rows so the picture + description beneath read large
-            var arrow = 70f * v;
 
             var listDepthPx = (top * 2f) - headerPad - footerPad;
             var itemsPerPage = MenuLayout.ItemsPerPage(listDepthPx, rowHeight);
@@ -618,36 +642,56 @@ namespace Meniscus.UI
             rowHeightPx = rowHeight;
             rowWidthPx = pageTextWidth;
 
-            // Corner arrows.
-            prevArrow = RuntimeUiFactory.CreateButton(
-                canvas.transform, "Prev Arrow", "‹", new Vector2(arrow, arrow),
-                new Vector2(rightCenter - pageTextWidth * 0.5f + 24f, top - arrow), F(56), () => OnTurn(-1),
-                boldLabel: true,
-                normalColor: RowTransparent,
-                highlightedColor: RowHover,
-                pressedColor: RowPressed,
-                labelColor: InkColor);
-
-            nextArrow = RuntimeUiFactory.CreateButton(
-                canvas.transform, "Next Arrow", "›", new Vector2(arrow, arrow),
-                new Vector2(rightCenter + pageTextWidth * 0.5f - 24f, top - arrow), F(56), () => OnTurn(1),
-                boldLabel: true,
-                normalColor: RowTransparent,
-                highlightedColor: RowHover,
-                pressedColor: RowPressed,
-                labelColor: InkColor);
-
-            pageIndicator = RuntimeUiFactory.CreateText(
-                canvas.transform, "Page Indicator", "",
-                new Vector2(rightCenter, -top + 60f * v), new Vector2(pageTextWidth, 50f * v), F(30), InkSoftColor);
-
             // The rows live under a dedicated container so a page rebuild only clears the list.
             var containerObject = RuntimeUiFactory.CreateImage(
                 canvas.transform, "Right List", new Vector2(pageTextWidth, listDepthPx),
                 new Vector2(rightCenter, top - headerPad - listDepthPx * 0.5f), RowTransparent);
             rightListContainer = containerObject.transform;
 
+            // Page navigator pinned to the foot of the page: two solid ink-stamp arrows flanking the page
+            // count, in the SAME button language as Buy / Finish Drink so paging reads unmistakably as a
+            // control. (The old version was a bare ‹ / › glyph on a transparent background tucked in the top
+            // corner — almost invisible, and it didn't even change when a direction was unavailable.) The
+            // whole navigator is hidden on a single-page catalog; an unavailable direction is faded but kept
+            // visible (see SetArrowState) so the player still sees that pages exist.
+            var pagerY = -top + 100f * v;
+            var arrowSize = new Vector2(74f, 58f);
+
+            prevArrow = BuildPagerArrow("Prev Arrow", "‹", new Vector2(rightCenter - 150f, pagerY), arrowSize, F(60), -1);
+            prevArrowLabel = prevArrow.transform.Find("Label").GetComponent<Text>();
+
+            nextArrow = BuildPagerArrow("Next Arrow", "›", new Vector2(rightCenter + 150f, pagerY), arrowSize, F(60), 1);
+            nextArrowLabel = nextArrow.transform.Find("Label").GetComponent<Text>();
+
+            pageIndicator = RuntimeUiFactory.CreateText(
+                canvas.transform, "Page Indicator", "",
+                new Vector2(rightCenter, pagerY), new Vector2(pageTextWidth - 220f, 60f * v), F(30), InkSoftColor);
+            InkShadow(pageIndicator, 1.5f);
+
             model.SetCatalog(catalog, itemsPerPage);
+        }
+
+        /// <summary>
+        /// One foot-of-page navigator arrow: a solid ink-stamp button (matching Buy / Finish) with a faded
+        /// disabled tint so the unavailable direction still reads as a real, if greyed, control.
+        /// </summary>
+        Button BuildPagerArrow(string name, string glyph, Vector2 position, Vector2 size, int glyphFont, int dir)
+        {
+            var button = RuntimeUiFactory.CreateButton(
+                menuCanvasTransform, name, glyph, size, position, glyphFont, () => OnTurn(dir),
+                boldLabel: true,
+                normalColor: StampColor,
+                highlightedColor: StampHover,
+                pressedColor: StampPressed,
+                labelColor: PaperColor);
+
+            var colors = button.colors;
+            colors.disabledColor = new Color(0.30f, 0.15f, 0.07f, 0.30f);
+            colors.fadeDuration = 0.08f;
+            button.colors = colors;
+
+            InkShadow(button.transform.Find("Label").GetComponent<Text>(), 2f);
+            return button;
         }
 
         /// <summary>
@@ -726,20 +770,20 @@ namespace Meniscus.UI
                 var textWidth = Mathf.Max(40f, rowWidthPx * 0.5f - priceColumnWidth - textLeft);
                 var textCenterX = textLeft + textWidth * 0.5f;
 
-                RuntimeUiFactory.CreateText(
+                InkShadow(RuntimeUiFactory.CreateText(
                     row.transform, "Name", item.DisplayName,
                     new Vector2(textCenterX, rowSize.y * 0.22f), new Vector2(textWidth, rowSize.y * 0.5f),
-                    F(38), InkColor, TextAnchor.MiddleLeft, bold: true).raycastTarget = false;
+                    F(38), InkColor, TextAnchor.MiddleLeft, bold: true), 2f).raycastTarget = false;
 
                 RuntimeUiFactory.CreateText(
                     row.transform, "Desc", item.Description,
                     new Vector2(textCenterX, -rowSize.y * 0.22f), new Vector2(textWidth, rowSize.y * 0.52f),
-                    F(24), InkSoftColor, TextAnchor.UpperLeft).raycastTarget = false;
+                    F(30), InkSoftColor, TextAnchor.UpperLeft).raycastTarget = false;
 
                 // Price (upper-right) and the owned badge ✓×N beneath it (shown only when owned > 0).
-                RuntimeUiFactory.CreateText(
+                InkShadow(RuntimeUiFactory.CreateText(
                     row.transform, "Price", $"${item.Cost}",
-                    new Vector2(-24f, 18f * v), rowSize, F(34), InkSoftColor, TextAnchor.MiddleRight)
+                    new Vector2(-24f, 18f * v), rowSize, F(34), InkSoftColor, TextAnchor.MiddleRight), 1.5f)
                     .raycastTarget = false;
 
                 var badge = RuntimeUiFactory.CreateText(
@@ -767,11 +811,11 @@ namespace Meniscus.UI
                     pageIndicator.text = $"Page {model.CurrentPage + 1} / {model.PageCount}";
             }
 
-            if (prevArrow != null)
-                prevArrow.interactable = model.CanTurnPrev;
-
-            if (nextArrow != null)
-                nextArrow.interactable = model.CanTurnNext;
+            // Show the navigator only when there is more than one page; fade (don't hide) the direction
+            // you can't currently take, so the player still sees that pages exist on either side.
+            var multiPage = model.PageCount > 1;
+            SetArrowState(prevArrow, prevArrowLabel, multiPage, model.CanTurnPrev);
+            SetArrowState(nextArrow, nextArrowLabel, multiPage, model.CanTurnNext);
 
             RefreshOwnedBadges();
             ApplySelectionVisual();
@@ -1123,6 +1167,62 @@ namespace Meniscus.UI
 
             hasDeskBounds = true;
             Log($"ResolveDesk: using '{deskObject.name}', center={deskBounds.center}, topY={deskBounds.max.y}, size={deskBounds.size}");
+        }
+
+        /// <summary>
+        /// Shows/hides a pager arrow and sets its usable state: an unavailable direction stays visible but
+        /// fades its glyph (the stamp itself fades via the button's disabledColor) so the control still
+        /// reads as a button, just not one you can press here.
+        /// </summary>
+        static void SetArrowState(Button arrow, Text label, bool visible, bool enabled)
+        {
+            if (arrow == null)
+                return;
+
+            arrow.gameObject.SetActive(visible);
+            arrow.interactable = enabled;
+
+            if (label != null)
+                label.color = enabled
+                    ? PaperColor
+                    : new Color(PaperColor.r, PaperColor.g, PaperColor.b, 0.30f);
+        }
+
+        /// <summary>A printed look: a soft warm-dark shadow under ink, as if pressed into the paper.</summary>
+        static Text InkShadow(Text text, float distance = 2.5f)
+        {
+            if (text == null)
+                return text;
+
+            var shadow = text.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0.10f, 0.05f, 0.02f, 0.35f);
+            shadow.effectDistance = new Vector2(distance, -distance);
+            return text;
+        }
+
+        /// <summary>Marks a built image as pure decoration so it never eats a click meant for a control.</summary>
+        static GameObject Decor(GameObject built)
+        {
+            if (built != null && built.TryGetComponent<Image>(out var image))
+                image.raycastTarget = false;
+
+            return built;
+        }
+
+        /// <summary>A thin ruled border inset on a page, drawn as four strips, like a printed ledger frame.</summary>
+        void BuildPageFrame(Transform canvas, float centerX, float pageWidthPx, float pageHeightPx)
+        {
+            const float inset = 20f;
+            const float thickness = 3f;
+            var spanX = pageWidthPx - inset * 2f;
+            var spanY = pageHeightPx - inset * 2f;
+            var halfX = pageWidthPx * 0.5f - inset;
+            var halfY = pageHeightPx * 0.5f - inset;
+
+            Decor(RuntimeUiFactory.CreateImage(canvas, "Frame Top", new Vector2(spanX, thickness), new Vector2(centerX, halfY), RuleColor));
+            Decor(RuntimeUiFactory.CreateImage(canvas, "Frame Bottom", new Vector2(spanX, thickness), new Vector2(centerX, -halfY), RuleColor));
+            Decor(RuntimeUiFactory.CreateImage(canvas, "Frame Left", new Vector2(thickness, spanY), new Vector2(centerX - halfX, 0f), RuleColor));
+            Decor(RuntimeUiFactory.CreateImage(canvas, "Frame Right", new Vector2(thickness, spanY), new Vector2(centerX + halfX, 0f), RuleColor));
         }
 
         void Log(string message)

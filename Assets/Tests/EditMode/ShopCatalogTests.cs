@@ -32,17 +32,6 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void DefaultCatalog_ContainsBuyTheHouseARound()
-        {
-            var item = Find(ShopCatalog.CreateDefaultCatalog(), "buy_the_house_a_round");
-
-            Assert.IsNotNull(item);
-            Assert.AreEqual(ItemEffectKind.ReduceCurrentRisk, item.Effect);
-            Assert.AreEqual(45, item.Cost);
-            Assert.AreEqual(15f, item.Magnitude, 0.001f);
-        }
-
-        [Test]
         public void DefaultCatalog_ContainsStepOutside()
         {
             var item = Find(ShopCatalog.CreateDefaultCatalog(), "step_outside");
@@ -53,14 +42,14 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void DefaultCatalog_ContainsHappyHour()
+        public void DefaultCatalog_ContainsDogWhistle()
         {
-            var item = Find(ShopCatalog.CreateDefaultCatalog(), "happy_hour");
+            var item = Find(ShopCatalog.CreateDefaultCatalog(), "dog_whistle");
 
             Assert.IsNotNull(item);
-            Assert.AreEqual(ItemEffectKind.RoundPayoutMultiplier, item.Effect);
-            Assert.AreEqual(55, item.Cost);
-            Assert.AreEqual(1.5f, item.Magnitude, 0.001f);
+            Assert.AreEqual(ItemEffectKind.EnemySafeZonePenalty, item.Effect);
+            Assert.AreEqual(50, item.Cost);
+            Assert.AreEqual(15f, item.Magnitude, 0.001f);
         }
 
         [Test]
@@ -70,6 +59,8 @@ namespace Meniscus.Tests.EditMode
 
             Assert.IsNull(Find(catalog, "recast_coin"), "Recast was removed from the catalog.");
             Assert.IsNull(Find(catalog, "iron_grip"), "Iron Grip was removed from the catalog.");
+            Assert.IsNull(Find(catalog, "buy_the_house_a_round"), "Buy a Round was removed from the catalog.");
+            Assert.IsNull(Find(catalog, "happy_hour"), "Happy Hour was removed from the catalog.");
         }
 
         [Test]

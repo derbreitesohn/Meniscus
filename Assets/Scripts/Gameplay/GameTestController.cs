@@ -1,14 +1,24 @@
+using System.Collections.Generic;
 using Meniscus.Core;
+using Meniscus.Items;
+using Meniscus.UI;
 using UnityEngine;
 
 namespace Meniscus.Gameplay
 {
     public class GameTestController : MonoBehaviour
     {
+        [Tooltip("DEBUG: top-left panel listing every catalog item; click one to use it free this turn " +
+                 "(applies the effect and plays its use performance, no cash spent, no inventory needed).")]
+        [SerializeField] bool showItemTestMenu = true;
         [SerializeField] bool showDebugOverlay;
         [SerializeField] GameManager gameManager;
         [SerializeField] GlassManager glassManager;
         [SerializeField] EconomyManager economyManager;
+        [SerializeField] ShopManager shopManager;
+
+        // Cached so OnGUI (called several times a frame) does not rebuild the default catalog each pass.
+        IReadOnlyList<ItemDefinition> cachedCatalog;
 
         void Awake()
         {
@@ -17,11 +27,76 @@ namespace Meniscus.Gameplay
 
         void OnGUI()
         {
-            if (!showDebugOverlay)
-                return;
-
             ResolveReferences();
 
+            if (showItemTestMenu)
+                DrawItemTestMenu();
+
+            if (showDebugOverlay)
+                DrawDebugOverlay();
+        }
+
+        // Top-left: one button per catalog item that uses it for free on the player's turn. Faithful to a
+        // real use (effect + use performance) via GameManager.DebugUseItemFree, just without ownership/cost.
+        void DrawItemTestMenu()
+        {
+            if (gameManager == null)
+                return;
+
+            var catalog = ResolveCatalog();
+
+            if (catalog == null || catalog.Count == 0)
+                return;
+
+            const int width = 260;
+            const int rowH = 24;
+            var x = 16;
+            var y = 16;
+
+            var boxHeight = (catalog.Count + 3) * rowH + 16;
+            GUI.Box(new Rect(x - 8, y - 8, width + 16, boxHeight), "Item Test — free use");
+            y += 4;
+
+            GUI.Label(new Rect(x, y, width, rowH), "Click to use this turn (free):");
+            y += rowH;
+
+            var busy = gameManager.ItemPresentationActive;
+            var canUse = gameManager.CurrentState == GameState.PlayerTurn && !busy;
+            GUI.enabled = canUse;
+
+            for (var i = 0; i < catalog.Count; i++)
+            {
+                var item = catalog[i];
+
+                if (item == null)
+                    continue;
+
+                if (GUI.Button(new Rect(x, y, width, rowH - 2), item.DisplayName))
+                    gameManager.DebugUseItemFree(item);
+
+                y += rowH;
+            }
+
+            GUI.enabled = true;
+
+            if (!canUse)
+                GUI.Label(new Rect(x, y, width, rowH),
+                    busy ? "(busy — performance playing)" : "(only on your turn)");
+        }
+
+        // The catalog the shop is actually using (so authored lists are honoured), falling back to the
+        // code-built default when no shop is present. ShopManager.Catalog caches its own resolution.
+        IReadOnlyList<ItemDefinition> ResolveCatalog()
+        {
+            if (cachedCatalog != null && cachedCatalog.Count > 0)
+                return cachedCatalog;
+
+            cachedCatalog = shopManager != null ? shopManager.Catalog : ShopCatalog.CreateDefaultCatalog();
+            return cachedCatalog;
+        }
+
+        void DrawDebugOverlay()
+        {
             const int width = 340;
             const int height = 26;
             var x = 16;
@@ -75,6 +150,9 @@ namespace Meniscus.Gameplay
 
             if (economyManager == null)
                 economyManager = FindAnyObjectByType<EconomyManager>();
+
+            if (shopManager == null)
+                shopManager = FindAnyObjectByType<ShopManager>();
         }
 
         float GetRisk() =>

@@ -25,6 +25,20 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0f)] float beatBeforeFirstLine = 0.4f;
         [Tooltip("Beat the camera nod is allowed to read before the next box appears.")]
         [SerializeField, Min(0f)] float nodInterludeSeconds = 0.6f;
+        [Tooltip("Length of the silent dramatic beat held before a line flagged for it (e.g. \"Well, well. " +
+                 "Too bad…\") — the pause before the camera pushes to the dealer's face.")]
+        [SerializeField, Min(0f)] float pauseBeatSeconds = 1.2f;
+
+        [Header("Intro camera shots")]
+        [Tooltip("Lean-in close-up of the dealer (used on \"Well it's easy to…\"). Offset from the resting " +
+                 "pose: +z pushes toward him, +x right, +y up.")]
+        [SerializeField] Vector3 dealerCloseUpPosition = new(0f, -0.05f, 1.7f);
+        [Tooltip("Rotation offset for the lean-in close-up (degrees, camera space): +x pitches DOWN, " +
+                 "-x looks UP toward his face.")]
+        [SerializeField] Vector3 dealerCloseUpRotation = new(-7f, 0f, 0f);
+        [Tooltip("Tight, straight-on close-up of the dealer's face (the beat after the silent pause).")]
+        [SerializeField] Vector3 dealerFrontPosition = new(0f, 0.12f, 2.5f);
+        [SerializeField] Vector3 dealerFrontRotation = new(-13f, 0f, 0f);
 
         [Header("Wake-up blink (eyelids)")]
         [Tooltip("Black bars close from top & bottom like eyelids; the screen starts shut and blinks open as " +
@@ -124,15 +138,15 @@ namespace Meniscus.Gameplay
 
             yield return WaitUnscaled(beatBeforeFirstLine);
 
-            camera?.BeginDialogueShots();
             var done = false;
             dialogue.Play(
                 introLines,
                 () => done = true,
                 cue => NodInterlude(camera, cue),
-                () => camera?.NextDialogueShot());
+                line => LineEnter(camera, line));
             while (!done) yield return null;
-            camera?.EndDialogueShots();
+
+            camera?.ClearMonologueShot();   // back to the resting framing for the round (defensive: last shot already did)
 
             routine = null;
             playing = false;
@@ -141,15 +155,9 @@ namespace Meniscus.Gameplay
 
         IEnumerator OutroRoutine(CameraController camera, DialogueController dialogue, Action onDone)
         {
-            camera?.BeginDialogueShots();
             var done = false;
-            dialogue.Play(
-                outroLines,
-                () => done = true,
-                cue => NodInterlude(camera, cue),
-                () => camera?.NextDialogueShot());
+            dialogue.Play(outroLines, () => done = true, cue => NodInterlude(camera, cue));
             while (!done) yield return null;
-            camera?.EndDialogueShots();
 
             BuildFadeOverlay();
             yield return Fade(0f, 1f, outroFadeSeconds);     // dim to black
@@ -163,14 +171,48 @@ namespace Meniscus.Gameplay
             playing = false;
         }
 
+        // Played as each box appears, before it types: holds the silent dramatic beat (if flagged) and then
+        // pushes the camera to the box's framing, so the close-up eases in while the dealer speaks the line.
+        IEnumerator LineEnter(CameraController camera, DialogueLine line)
+        {
+            if (line == null)
+                yield break;
+
+            if (line.pauseOnEnter && pauseBeatSeconds > 0f)
+                yield return WaitUnscaled(pauseBeatSeconds);
+
+            ApplyShot(camera, line.shotOnEnter);
+        }
+
+        void ApplyShot(CameraController camera, DialogueShot shot)
+        {
+            if (camera == null)
+                return;
+
+            switch (shot)
+            {
+                case DialogueShot.Default:
+                    camera.ClearMonologueShot();
+                    break;
+                case DialogueShot.DealerCloseUp:
+                    camera.FrameMonologueShot(dealerCloseUpPosition, dealerCloseUpRotation);
+                    break;
+                case DialogueShot.DealerFront:
+                    camera.FrameMonologueShot(dealerFrontPosition, dealerFrontRotation);
+                    break;
+                case DialogueShot.Keep:
+                default:
+                    break;
+            }
+        }
+
         IEnumerator NodInterlude(CameraController camera, DialogueCue cue)
         {
             if (camera == null || cue == DialogueCue.None)
                 yield break;
 
-            // Cut back to the player's initial POV so the nod reads as the player nodding from their seat;
-            // the next line resumes the dealer close-up.
-            camera.SuspendDialogueShotsToBase();
+            // The camera stays at the normal seated framing through the whole monologue, so the nod simply
+            // tilts in place (the player nodding) before the next box.
             camera.NodCamera(cue == DialogueCue.StrongNod);
             yield return WaitUnscaled(nodInterludeSeconds);
         }
@@ -323,20 +365,26 @@ namespace Meniscus.Gameplay
         }
 
         // Seed copy (editable in the inspector). The two nods land on the lines the script marks *nodding*.
+        // The camera leans into the dealer on "Well it's easy to…", pulls back, then — after a silent beat —
+        // pushes to a tight front close-up of his face on "Well, well. Too bad…" and holds it through his
+        // gloating before returning to the resting framing for the deal.
         static DialogueLine[] BuildDefaultIntro() => new[]
         {
             new DialogueLine("Ah, so you're finally awake."),
             new DialogueLine("Wondering where you are? How you got here?"),
             new DialogueLine("Well it's easy to... let's say... pick up a lonely traveller while they rest. " +
-                             "And your two little pals are quite bribable."),
+                             "And your two little pals are quite bribable.",
+                             DialogueCue.None, DialogueShot.DealerCloseUp),
             new DialogueLine("See it like this: I just helped you find a nice place to stay."),
             new DialogueLine("And now that we're here, well – you wouldn't want to leave already, would you?",
-                             DialogueCue.Nod),
+                             DialogueCue.Nod, DialogueShot.Default),
             new DialogueLine("Well, well. Too bad this place is locked up and there's nowhere to go. I took " +
-                             "your horse too, and your gear. A lone lamb wouldn't make it far in the desert anyway."),
+                             "your horse too, and your gear. A lone lamb wouldn't make it far in the desert anyway.",
+                             DialogueCue.None, DialogueShot.DealerFront, pauseOnEnter: true),
             new DialogueLine("But I see that you might find this situation uncomfortable.",
                              DialogueCue.StrongNod),
-            new DialogueLine("Ha, ha. So, let's make a deal."),
+            new DialogueLine("Ha, ha. So, let's make a deal.",
+                             DialogueCue.None, DialogueShot.Default),
             new DialogueLine("Play my favourite game with me. If you win three rounds, I'll let you go. If not, " +
                              "I'll keep you here for now. Don't worry – I have a nice room ready for you to stay."),
         };

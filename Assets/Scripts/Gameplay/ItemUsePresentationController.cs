@@ -25,6 +25,13 @@ namespace Meniscus.Gameplay
     ///  • Taro (item id "taro_laps", a ReduceCurrentRisk) — shake the held Leckerlis treats to call Taro the
     ///    cat over; he laps the glass (<see cref="CatController.SummonToDrink"/> + the Cat_Drink clip) and the
     ///    whiskey settles. Keyed by id, since Buy a Round shares the ReduceCurrentRisk effect.
+    ///  • Bandana (<see cref="ItemEffectKind.SkipTurn"/>) — pull it up over the camera; the screen blacks out
+    ///    for a beat (see <see cref="ScreenFadeOverlay"/>), masking the cut to the dealer's turn that SkipTurn
+    ///    already triggered.
+    ///  • Pfeifi whistle (item id "dog_whistle", an EnemySafeZonePenalty) — the whistle flies to the mouth and
+    ///    is blown; the dog runs to the dealer's side and barks (<see cref="DogController.SummonToHarass"/> +
+    ///    the Dog_Steal clip standing in for a bark), rattling the dealer. Keyed by id (Round for the Dealer
+    ///    shares EnemySafeZonePenalty).
     /// While a performance plays the <see cref="GameManager"/> holds an input lock so a pour can't cut it short.
     /// </summary>
     [DisallowMultipleComponent]
@@ -90,18 +97,64 @@ namespace Meniscus.Gameplay
         [Tooltip("Safety cap on how long we shake the treats waiting for Taro to arrive.")]
         [SerializeField, Min(0f)] float maxSummonWait = 3.5f;
 
+        [Header("Pfeifi whistle — pick up from the desk to the mouth (dog_whistle)")]
+        [Tooltip("The Pfeifi whistle GameObject resting on the desk. If empty, a scene object named " +
+                 "'Whistle Prop Name' is found (even if inactive); failing that, the wired model is instantiated. " +
+                 "It is picked up to the mouth POV-style, then put back exactly where it was.")]
+        [SerializeField] Transform whistleSceneProp;
+        [Tooltip("Scene object name used as the whistle when none is assigned above.")]
+        [SerializeField] string whistlePropName = "Pfeifi";
+        [Tooltip("Where the whistle is held near the mouth (camera-local). Kept well past the camera near-plane " +
+                 "so it doesn't clip / fill the view; a bit below centre, toward the lips.")]
+        [SerializeField] Vector3 whistleMouthLocalPos = new(0f, -0.12f, 0.42f);
+        [Tooltip("Tilt at the mouth used ONLY for the instantiated fallback model. A scene whistle keeps its " +
+                 "own authored rotation (the mouthpiece you aimed at the cam) — this is ignored for it.")]
+        [SerializeField] Vector3 whistleHeldEuler = new(35f, 0f, 0f);
+        [Tooltip("Extra turn applied to the SCENE whistle as it reaches the mouth, relative to its authored " +
+                 "rotation. Default = turned 180° (around up). Restored to the authored rotation on the way back.")]
+        [SerializeField] Vector3 whistleMouthTurnEuler = new(0f, 180f, 0f);
+        [Tooltip("Desk start pose used ONLY when instantiating the wired model (no scene object found): low + forward, on the desk.")]
+        [SerializeField] Vector3 whistleDeskLocalOffset = new(0.14f, -0.42f, 0.62f);
+        [SerializeField, Min(0.01f)] float whistleHeldSize = 0.2f;
+        [SerializeField, Min(0.05f)] float whistleFlySeconds = 0.55f;
+        [Tooltip("Lift of the pickup arc (camera-local up). Bigger = a more pronounced arch up to the face.")]
+        [SerializeField, Min(0f)] float whistleFlyArc = 0.2f;
+        [Tooltip("Beat held at the mouth as the whistle is blown (audio added later).")]
+        [SerializeField, Min(0f)] float whistleBlowSeconds = 0.35f;
+        [Tooltip("How far back from the dealer's side the dog stops to bark.")]
+        [SerializeField, Min(0f)] float dogStandoff = 0.7f;
+        [SerializeField, Min(0f)] float dogHoldSeconds = 1.6f;
+
+        [Header("Bandana — pull it over the camera (SkipTurn)")]
+        [Tooltip("Resting pose of the held bandana in camera-local space, just before it covers the lens.")]
+        [SerializeField] Vector3 bandanaHeldLocalPos = new(0f, -0.04f, 0.3f);
+        [SerializeField] Vector3 bandanaHeldEuler = Vector3.zero;
+        [SerializeField, Min(0.01f)] float bandanaHeldSize = 0.5f;
+        [Tooltip("How far below the held pose the bandana starts — it's pulled up from here over the face.")]
+        [SerializeField, Min(0f)] float bandanaRaiseFrom = 0.4f;
+        [SerializeField, Min(0.01f)] float bandanaRaiseSeconds = 0.22f;
+        [Tooltip("How fast the screen blacks out as the bandana covers the camera.")]
+        [SerializeField, Min(0.01f)] float coverSeconds = 0.15f;
+        [SerializeField, Min(0f)] float holdBlackSeconds = 0.55f;
+        [Tooltip("How fast the blackout lifts again onto the dealer's turn.")]
+        [SerializeField, Min(0.01f)] float uncoverSeconds = 0.35f;
+
         [Header("Effect banner (floating text)")]
         [SerializeField, Min(0f)] float bannerFadeSeconds = 0.25f;
         [SerializeField, Min(0f)] float bannerHoldSeconds = 1.1f;
         [Tooltip("How far above the glass the effect text floats (metres in world space).")]
         [SerializeField] float bannerWorldLift = 0.35f;
 
-        // Taro is keyed by item id (the cat-summon beat), since Buy a Round shares the ReduceCurrentRisk effect.
+        // Keyed by item id (critter-summon beats) since they share an effect with another item.
         const string TaroItemId = "taro_laps";
+        const string WhistleItemId = "dog_whistle";
 
         SpyglassScopeView scopeView;
         ItemEffectBanner banner;
+        ScreenFadeOverlay fade;
         CatController cat;
+        DogController dog;
+        Transform resolvedWhistle;
         bool playing;
 
         void OnEnable()
@@ -140,10 +193,18 @@ namespace Meniscus.Gameplay
             if (item == null || !Application.isPlaying || playing)
                 return;
 
-            // Taro is keyed by id, not effect: it summons the cat, and Buy a Round shares ReduceCurrentRisk.
+            // Taro and the whistle are keyed by id, not effect, because they summon a specific critter and
+            // share their effect with another item (Taro/Buy-a-Round = ReduceCurrentRisk; the whistle and
+            // Round for the Dealer = EnemySafeZonePenalty).
             if (item.Id == TaroItemId)
             {
                 StartCoroutine(PlayTaroDrink(item));
+                return;
+            }
+
+            if (item.Id == WhistleItemId)
+            {
+                StartCoroutine(PlayWhistleSummon(item));
                 return;
             }
 
@@ -158,6 +219,12 @@ namespace Meniscus.Gameplay
                 case ItemEffectKind.PayoutMultiplier:
                 case ItemEffectKind.ForceEnemyCoins:
                     StartCoroutine(PlayCoinDropReveal(item));
+                    break;
+
+                // Bandana (SkipTurn): pull it up over the camera — a short blackout masking the cut to the
+                // dealer's turn (SkipTurn already advanced the turn before this beat).
+                case ItemEffectKind.SkipTurn:
+                    StartCoroutine(PlayBandanaCover(item));
                     break;
 
                 // Round for the Dealer (EnemySafeZonePenalty) → PlayBottlePourReveal is built and parked, but
@@ -725,6 +792,280 @@ namespace Meniscus.Gameplay
                 cat = FindAnyObjectByType<CatController>();
 
             return cat;
+        }
+
+        // Pfeifi (item id "dog_whistle", an EnemySafeZonePenalty — keyed by id, since Round for the Dealer
+        // shares that effect): the whistle flies up to the mouth and is blown (sound added later), which calls
+        // the dog over to the dealer's side to bark at him (his Dog_Steal clip stands in for a bark — no bark
+        // clip exists). A line of text + a camera kick sell that the dealer is rattled and will overflow more
+        // easily next round (EnemySafeZonePenalty, applied on use — it has no live glass tell, so the text carries it).
+        IEnumerator PlayWhistleSummon(ItemDefinition item)
+        {
+            ResolveReferences();
+            playing = true;
+            gameManager?.SetItemPresentationActive(true);
+
+            var camTransform = Camera.main != null ? Camera.main.transform : null;
+
+            // Prefer the whistle GameObject sitting on the desk (a POV pickup); else instantiate the wired model.
+            var sceneProp = ResolveWhistleProp();
+            Transform prop = null;
+            var usingSceneProp = false;
+            Transform origParent = null;
+            var origLocalPos = Vector3.zero;
+            var origLocalRot = Quaternion.identity;
+            var origLocalScale = Vector3.one;
+            var origActive = true;
+            GameObject instantiated = null;
+
+            if (sceneProp != null && camTransform != null)
+            {
+                prop = sceneProp;
+                usingSceneProp = true;
+                origParent = prop.parent;
+                origLocalPos = prop.localPosition;
+                origLocalRot = prop.localRotation;
+                origLocalScale = prop.localScale;
+                origActive = prop.gameObject.activeSelf;
+
+                prop.gameObject.SetActive(true);
+                // Keep it where it sits on the desk, but now in camera space so we can lift it to the mouth.
+                prop.SetParent(camTransform, worldPositionStays: true);
+            }
+            else if (camTransform != null)
+            {
+                instantiated = CreateProp(item, camTransform, whistleHeldSize);
+                if (instantiated != null)
+                {
+                    prop = instantiated.transform;
+                    prop.localPosition = whistleDeskLocalOffset;
+                }
+            }
+
+            // Reach down to the desk and bring the whistle up to the mouth in an arc (POV pickup).
+            if (prop != null)
+            {
+                var startLocalPos = prop.localPosition;
+                var startLocalRot = prop.localRotation;
+
+                // The scene whistle keeps its authored orientation, turned by whistleMouthTurnEuler (default
+                // 180°) once at the mouth. The instantiated fallback just gets the authored down-tilt.
+                var endRot = usingSceneProp
+                    ? startLocalRot * Quaternion.Euler(whistleMouthTurnEuler)
+                    : Quaternion.Euler(whistleHeldEuler);
+
+                for (var t = 0f; t < whistleFlySeconds; t += Time.deltaTime)
+                {
+                    var e = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / whistleFlySeconds));
+                    prop.localPosition = CoinDropPresentationController.CalculateArcPosition(startLocalPos, whistleMouthLocalPos, e, whistleFlyArc);
+                    prop.localRotation = Quaternion.Slerp(startLocalRot, endRot, e);
+                    yield return null;
+                }
+                prop.SetLocalPositionAndRotation(whistleMouthLocalPos, endRot);
+            }
+
+            // The blow (audio later) — a short beat held at the mouth.
+            for (var t = 0f; t < whistleBlowSeconds; t += Time.deltaTime)
+                yield return null;
+
+            // Keep the camera where it is — no move/rise. The dog runs over from wherever it was wandering.
+            var pup = ResolveDog();
+            var barking = false;
+
+            if (pup != null)
+            {
+                var dealerSpot = ResolveDealerSpot(pup.transform.position.y);
+                pup.SummonToHarass(dealerSpot, dogStandoff, dogHoldSeconds, () => barking = true);
+            }
+            else
+            {
+                barking = true;   // no dog to wait on — still play the text beat
+            }
+
+            // Keep the whistle at the mouth while the dog runs over (timeout-guarded).
+            var waited = 0f;
+            while (!barking && waited < maxSummonWait)
+            {
+                waited += Time.deltaTime;
+                yield return null;
+            }
+
+            // The dog barks at the dealer: a camera kick + the effect text. Anchored to the glass (the camera
+            // hasn't moved, so the dog may be off to the side) so the text always reads.
+            cameraController?.Shake();
+            EnsureBanner();
+            banner.Show(
+                $"DEALER RATTLED\n<size=34>+{Mathf.RoundToInt(item.Magnitude)} RISK NEXT ROUND</size>",
+                GlassAnchorTransform(),
+                Vector3.up * bannerWorldLift);
+            yield return FadeBanner(0f, 1f, bannerFadeSeconds);
+
+            for (var t = 0f; t < dogHoldSeconds; t += Time.deltaTime)
+                yield return null;
+
+            yield return FadeBanner(1f, 0f, bannerFadeSeconds);
+            banner.Hide();
+
+            // Put the desk whistle back exactly where it was (or remove the instantiated stand-in).
+            if (usingSceneProp && prop != null)
+            {
+                prop.SetParent(origParent, worldPositionStays: false);
+                prop.localPosition = origLocalPos;
+                prop.localRotation = origLocalRot;
+                prop.localScale = origLocalScale;
+                prop.gameObject.SetActive(origActive);
+            }
+            else if (instantiated != null)
+            {
+                Destroy(instantiated);
+            }
+
+            // The camera was never moved, so nothing to hand back — it's still the player's turn.
+            gameManager?.SetItemPresentationActive(false);
+            playing = false;
+        }
+
+        // The whistle to pick up: the assigned desk object, else a scene object named whistlePropName (found
+        // even if inactive), else null (the caller instantiates the wired model instead). Cached after first find.
+        Transform ResolveWhistleProp()
+        {
+            if (whistleSceneProp != null)
+                return whistleSceneProp;
+
+            if (resolvedWhistle != null)
+                return resolvedWhistle;
+
+            if (!string.IsNullOrEmpty(whistlePropName))
+            {
+                var transforms = FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                for (var i = 0; i < transforms.Length; i++)
+                {
+                    if (transforms[i] != null && transforms[i].name == whistlePropName)
+                    {
+                        resolvedWhistle = transforms[i];
+                        return resolvedWhistle;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        DogController ResolveDog()
+        {
+            if (dog == null)
+                dog = FindAnyObjectByType<DogController>();
+
+            return dog;
+        }
+
+        // The dealer sits across the table; aim the dog at the dealer's side of the table — the centre of the
+        // enemy's coin row — projected to the dog's (floor) height. Falls back to the glass column if the
+        // enemy has no coins out (e.g. between deals).
+        Vector3 ResolveDealerSpot(float floorY)
+        {
+            var enemyCoins = gameManager != null ? gameManager.EnemyCoins : null;
+
+            if (enemyCoins != null && enemyCoins.Count > 0)
+            {
+                var sum = Vector3.zero;
+                var n = 0;
+
+                for (var i = 0; i < enemyCoins.Count; i++)
+                {
+                    if (enemyCoins[i] != null && enemyCoins[i].gameObject.activeInHierarchy)
+                    {
+                        sum += enemyCoins[i].transform.position;
+                        n++;
+                    }
+                }
+
+                if (n > 0)
+                {
+                    var spot = sum / n;
+                    spot.y = floorY;
+                    return spot;
+                }
+            }
+
+            if (TryGetGlassSurface(out var surface, out _))
+                return new Vector3(surface.x, floorY, surface.z);
+
+            return new Vector3(0f, floorY, 0f);
+        }
+
+        // Bandana (SkipTurn): pull the bandana up over the camera so the screen blacks out for a beat, then
+        // lift it onto the dealer's turn. SkipTurn already advanced the turn (and switched to DealerFocus)
+        // before this beat fired, so the blackout neatly masks that cut — we never touch the camera here.
+        IEnumerator PlayBandanaCover(ItemDefinition item)
+        {
+            ResolveReferences();
+            playing = true;
+            gameManager?.SetItemPresentationActive(true);
+
+            EnsureFade();
+
+            // Pull the bandana up from below toward the lens, like raising it over your face.
+            var camTransform = Camera.main != null ? Camera.main.transform : null;
+            var bandana = camTransform != null ? CreateProp(item, camTransform, bandanaHeldSize) : null;
+            var heldRot = Quaternion.Euler(bandanaHeldEuler);
+
+            if (bandana != null)
+            {
+                var from = bandanaHeldLocalPos - Vector3.up * bandanaRaiseFrom;
+                bandana.transform.SetLocalPositionAndRotation(from, heldRot);
+                yield return AnimateProp(bandana, from, bandanaHeldLocalPos, heldRot, bandanaRaiseSeconds, easeOut: true);
+            }
+
+            // It comes over the eyes — black the camera out.
+            yield return FadeScreen(0f, 1f, coverSeconds);
+
+            if (bandana != null)
+                Destroy(bandana);   // hidden behind the black now
+
+            for (var t = 0f; t < holdBlackSeconds; t += Time.deltaTime)
+                yield return null;
+
+            // Lift it again — onto the dealer's turn.
+            yield return FadeScreen(1f, 0f, uncoverSeconds);
+
+            // Once the blindfold lifts, name what happened.
+            EnsureBanner();
+            banner.Show("TURN SKIPPED", GlassAnchorTransform(), Vector3.up * bannerWorldLift);
+            yield return FadeBanner(0f, 1f, bannerFadeSeconds);
+            for (var t = 0f; t < bannerHoldSeconds; t += Time.deltaTime)
+                yield return null;
+            yield return FadeBanner(1f, 0f, bannerFadeSeconds);
+            banner.Hide();
+
+            gameManager?.SetItemPresentationActive(false);
+            playing = false;
+        }
+
+        IEnumerator FadeScreen(float from, float to, float seconds)
+        {
+            if (fade == null)
+                yield break;
+
+            if (seconds <= 0f)
+            {
+                fade.SetAlpha(to);
+                yield break;
+            }
+
+            for (var t = 0f; t < seconds; t += Time.deltaTime)
+            {
+                fade.SetAlpha(Mathf.Lerp(from, to, t / seconds));
+                yield return null;
+            }
+
+            fade.SetAlpha(to);
+        }
+
+        void EnsureFade()
+        {
+            if (fade == null)
+                fade = ScreenFadeOverlay.Create();
         }
 
         void EnsureScopeView()

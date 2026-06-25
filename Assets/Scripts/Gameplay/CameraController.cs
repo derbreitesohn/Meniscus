@@ -141,38 +141,6 @@ namespace Meniscus.Gameplay
         [Tooltip("Number of down-up swings in a strong nod.")]
         [SerializeField, Min(1)] int nodStrongSwings = 2;
 
-        [Header("Dialogue Shots")]
-        [Tooltip("Optional: the dealer's face/head transform to frame. If empty, the 'Main_character-textured' " +
-                 "model is found at runtime and its head is measured from renderer bounds (robust to the model's " +
-                 "pivot sitting at his feet).")]
-        [SerializeField] Transform dialogueSubject;
-        [Tooltip("Scene name of the dealer model, found and measured at runtime when no subject is wired above.")]
-        [SerializeField] string dialogueSubjectName = "Main_character-textured";
-        [Tooltip("Vertical nudge applied to the framed face (metres). Use if the close-up sits a little high or low.")]
-        [SerializeField] float dialogueFaceHeight = 0f;
-        [Tooltip("Closer framing distance as a fraction of the dealer's height (alternating lines lean closer).")]
-        [SerializeField, Range(0.1f, 1.5f)] float dialogueNearFraction = 0.42f;
-        [Tooltip("Less-close framing distance as a fraction of the dealer's height (alternating lines lean back).")]
-        [SerializeField, Range(0.1f, 1.5f)] float dialogueFarFraction = 0.62f;
-        [Tooltip("How much the distance gently breathes in / out within a shot (fraction of height).")]
-        [SerializeField, Range(0f, 0.3f)] float dialogueDistBreathFraction = 0.05f;
-        [Tooltip("Minimum close-up distance from the face (metres), so it never clips inside him.")]
-        [SerializeField, Min(0.05f)] float dialogueMinFaceDistance = 0.15f;
-        [Tooltip("When a head/eye mesh can't be identified, aim this far up the dealer's full height (0 = feet, 1 = top).")]
-        [SerializeField, Range(0f, 1f)] float dialogueHeadHeightFraction = 0.9f;
-        [Tooltip("Per-line yaw bias to either side of the face the shot re-centres on (degrees). Smoothly panned, never jumped.")]
-        [SerializeField, Range(0f, 60f)] float dialogueShotBias = 18f;
-        [Tooltip("Amplitude of the continuous gentle pan around the current centre (degrees).")]
-        [SerializeField, Range(0f, 40f)] float dialoguePanAmplitude = 9f;
-        [Tooltip("Speed of the continuous pan sweep (radians/sec). Lower = slower, statelier.")]
-        [SerializeField, Min(0f)] float dialoguePanSpeed = 0.6f;
-        [Tooltip("How high the close-up rides relative to the face (degrees). ~0 = level with his eyes.")]
-        [SerializeField, Range(-30f, 40f)] float dialogueFacePitch = 4f;
-        [Tooltip("How fast dialogue shots glide / pan between line framings. Lower = slower glide.")]
-        [SerializeField, Min(0.5f)] float dialogueBlendSpeed = 3.5f;
-        [Tooltip("Fallback only: distance ahead of the seated eye to aim if no dealer model can be found.")]
-        [SerializeField, Min(0.1f)] float dialogueSubjectDistance = 1.5f;
-
         [Header("Death Orbit")]
         [Tooltip("Distance the loss orbit holds from the glass, as a multiple of the glass size.")]
         [SerializeField, Min(0.5f)] float orbitRadiusMultiplier = 3.2f;
@@ -218,14 +186,9 @@ namespace Meniscus.Gameplay
         float nodAmp;              // pitch amplitude of the active nod (degrees)
         int nodSwings;             // down-up swings in the active nod
 
-        bool dialogueShotActive;       // dialogue framing owns the rig: a panning close-up on the dealer's face
-        bool dialogueShotSuspended;    // held at the initial POV (the seat) for a nod, then resumed
-        int dialogueShotIndex;         // increments per line; parity re-centres the framing side / distance
-        float dialoguePanPhase;        // continuous gentle pan sweep
-        float dialogueCenterYaw;       // the side the current line's framing pans around (degrees)
-        float dialogueCenterDistFraction; // the current line's distance fraction (near vs. far)
-        Renderer dialogueFaceRenderer; // the dealer's eye/head renderer; focus = its world bounds centre
-        Renderer[] dialogueDealerRenderers; // all dealer renderers — measure his height + a fallback head point
+        bool monologueFraming;         // the dealer monologue is holding a custom close-up (offset from base)
+        Vector3 monologuePosOffset;    // its position offset from the base pose (base-local axes)
+        Vector3 monologueRotOffset;    // its rotation offset from the base pose (camera space, degrees)
 
         Vector3 lastFocusPosition;
         Quaternion lastFocusRotation = Quaternion.identity;
@@ -304,17 +267,6 @@ namespace Meniscus.Gameplay
         {
             EnsureBaseCaptured(cameraTransform);
 
-            if (dialogueShotActive && !dialogueShotSuspended)
-            {
-                // A close-up on the dealer's face that gently pans, and glides (not jumps) to a new framing
-                // each line. Suspended during a nod so the rig falls through to the initial seated POV below.
-                UpdateDialogueShot(out var shotPosition, out var shotRotation);
-                var blend = dialogueBlendSpeed <= 0f ? 1f : 1f - Mathf.Exp(-dialogueBlendSpeed * Time.deltaTime);
-                rigPosition = Vector3.Lerp(rigPosition, shotPosition, blend);
-                rigRotation = Quaternion.Slerp(rigRotation, shotRotation, blend);
-                return;
-            }
-
             if (!TryGetRestingPose(out var targetPosition, out var targetRotation))
                 return; // Hold the current rig pose (glass close-ups blend on top of wherever we are).
 
@@ -351,6 +303,16 @@ namespace Meniscus.Gameplay
 
         bool TryGetRestingPose(out Vector3 position, out Quaternion rotation)
         {
+            // The dealer's monologue can push to a custom close-up framed as an offset from the base pose; it
+            // wins over the per-state framing while active and blends in/out via the rig like any other shot.
+            // Released (ClearMonologueShot) when the monologue ends so normal play returns to its framing.
+            if (monologueFraming)
+            {
+                rotation = baseRotation * Quaternion.Euler(monologueRotOffset);
+                position = basePosition + baseRotation * monologuePosOffset;
+                return true;
+            }
+
             // An assigned anchor is a pixel-exact override and wins outright.
             var anchor = FindAnchor(currentState);
 
@@ -534,6 +496,11 @@ namespace Meniscus.Gameplay
         void ApplyIdleSway(ref Vector3 position, ref Quaternion rotation)
         {
             var swayMultiplier = StateSwayMultiplier(currentState);
+
+            // A monologue close-up holds a tight frame, so calm the handheld sway right down (still alive,
+            // not jittery) regardless of the underlying state's sway.
+            if (monologueFraming)
+                swayMultiplier *= 0.3f;
 
             if (swayMultiplier <= 0f)
                 return;
@@ -928,6 +895,22 @@ namespace Meniscus.Gameplay
         }
 
         /// <summary>
+        /// Push to a custom monologue close-up: a framing held as an offset from the resting/overview pose
+        /// (<paramref name="positionOffset"/> in base-local axes, +z toward the table; <paramref name="rotationOffset"/>
+        /// in camera space, +x pitches the view down). Blends in via the rig like any resting framing and stays
+        /// until <see cref="ClearMonologueShot"/>. Driven by the dealer's monologue to frame the dealer.
+        /// </summary>
+        public void FrameMonologueShot(Vector3 positionOffset, Vector3 rotationOffset)
+        {
+            monologuePosOffset = positionOffset;
+            monologueRotOffset = rotationOffset;
+            monologueFraming = true;
+        }
+
+        /// <summary>Release the monologue close-up so the camera blends back to its current state's framing.</summary>
+        public void ClearMonologueShot() => monologueFraming = false;
+
+        /// <summary>
         /// Kick a camera nod — a brief down-up pitch swing layered on top of the current framing, as if the
         /// player nods. <paramref name="strong"/> swings further and twice. Used by the dealer's monologue.
         /// </summary>
@@ -952,206 +935,6 @@ namespace Meniscus.Gameplay
             var pitch = Mathf.Sin(phase) * nodAmp * envelope;                 // +pitch tips the view down
 
             rotation *= Quaternion.Euler(pitch, 0f, 0f);
-        }
-
-        /// <summary>
-        /// Hand the rig over to dialogue framing: a close-up on the dealer's face that gently pans and glides
-        /// to a new composition each line (see <see cref="NextDialogueShot"/>). Call
-        /// <see cref="EndDialogueShots"/> when the talk ends.
-        /// </summary>
-        public void BeginDialogueShots()
-        {
-            if (targetCamera == null)
-                targetCamera = Camera.main;
-
-            if (targetCamera != null)
-                EnsureBaseCaptured(targetCamera.transform);
-
-            ResolveDialogueFace();
-            dialogueShotActive = true;
-            dialogueShotSuspended = false;
-            dialogueShotIndex = 0;
-            dialoguePanPhase = 0f;
-            dialogueCenterYaw = -dialogueShotBias;
-            dialogueCenterDistFraction = dialogueFarFraction;   // open a touch less close
-        }
-
-        /// <summary>
-        /// Re-centre the framing for the next line — alternating side and near / far distance. The rig glides
-        /// (pans) to it rather than cutting. Also resumes shots after a nod. Called as each box begins.
-        /// </summary>
-        public void NextDialogueShot()
-        {
-            if (!dialogueShotActive)
-                return;
-
-            dialogueShotSuspended = false;   // resume the close-up after a nod
-            dialogueShotIndex++;
-
-            var even = dialogueShotIndex % 2 == 0;
-            dialogueCenterYaw = (even ? -1f : 1f) * dialogueShotBias;
-            dialogueCenterDistFraction = even ? dialogueFarFraction : dialogueNearFraction;
-        }
-
-        /// <summary>
-        /// Suspend the close-up and snap the rig back to the initial seated POV so a nod reads as the player
-        /// nodding from their own seat. The next <see cref="NextDialogueShot"/> resumes the close-up.
-        /// </summary>
-        public void SuspendDialogueShotsToBase()
-        {
-            if (!dialogueShotActive)
-                return;
-
-            if (targetCamera != null)
-                EnsureBaseCaptured(targetCamera.transform);
-
-            dialogueShotSuspended = true;
-            rigPosition = basePosition;     // reset to the POV of the initial camera position
-            rigRotation = baseRotation;
-        }
-
-        /// <summary>Release the rig back to its resting framing.</summary>
-        public void EndDialogueShots()
-        {
-            dialogueShotActive = false;
-            dialogueShotSuspended = false;
-            dialogueFaceRenderer = null;
-            dialogueDealerRenderers = null;
-        }
-
-        public bool IsDialogueShotActive => dialogueShotActive;
-
-        // Find the dealer model and the renderer to centre the face on (its eye, else head). The model's
-        // transform pivot sits at his feet, so we measure RENDERER BOUNDS, not transform.position.
-        void ResolveDialogueFace()
-        {
-            dialogueFaceRenderer = null;
-            dialogueDealerRenderers = null;
-
-            if (dialogueSubject != null || string.IsNullOrEmpty(dialogueSubjectName))
-                return;
-
-            var root = GameObject.Find(dialogueSubjectName);
-            if (root == null)
-                return;
-
-            dialogueDealerRenderers = root.GetComponentsInChildren<Renderer>(true);
-
-            Renderer eye = null, head = null;
-            foreach (var r in dialogueDealerRenderers)
-            {
-                if (r == null)
-                    continue;
-
-                var n = r.gameObject.name.ToLowerInvariant();
-                if (eye == null && n.Contains("eye")) eye = r;
-                if (head == null && n.Contains("head")) head = r;
-            }
-
-            dialogueFaceRenderer = eye != null ? eye : head;
-        }
-
-        // The world-space face point + the dealer's measured height. Measured live so it tracks idle motion.
-        bool TryGetDialogueFocus(out Vector3 focus, out float dealerHeight)
-        {
-            dealerHeight = 0f;
-
-            if (dialogueSubject != null)
-            {
-                focus = dialogueSubject.position + Vector3.up * dialogueFaceHeight;
-                return true;
-            }
-
-            if (dialogueDealerRenderers != null && dialogueDealerRenderers.Length > 0)
-            {
-                var combined = CombinedBounds(dialogueDealerRenderers, out var any);
-                if (any)
-                {
-                    dealerHeight = combined.size.y;
-                    focus = dialogueFaceRenderer != null
-                        ? dialogueFaceRenderer.bounds.center
-                        : new Vector3(
-                            combined.center.x,
-                            Mathf.Lerp(combined.center.y, combined.max.y, dialogueHeadHeightFraction),
-                            combined.center.z);
-                    focus += Vector3.up * dialogueFaceHeight;
-                    return true;
-                }
-            }
-
-            focus = default;
-            return false;
-        }
-
-        static Bounds CombinedBounds(Renderer[] renderers, out bool any)
-        {
-            any = false;
-            var bounds = new Bounds();
-
-            foreach (var r in renderers)
-            {
-                if (r == null || !r.enabled)
-                    continue;
-
-                if (!any) { bounds = r.bounds; any = true; }
-                else bounds.Encapsulate(r.bounds);
-            }
-
-            return bounds;
-        }
-
-        // The live close-up target: a continuous gentle pan around the current centre, breathing in / out.
-        void UpdateDialogueShot(out Vector3 position, out Quaternion rotation)
-        {
-            dialoguePanPhase += Time.unscaledDeltaTime * dialoguePanSpeed;
-
-            var yaw = dialogueCenterYaw + Mathf.Sin(dialoguePanPhase) * dialoguePanAmplitude;
-            var distFraction = dialogueCenterDistFraction
-                               + Mathf.Sin(dialoguePanPhase * 0.6f) * dialogueDistBreathFraction;
-
-            ComposeFaceShot(yaw, distFraction, out position, out rotation);
-        }
-
-        // A close-up looking at the dealer's face from a given side (yaw) and distance (fraction of his height).
-        void ComposeFaceShot(float yawDeg, float distFraction, out Vector3 position, out Quaternion rotation)
-        {
-            float distance;
-
-            if (TryGetDialogueFocus(out var focus, out var dealerHeight))
-            {
-                distance = Mathf.Max(
-                    dialogueMinFaceDistance,
-                    dealerHeight > 0.01f ? dealerHeight * distFraction : dialogueMinFaceDistance);
-            }
-            else
-            {
-                // No dealer found: aim ahead of the seated eye as a last resort.
-                var fwd = baseRotation * Vector3.forward;
-                fwd.y = 0f;
-                fwd = fwd.sqrMagnitude > 1e-5f ? fwd.normalized : Vector3.forward;
-                focus = basePosition + fwd * dialogueSubjectDistance + Vector3.up * dialogueFaceHeight;
-                distance = Mathf.Max(dialogueMinFaceDistance, 0.6f);
-            }
-
-            // Approach the face from the player's side of it, offset left / right by the yaw.
-            var toPlayer = basePosition - focus;
-            toPlayer.y = 0f;
-            if (toPlayer.sqrMagnitude < 1e-5f)
-            {
-                toPlayer = baseRotation * Vector3.back;
-                toPlayer.y = 0f;
-            }
-            toPlayer = toPlayer.sqrMagnitude > 1e-5f ? toPlayer.normalized : Vector3.back;
-
-            var horizontal = (Quaternion.AngleAxis(yawDeg, Vector3.up) * toPlayer).normalized;
-            var pitchRad = dialogueFacePitch * Mathf.Deg2Rad;
-            var camDir = (horizontal * Mathf.Cos(pitchRad) + Vector3.up * Mathf.Sin(pitchRad)).normalized;
-
-            position = focus + camDir * distance;
-            var look = focus - position;
-            rotation = look.sqrMagnitude > 1e-6f
-                ? Quaternion.LookRotation(look.normalized, Vector3.up)
-                : baseRotation;
         }
 
         static float Smootherstep(float x)

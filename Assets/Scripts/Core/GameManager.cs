@@ -99,6 +99,11 @@ namespace Meniscus.Core
 
         GameState currentState = GameState.StartRound;
         MatchOutcome lastMatchOutcome = MatchOutcome.None;
+        // True once the opening intro cutscene has played in this scene's lifetime. An in-place restart
+        // (after a win or loss) reuses this same GameManager, so the flag is already set and the match
+        // skips straight to the round. Coming in fresh from the main menu reloads the Saloon scene, which
+        // makes a new GameManager with the flag clear — so the intro only plays on that first entry.
+        bool hasPlayedOpeningIntro;
         int currentRound;
         int queuedEnemyForcedCoinCount;
         // Held while an item's "use" performance plays (e.g. the spyglass reveal), so a pour or a second
@@ -170,9 +175,14 @@ namespace Meniscus.Core
             // Open the match with the dealer's wake-up monologue (camera lifts off the table, then he talks);
             // the round only begins once it finishes. Falls back to the walk-in seating intro, then to an
             // instant start. Edit-mode / unwired scenes skip straight to the round so the old flow is preserved.
-            if (ShouldPlayIntroMonologue())
+            // The intro only plays the first time the player enters the scene (i.e. fresh from the main menu);
+            // an in-place restart after a win or loss skips it and starts the round immediately.
+            var playOpeningIntro = !hasPlayedOpeningIntro;
+            hasPlayedOpeningIntro = true;
+
+            if (playOpeningIntro && ShouldPlayIntroMonologue())
                 dealerMonologue.PlayIntro(cameraController, dialogueController, StartRound);
-            else if (ShouldPlaySeatingIntro())
+            else if (playOpeningIntro && ShouldPlaySeatingIntro())
                 seatingIntro.Play(cameraController, StartRound);
             else
                 StartRound();
@@ -315,6 +325,35 @@ namespace Meniscus.Core
             playerInventory.TryConsume(item);
             ItemEffectApplier.Apply(item, economyManager, glassManager, this);
             // The effect is now applied and the item consumed; let the presentation layer play its beat.
+            ItemUsed?.Invoke(item);
+            return true;
+        }
+
+        /// <summary>
+        /// DEBUG/TEST: applies an item's effect for free — it need not be owned, and no inventory copy is
+        /// consumed — then fires <see cref="ItemUsed"/> so its use performance still plays. Gated to the
+        /// player's turn and a clear stage, exactly like a real <see cref="TryUseItem"/>, so the effect
+        /// lands in the same game context it would in play. Drives the GameTestController item menu; not
+        /// part of the normal play loop.
+        /// </summary>
+        public bool DebugUseItemFree(ItemDefinition item)
+        {
+            if (currentState != GameState.PlayerTurn)
+            {
+                Debug.LogWarning($"[GameManager] Ignored debug item use while state={currentState}.");
+                return false;
+            }
+
+            if (itemPresentationLock)
+            {
+                Debug.LogWarning("[GameManager] Ignored debug item use while an item performance is playing.");
+                return false;
+            }
+
+            if (item == null)
+                return false;
+
+            ItemEffectApplier.Apply(item, economyManager, glassManager, this);
             ItemUsed?.Invoke(item);
             return true;
         }

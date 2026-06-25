@@ -23,6 +23,7 @@ namespace Meniscus.Editor
         const string SpyglassFbxGuid = "8d6e7694f7ea6494fa911a8842955029";
         const string BandanaFbxGuid = "1e6bd347bb7b444789c7d56712034dc3";
         const string LeckerlisFbxGuid = "d8989f0d05b09466096d3c4f6031bc53";
+        const string PfeifiFbxGuid = "946f48768b3134517960fe6b5221de38";
         const string SpyglassMatGuid = "9b91b9e9bc45041ad916b749a2867e9f";
         const string BandanaMatGuid = "f6f6cfa1dfe7e41718fe48317c7b7220";
         const string LeckerlisMatGuid = "cd533f3aa04ff40af83f2a5c896f071e";
@@ -111,6 +112,7 @@ namespace Meniscus.Editor
             var spyglass = Load<GameObject>(SpyglassFbxGuid, "Spyglass.fbx");
             var bandana = Load<GameObject>(BandanaFbxGuid, "Bandana.fbx");
             var leckerlis = Load<GameObject>(LeckerlisFbxGuid, "Leckerlis.fbx");
+            var pfeifi = Load<GameObject>(PfeifiFbxGuid, "Pfeifi.fbx");
             var smallCoin = Load<GameObject>(SmallCoinFbxGuid, "Small_coin.fbx");
             var mediumCoin = Load<GameObject>(MediumCoinFbxGuid, "Medium_coin.fbx");
             var bigCoin = Load<GameObject>(BigCoinFbxGuid, "Big_coin.fbx");
@@ -126,6 +128,7 @@ namespace Meniscus.Editor
                 new Binding("bartenders_spectacles", spyglass, spyglassMat),  // "Spyglass"
                 new Binding("step_outside", bandana, bandanaMat),             // "Bandana"
                 new Binding("taro_laps", leckerlis, leckerlisMat),            // "Taro" (the treats / Leckerlis)
+                new Binding("dog_whistle", pfeifi, null),                     // "Pfeifi" (the whistle)
 
                 // Coin-themed items reuse a coin.
                 new Binding("marked_coin", mediumCoin, null),
@@ -133,8 +136,6 @@ namespace Meniscus.Editor
                 new Binding("dealers_debt", smallCoin, null),
 
                 // Drink / pour-easing items reuse the single clean glass.
-                new Binding("happy_hour", glass, null),
-                new Binding("buy_the_house_a_round", glass, null),
                 new Binding("round_for_the_dealer", glass, null),
                 new Binding("steady_hand", glass, null),
             };

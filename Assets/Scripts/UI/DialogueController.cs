@@ -11,6 +11,18 @@ namespace Meniscus.UI
     public enum DialogueCue { None, Nod, StrongNod }
 
     /// <summary>
+    /// A camera framing switched to as a box appears (before it types). The actual poses are owned by the
+    /// monologue so writers pick the intent here and dial the feel there.
+    /// </summary>
+    public enum DialogueShot
+    {
+        Keep,           // leave the camera wherever it is
+        Default,        // return to the resting table framing
+        DealerCloseUp,  // lean-in close-up of the dealer
+        DealerFront     // tight, straight-on close-up of the dealer's face
+    }
+
+    /// <summary>
     /// One dialogue box: a block of text plus an optional camera reaction fired once the box is dismissed.
     /// Authored in the inspector (multi-line <see cref="text"/>) so writers can edit copy without touching code.
     /// </summary>
@@ -22,12 +34,24 @@ namespace Meniscus.UI
         [Tooltip("A camera reaction played AFTER this box is dismissed, before the next one appears.")]
         public DialogueCue cueAfter = DialogueCue.None;
 
+        [Tooltip("Camera framing switched to as this box APPEARS (before it types). Keep = leave it as-is.")]
+        public DialogueShot shotOnEnter = DialogueShot.Keep;
+
+        [Tooltip("Hold a silent dramatic beat before this box types (the duration is owned by the speaker).")]
+        public bool pauseOnEnter;
+
         public DialogueLine() { }
 
-        public DialogueLine(string text, DialogueCue cueAfter = DialogueCue.None)
+        public DialogueLine(
+            string text,
+            DialogueCue cueAfter = DialogueCue.None,
+            DialogueShot shotOnEnter = DialogueShot.Keep,
+            bool pauseOnEnter = false)
         {
             this.text = text;
             this.cueAfter = cueAfter;
+            this.shotOnEnter = shotOnEnter;
+            this.pauseOnEnter = pauseOnEnter;
         }
     }
 
@@ -83,14 +107,14 @@ namespace Meniscus.UI
         /// <summary>
         /// Play a sequence of lines, calling <paramref name="onComplete"/> once the last box is dismissed. If
         /// <paramref name="interlude"/> is supplied it is yielded between boxes whenever a line carries a cue.
-        /// <paramref name="onLineStart"/> fires as each box begins — the monologue uses it to cut the camera
-        /// to the next shot on every "continue".
+        /// If <paramref name="onEnter"/> is supplied it is yielded as each box appears, before it types (the
+        /// monologue uses this to push the camera into a close-up / hold a dramatic beat).
         /// </summary>
         public void Play(
             IReadOnlyList<DialogueLine> lines,
             Action onComplete,
             Func<DialogueCue, IEnumerator> interlude = null,
-            Action onLineStart = null)
+            Func<DialogueLine, IEnumerator> onEnter = null)
         {
             if (lines == null || lines.Count == 0)
             {
@@ -102,7 +126,7 @@ namespace Meniscus.UI
                 BuildUi();
 
             Stop();
-            routine = StartCoroutine(PlayRoutine(lines, onComplete, interlude, onLineStart));
+            routine = StartCoroutine(PlayRoutine(lines, onComplete, interlude, onEnter));
         }
 
         public void Hide()
@@ -160,7 +184,7 @@ namespace Meniscus.UI
             IReadOnlyList<DialogueLine> lines,
             Action onComplete,
             Func<DialogueCue, IEnumerator> interlude,
-            Action onLineStart)
+            Func<DialogueLine, IEnumerator> onEnter)
         {
             playing = true;
             canvas.enabled = true;
@@ -172,7 +196,11 @@ namespace Meniscus.UI
             for (var i = 0; i < lines.Count; i++)
             {
                 var line = lines[i];
-                onLineStart?.Invoke();
+
+                // Let the speaker reframe the camera / hold a beat as the box appears, before it types.
+                if (onEnter != null && line != null)
+                    yield return onEnter(line);
+
                 yield return ShowLine(line != null ? line.text : string.Empty);
 
                 var cue = line != null ? line.cueAfter : DialogueCue.None;

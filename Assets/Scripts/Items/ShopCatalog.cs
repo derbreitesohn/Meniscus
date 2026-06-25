@@ -41,17 +41,13 @@ namespace Meniscus.Items
                     "Reveal the true spill odds on the glass next round.",
                     30, ItemEffectKind.RevealTrueOdds, 0f),
                 ItemDefinition.Create(
-                    "buy_the_house_a_round", "Buy a Round",
-                    "Lower the glass right now, before you pour.",
-                    45, ItemEffectKind.ReduceCurrentRisk, 15f),
+                    "dog_whistle", "Pfeifi",
+                    "Blow the whistle — your dog harries the dealer, who overflows more easily next round.",
+                    50, ItemEffectKind.EnemySafeZonePenalty, 15f),
                 ItemDefinition.Create(
                     "step_outside", "Bandana",
                     "End your turn — pass the loaded glass to the dealer.",
                     40, ItemEffectKind.SkipTurn, 0f),
-                ItemDefinition.Create(
-                    "happy_hour", "Happy Hour",
-                    "Every safe pour pays ×1.5 for the rest of this round.",
-                    55, ItemEffectKind.RoundPayoutMultiplier, 1.5f),
                 ItemDefinition.Create(
                     "taro_laps", "Taro",
                     "Taro laps the glass down — a big cut to the spill risk now.",
