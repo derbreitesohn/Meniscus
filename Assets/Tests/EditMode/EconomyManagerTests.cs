@@ -139,6 +139,45 @@ namespace Meniscus.Tests.EditMode
             Assert.AreEqual(100, economyManager.PlayerTotalBankedCash);
         }
 
+        [Test]
+        public void PreviewSafeDropMultiplier_FoldsBoldnessAndCombo()
+        {
+            var coin = CreateCoin("Solo Coin", 5f, 20, true);
+            var coinB = CreateCoin("Combo Coin", 5f, 20, true);
+
+            // braved 50% → factor = 0.1 + 6·(0.5)^1.5 ≈ 2.2213. It is a per-coin-value multiplier, so the
+            // coins' payout is irrelevant to the figure; a second coin folds in the ×2 combo.
+            Assert.AreEqual(2.2213f, economyManager.PreviewSafeDropMultiplier(new[] { coin }, 50f), 0.001f);
+            Assert.AreEqual(4.4426f, economyManager.PreviewSafeDropMultiplier(new[] { coin, coinB }, 50f), 0.001f);
+
+            Object.DestroyImmediate(coin.gameObject);
+            Object.DestroyImmediate(coinB.gameObject);
+        }
+
+        [Test]
+        public void PreviewSafeDropMultiplier_IncludesShopBoosts_WithoutConsumingOneShot()
+        {
+            var coin = CreateCoin("Boosted Coin", 5f, 10, true);
+            economyManager.QueueNextSafeDropPayoutMultiplier(2f);
+
+            // The preview reflects the queued one-shot (≈2.2213 × 2 = 4.4426)…
+            var preview = economyManager.PreviewSafeDropMultiplier(new[] { coin }, 50f);
+            // …but must NOT spend it: the real award still gets the ×2 (RoundToInt(10×2.2213)=22, ×2 = 44).
+            var awarded = economyManager.AwardSafeDrop(new[] { coin }, 50f);
+
+            Assert.AreEqual(4.4426f, preview, 0.001f);
+            Assert.AreEqual(44, awarded);
+
+            Object.DestroyImmediate(coin.gameObject);
+        }
+
+        [Test]
+        public void PreviewSafeDropMultiplier_EmptySelection_ReturnsOne()
+        {
+            Assert.AreEqual(1f, economyManager.PreviewSafeDropMultiplier(new Coin[0], 50f), 0.0001f);
+            Assert.AreEqual(1f, economyManager.PreviewSafeDropMultiplier(null, 50f), 0.0001f);
+        }
+
         static Coin CreateCoin(string name, float risk, int payout, bool isPlayerCoin)
         {
             var coinObject = new GameObject(name);

@@ -62,6 +62,28 @@ namespace Meniscus.Core
             return Mathf.RoundToInt(total);
         }
 
+        /// <summary>
+        /// The payout-per-coin-value this selection would bank if poured now and came up safe — boldness ×
+        /// combo × any active shop boosts (Happy Hour, one-shot). This is the "×2.4" the selection preview
+        /// shows before a pour; it mirrors the factors in <see cref="AwardSafeDrop"/> without mutating state
+        /// or consuming the one-shot boost (and without the per-step integer rounding, so it reads as a clean
+        /// forecast). Returns 1 for an empty selection.
+        /// </summary>
+        public float PreviewSafeDropMultiplier(IReadOnlyList<Coin> coins, float spillChanceBraved)
+        {
+            if (coins == null || coins.Count == 0)
+                return 1f;
+
+            var boldness = Mathf.Clamp01(spillChanceBraved / GameConstants.MaxOverflowProbability);
+            var multiplier = GameConstants.BoldnessPayoutFloor
+                + GameConstants.BoldnessPayoutScale * Mathf.Pow(boldness, GameConstants.BoldnessExponent);
+
+            if (coins.Count > 1)
+                multiplier *= GameConstants.ComboMultiplier;
+
+            return multiplier * roundPayoutMultiplier * nextSafeDropPayoutMultiplier;
+        }
+
         public int AwardSafeDrop(IReadOnlyList<Coin> coins, float spillChanceBraved)
         {
             var payout = CalculateSafeDropPayout(coins, spillChanceBraved);
