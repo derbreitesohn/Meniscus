@@ -10,39 +10,10 @@
     "Type": "Event",
     "GUID": "{230E55CC-AB00-4765-ACB6-E0D703714AC2}",
     "Language": "SFX",
-    "Hash": "{7AD0A15D-26A7-272A-4ABD-BA9BCB0CA886}",
+    "Hash": "{BB06EDF7-558A-A29E-6588-4787C46AA974}",
     "ObjectPath": "Play_coins_on_wood",
     "ShortName": "Play_coins_on_wood",
     "Path": "Event/Play_coins_on_wood.bnk",
-    "Media": [
-     {
-      "Id": "266421773",
-      "Language": "SFX",
-      "Streaming": "false",
-      "Location": "Loose",
-      "ShortName": "coin_on_wood01.wav",
-      "Path": "Media/266421773.wem",
-      "CachePath": "6B/{6B3E45EF-82AF-B1F5-1DF6-71F6EDE28D67}.wem"
-     },
-     {
-      "Id": "619811085",
-      "Language": "SFX",
-      "Streaming": "false",
-      "Location": "Loose",
-      "ShortName": "coin_on_wood02.wav",
-      "Path": "Media/619811085.wem",
-      "CachePath": "D1/{D152F906-E416-AFDC-6D3B-5B09055B2D06}.wem"
-     },
-     {
-      "Id": "825284543",
-      "Language": "SFX",
-      "Streaming": "false",
-      "Location": "Loose",
-      "ShortName": "coin_on_wood03.wav",
-      "Path": "Media/825284543.wem",
-      "CachePath": "C7/{C75DEBA3-D340-AD52-3DBE-5B4C7D996C81}.wem"
-     }
-    ],
     "Events": [
      {
       "Id": "4117578692",
@@ -50,23 +21,12 @@
       "ObjectPath": "\\Events\\Default Work Unit\\Play_coins_on_wood",
       "GUID": "{230E55CC-AB00-4765-ACB6-E0D703714AC2}",
       "DurationType": "OneShot",
-      "DurationMin": "0.31016666",
-      "DurationMax": "0.44472918",
-      "MediaRefs": [
-       {
-        "Id": "266421773"
-       },
-       {
-        "Id": "619811085"
-       },
-       {
-        "Id": "825284543"
-       }
-      ]
+      "DurationMin": "0",
+      "DurationMax": "0"
      }
     ]
    }
   ],
-  "FileHash": "{E4951CC7-D1AC-E620-10C5-9FDA3291AD30}"
+  "FileHash": "{1DFDE35F-CF00-D18D-CD76-6CC8237757DE}"
  }
 }

@@ -113,6 +113,39 @@
 						</Action>
 					</ChildrenList>
 				</Event>
+				<Event Name="Play_Klick_02" ID="{3C7C6F07-1CE9-4A73-9C62-B34853341A7D}">
+					<ChildrenList>
+						<Action Name="" ID="{2F72504B-8173-49A6-BBE8-808649866E42}" ShortID="606887753">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="Klick_02" ID="{0C3B86B3-58A0-4979-A0D1-BF41343B9CB0}" WorkUnitID="{3E5ABF94-8B9A-4507-853B-33764D180567}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Event Name="Play_Lose" ID="{C0E8E3E8-E541-4D1C-9778-0CF2291BC8C2}">
+					<ChildrenList>
+						<Action Name="" ID="{EA953B86-9BE3-46A0-BC0A-846DB81C79BC}" ShortID="448731609">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="Piano_Ende_Langsam" ID="{46E9BE89-8BE2-4E01-96A7-EBE954CB64E7}" WorkUnitID="{3E5ABF94-8B9A-4507-853B-33764D180567}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Event Name="Play_buying_01" ID="{95A3CF50-E972-46EA-B099-3C3BB3BF515E}">
+					<ChildrenList>
+						<Action Name="" ID="{9C87FFAB-C326-443E-8E1B-D89FCB038A21}" ShortID="472897794">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="buying_01" ID="{6368DF00-134F-4A2C-BBC6-997B778073FC}" WorkUnitID="{3E5ABF94-8B9A-4507-853B-33764D180567}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
 			</ChildrenList>
 		</WorkUnit>
 	</Events>

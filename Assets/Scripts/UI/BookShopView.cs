@@ -46,6 +46,9 @@ namespace Meniscus.UI
         [Header("Audio")]
         [SerializeField] AK.Wwise.Event pageFlip;
         [SerializeField] AK.Wwise.Event pageClose;
+         [SerializeField] AK.Wwise.Event buySound;
+     [SerializeField] AK.Wwise.Event uiClick;
+
 
 
         [Header("Desk Placement")]
@@ -773,10 +776,12 @@ namespace Meniscus.UI
             RefreshOwnedBadges();
             ApplySelectionVisual();
         }
+        void PlayClick() => uiClick?.Post(gameObject);
 
         /// <summary>Row click: focus the item for its detail and toggle it in the buy cart (multi-select).</summary>
         void OnSelect(ItemDefinition item)
         {
+             PlayClick();
             model.ToggleCart(item);
             RefreshTicket();
             ApplySelectionVisual();
@@ -804,6 +809,7 @@ namespace Meniscus.UI
 
             if (boughtAny)
             {
+                buySound?.Post(gameObject);
                 RefreshOwnedBadges();
                 ApplySelectionVisual();
                 // Confirm flourish: pop the Buy stamp so a purchase lands with a beat instead of silently.
@@ -822,6 +828,8 @@ namespace Meniscus.UI
         {
             if (isTurning)
                 return;
+
+            PlayClick();
 
             var canTurn = dir < 0 ? model.CanTurnPrev : model.CanTurnNext;
 
@@ -984,6 +992,7 @@ namespace Meniscus.UI
             // Mid-round the book was opened to shop on the fly: closing just sets it back on the desk
             // and the round carries on (no game-state change). In the between-rounds shop phase, closing
             // finishes the phase and advances the game.
+            PlayClick();
             if (previewMode)
             {
                 Close();

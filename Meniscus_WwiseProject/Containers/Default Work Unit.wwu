@@ -597,6 +597,11 @@
 								<RandomSequenceContainer Name="coins_on_wood" ID="{D4488FB1-202B-4199-9CCD-52184C4E94F2}" ShortID="673239196">
 									<PropertyList>
 										<Property Name="3DSpatialization" Type="int16" Value="1"/>
+										<Property Name="Inclusion" Type="bool">
+											<ValueList>
+												<Value>False</Value>
+											</ValueList>
+										</Property>
 										<Property Name="OverridePositioning" Type="bool" Value="True"/>
 									</PropertyList>
 									<ReferenceList>
@@ -760,6 +765,13 @@
 					</PropertyList>
 					<ChildrenList>
 						<Sound Name="Klick_02" ID="{0C3B86B3-58A0-4979-A0D1-BF41343B9CB0}" ShortID="637845965">
+							<PropertyList>
+								<Property Name="Volume" Type="Real64">
+									<ValueList>
+										<Value>-6</Value>
+									</ValueList>
+								</Property>
+							</PropertyList>
 							<ReferenceList>
 								<Reference Name="Conversion">
 									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
@@ -771,9 +783,9 @@
 							<ChildrenList>
 								<AudioFileSource Name="Klick_02" ID="{F265F1B6-9164-4FFD-9F8F-63C4D46E0469}">
 									<PropertyList>
-										<Property Name="LoopBegin" Type="Real64" Value="0.09432"/>
 										<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
-										<Property Name="TrimBegin" Type="Real64" Value="0.09432"/>
+										<Property Name="TrimBegin" Type="Real64" Value="0.1033"/>
+										<Property Name="TrimEnd" Type="Real64" Value="0.19937"/>
 									</PropertyList>
 									<Language>SFX</Language>
 									<AudioFile>Klick_02.wav</AudioFile>
@@ -784,6 +796,33 @@
 							</ChildrenList>
 							<ActiveSourceList>
 								<ActiveSource Name="Klick_02" ID="{F265F1B6-9164-4FFD-9F8F-63C4D46E0469}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+						<Sound Name="buying_01" ID="{6368DF00-134F-4A2C-BBC6-997B778073FC}" ShortID="822541705">
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="coins_on_wood09" ID="{C3724A36-2078-4724-949D-21578232F4F8}">
+									<PropertyList>
+										<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+										<Property Name="TrimBegin" Type="Real64" Value="0.21777"/>
+										<Property Name="TrimEnd" Type="Real64" Value="0.74674"/>
+									</PropertyList>
+									<Language>SFX</Language>
+									<AudioFile>coins_on_wood09.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="530673977"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="coins_on_wood09" ID="{C3724A36-2078-4724-949D-21578232F4F8}" Platform="Linked"/>
 							</ActiveSourceList>
 						</Sound>
 					</ChildrenList>
@@ -1001,6 +1040,40 @@
 							</ChildrenList>
 						</Folder>
 						<Folder Name="Main" ID="{4104475D-CB31-4587-8BEB-75ADDD577DA1}" ShortID="455883407"/>
+						<Sound Name="gibberish_04" ID="{47F624C2-2042-4084-91FF-7F8142505471}" ShortID="32268792">
+							<PropertyList>
+								<Property Name="Pitch" Type="int32">
+									<ValueList>
+										<Value>-520</Value>
+									</ValueList>
+								</Property>
+								<Property Name="Volume" Type="Real64">
+									<ValueList>
+										<Value>12</Value>
+									</ValueList>
+								</Property>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{3A3B72EE-1B0C-4754-A451-4E971424AD9F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{672916DE-68CC-4437-9611-4B865C874676}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="gibberish_04" ID="{F6FF66ED-AEA8-444B-A6BF-65445A9066CF}">
+									<Language>SFX</Language>
+									<AudioFile>gibberish_04.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="317320729"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="gibberish_04" ID="{F6FF66ED-AEA8-444B-A6BF-65445A9066CF}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
 					</ChildrenList>
 				</Folder>
 				<SwitchContainer Name="music" ID="{C1E60124-BB65-4956-88FA-0AC78442A2C9}" ShortID="118230711">
@@ -1235,9 +1308,9 @@
 							<ChildrenList>
 								<AudioFileSource Name="Piano_Ende_Langsam" ID="{D273FC72-7FB8-400B-B60A-597C862A3517}">
 									<PropertyList>
-										<Property Name="LoopBegin" Type="Real64" Value="0"/>
+										<Property Name="FadeOutDuration" Type="Real64" Value="0.87076"/>
 										<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
-										<Property Name="TrimEnd" Type="Real64" Value="4.78943"/>
+										<Property Name="TrimEnd" Type="Real64" Value="4.15446"/>
 									</PropertyList>
 									<Language>SFX</Language>
 									<AudioFile>Piano_Ende_Langsam.wav</AudioFile>

@@ -15,6 +15,7 @@ namespace AK
     {
         static const AkUniqueID PLAY_24BIT_PIANO_CHORDS_MELODIE_STATE2_3_102BPM = 2739229492U;
         static const AkUniqueID PLAY_BAR_AMBIENCE01 = 3708788113U;
+        static const AkUniqueID PLAY_BUYING_01 = 1534786092U;
         static const AkUniqueID PLAY_COINDROP01_INTO_WATER = 3586401116U;
         static const AkUniqueID PLAY_COINFLIP = 4084283492U;
         static const AkUniqueID PLAY_COINS_ON_WOOD = 4117578692U;

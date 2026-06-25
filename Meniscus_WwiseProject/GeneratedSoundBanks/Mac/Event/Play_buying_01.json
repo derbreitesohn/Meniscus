@@ -1,0 +1,48 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Mac",
+  "BasePlatform": "Mac",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "1534786092",
+    "Type": "Event",
+    "GUID": "{95A3CF50-E972-46EA-B099-3C3BB3BF515E}",
+    "Language": "SFX",
+    "Hash": "{F70EC9FE-A109-23F1-4ED4-3B794266F1C3}",
+    "ObjectPath": "Play_buying_01",
+    "ShortName": "Play_buying_01",
+    "Path": "Event/Play_buying_01.bnk",
+    "Media": [
+     {
+      "Id": "530673977",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "coins_on_wood09.wav",
+      "Path": "Media/530673977.wem",
+      "CachePath": "A2/{A2EF7669-791B-3B27-D7DC-7BFD260229F1}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "1534786092",
+      "Name": "Play_buying_01",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_buying_01",
+      "GUID": "{95A3CF50-E972-46EA-B099-3C3BB3BF515E}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.52897",
+      "DurationMax": "0.52897",
+      "MediaRefs": [
+       {
+        "Id": "530673977"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{CC819BE1-A9BD-06AE-78DC-D3E80520EB35}"
+ }
+}
