@@ -32,12 +32,12 @@ namespace Meniscus.Gameplay
         [Header("Intro camera shots")]
         [Tooltip("Lean-in close-up of the dealer (used on \"Well it's easy to…\"). Offset from the resting " +
                  "pose: +z pushes toward him, +x right, +y up.")]
-        [SerializeField] Vector3 dealerCloseUpPosition = new(0f, -0.05f, 1.7f);
+        [SerializeField] Vector3 dealerCloseUpPosition = new(0f, -0.05f, 2.25f);
         [Tooltip("Rotation offset for the lean-in close-up (degrees, camera space): +x pitches DOWN, " +
                  "-x looks UP toward his face.")]
         [SerializeField] Vector3 dealerCloseUpRotation = new(-7f, 0f, 0f);
         [Tooltip("Tight, straight-on close-up of the dealer's face (the beat after the silent pause).")]
-        [SerializeField] Vector3 dealerFrontPosition = new(0f, 0.12f, 2.5f);
+        [SerializeField] Vector3 dealerFrontPosition = new(0f, 0.12f, 3.2f);
         [SerializeField] Vector3 dealerFrontRotation = new(-13f, 0f, 0f);
 
         [Header("Wake-up blink (eyelids)")]
