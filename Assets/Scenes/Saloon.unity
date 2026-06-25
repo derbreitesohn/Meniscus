@@ -3544,8 +3544,12 @@ MonoBehaviour:
   coinRowLocalZEnemy: 1.12
   coinFlip:
     idInternal: 0
-    valueGuidInternal: 
+    valueGuidInternal:
     WwiseObjectReference: {fileID: 11400000, guid: a0a610ba7942940deabdbf5e9da0c3fc, type: 2}
+  loseSound:
+    idInternal: 0
+    valueGuidInternal:
+    WwiseObjectReference: {fileID: 11400000, guid: d9ac247712fa54ebdb2bfc38fefed879, type: 2}
   coinPileAnchor: {fileID: 0}
   coinPileFallbackLocalPosition: {x: 0, y: 1.45, z: 0.17}
   coinFlyDuration: 0.45
