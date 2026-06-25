@@ -10,7 +10,7 @@ namespace Meniscus.Gameplay
     {
         [Tooltip("DEBUG: top-left panel listing every catalog item; click one to use it free this turn " +
                  "(applies the effect and plays its use performance, no cash spent, no inventory needed).")]
-        [SerializeField] bool showItemTestMenu = true;
+        [SerializeField] bool showItemTestMenu = false;
         [SerializeField] bool showDebugOverlay;
         [SerializeField] GameManager gameManager;
         [SerializeField] GlassManager glassManager;

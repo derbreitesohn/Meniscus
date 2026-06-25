@@ -3819,7 +3819,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3cdd137ab0e6bc8439f10ef3d6f187eb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Meniscus.Runtime::Meniscus.Gameplay.GameTestController
-  showItemTestMenu: 1
+  showItemTestMenu: 0
   showDebugOverlay: 0
   gameManager: {fileID: 392237781}
   glassManager: {fileID: 392237786}
