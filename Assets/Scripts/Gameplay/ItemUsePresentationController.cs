@@ -140,9 +140,10 @@ namespace Meniscus.Gameplay
         [Tooltip("How far to the dealer's side the dog stands (metres). Positive = it stands beside him, not " +
                  "on top of him.")]
         [SerializeField, Min(0f)] float dogBesideDealer = 0.95f;
-        [Tooltip("Small pull toward the player (away from the dealer) so the dog reads as in-frame beside him " +
-                 "rather than tucked behind. Kept small so it never re-enters the bar (metres).")]
-        [SerializeField, Min(0f)] float dogFrontOfDealer = 0.25f;
+        [Tooltip("Optional pull toward the player (away from the dealer). 0 = stand right beside him at his own " +
+                 "depth, which is the safest spot (furthest from the bar). Raise it only if you want the dog a " +
+                 "little forward — but keep it under ~0.6 so it never re-enters the bar (metres).")]
+        [SerializeField, Min(0f)] float dogFrontOfDealer = 0f;
         [Tooltip("FALLBACK ONLY (dealer not found): name of the bar object, used to size the footprint so the " +
                  "dog clears it. Falls back to 'Table'.")]
         [SerializeField] string tableObjectName = "Saloon Table";
