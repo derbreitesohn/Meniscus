@@ -100,28 +100,56 @@ namespace Meniscus.Core
         public float CalculateCurrentTrueSpillChance(float totalRiskWeight) =>
             CalculateTrueSpillChance(totalRiskWeight, CurrentSafeZoneThreshold);
 
+        /// <summary>
+        /// The fill the glass would sit at after pouring <paramref name="coinCount"/> coins carrying
+        /// <paramref name="addedRisk"/> total risk: the current fill plus that risk (clamped to the brim),
+        /// minus the combo claw-back (see <see cref="ComboRelief"/>). Single source of truth so the live
+        /// pour (<see cref="DropCoins"/>) and the selection preview agree on the post-drop fill.
+        /// </summary>
+        public float ProjectFillAfterDrop(float addedRisk, int coinCount)
+        {
+            var filled = Mathf.Clamp(
+                currentOverflowProbability + Mathf.Max(0f, addedRisk),
+                0f,
+                GameConstants.MaxOverflowProbability);
+
+            return Mathf.Max(0f, filled - ComboRelief(coinCount));
+        }
+
+        /// <summary>
+        /// How much dome fill a combo of <paramref name="coinCount"/> coins claws back (0 for a single
+        /// coin): <see cref="GameConstants.ComboRiskReliefPerExtraCoin"/> per extra coin beyond the first.
+        /// </summary>
+        public static float ComboRelief(int coinCount) =>
+            coinCount > 1
+                ? Mathf.Max(0f, GameConstants.ComboRiskReliefPerExtraCoin) * (coinCount - 1)
+                : 0f;
+
         public GlassDropResult DropCoins(IReadOnlyList<Coin> coins, TurnActor actor)
         {
             var coinCount = coins?.Count ?? 0;
             var riskBeforeDrop = currentOverflowProbability;
             var addedRisk = SumRisk(coins);
-            currentOverflowProbability = Mathf.Clamp(
-                currentOverflowProbability + addedRisk,
-                0f,
-                GameConstants.MaxOverflowProbability);
+            // Add the coins' risk, then let a combo claw a little of it back (see ProjectFillAfterDrop /
+            // ComboRelief): pouring a cluster at once settles the surface a touch better than dripping the
+            // same coins in one at a time. The relief stays below a single coin's risk, so a combo still
+            // net-climbs the glass — it just climbs gentler per coin while it pays the combo bonus.
+            currentOverflowProbability = ProjectFillAfterDrop(addedRisk, coinCount);
 
             var trueSpillChance = CalculateTrueSpillChance(
                 currentOverflowProbability, GetSafeZoneRelief(actor));
-            // Deterministic overflow: the glass goes over the instant the fill reaches the brim — the
-            // point where CalculateTrueSpillChance saturates at MaxOverflowProbability — NOT on a hidden
-            // per-drop dice roll. The danger is now fully readable: you can see exactly which coins tip it
-            // over, so a round converges into a duel over who is FORCED to cross the line, instead of a
-            // coin-flip you could lose at low odds or survive at high ones. The roll is still drawn (and
-            // carried on the result) only so the presentation layer can reference it; it no longer decides
-            // the outcome.
+            // Probabilistic overflow: the surface breaks on a dice roll against the spill chance, so a pour
+            // into the dome is a genuine press-your-luck gamble (a small chance early, climbing as the glass
+            // fills) rather than a fixed, readable kill. The one hard edge kept is the physical brim — once
+            // the effective fill reaches the dome capacity the chance saturates at MaxOverflowProbability and
+            // the glass WILL go over regardless of the roll, so a visibly-overfull glass never survives and a
+            // round always resolves. Everything below the brim is the roll's to decide. The roll is in
+            // [0, MaxOverflowProbability): a LOW (unlucky) roll under the chance breaks the surface; a HIGH
+            // (lucky) roll at or above it holds.
             var roll = SpillRollProvider?.Invoke()
                 ?? UnityEngine.Random.Range(0f, GameConstants.MaxOverflowProbability);
-            var overflowed = trueSpillChance >= GameConstants.MaxOverflowProbability;
+            var overflowed = trueSpillChance >= GameConstants.MaxOverflowProbability
+                || roll < trueSpillChance;
 
             var result = new GlassDropResult(
                 actor,
@@ -148,15 +176,16 @@ namespace Meniscus.Core
             CalculateTrueSpillChance(totalRiskWeight, GameConstants.SpillSafeZoneThreshold);
 
         /// <summary>
-        /// Spill chance as a reading of the meniscus dome. The glass is full to the brim; play happens in
-        /// the thin dome above the rim. <paramref name="totalRiskWeight"/> is how far coins have pushed
-        /// into that dome. Below <see cref="GameConstants.DomeSafeZone"/> surface tension holds for sure
-        /// (0%). Across the dome the break chance ramps up convexly (gentle early, steepening hard near the
-        /// top — see <see cref="GameConstants.DomeRampExponent"/>), reaching a CERTAIN spill once the fill
-        /// hits <see cref="GameConstants.DomeCapacity"/> — so a glass pushed to the brim WILL go over on the
-        /// next drop (readable, not a blind roll). The convex shape keeps early pours safe so a round builds
-        /// over many turns instead of ending on an early coin-flip. <paramref name="safeZoneRelief"/> shifts
-        /// the effective fill (a player bonus eases it down; a drunk-enemy penalty pushes it up).
+        /// Spill chance as a reading of the meniscus dome — the percentage a pour at this fill ROLLS
+        /// against in <see cref="DropCoins"/>. The glass is full to the brim; play happens in the thin dome
+        /// above the rim. <paramref name="totalRiskWeight"/> is how far coins have pushed into that dome.
+        /// Below <see cref="GameConstants.DomeSafeZone"/> surface tension holds for sure (0%). Across the
+        /// dome the break chance ramps up convexly (gentle early, steepening hard near the top — see
+        /// <see cref="GameConstants.DomeRampExponent"/>), saturating at 100% once the fill hits
+        /// <see cref="GameConstants.DomeCapacity"/> — a CERTAIN spill at the physical brim regardless of the
+        /// roll, so a round always resolves. The convex shape keeps early pours a long-odds gamble so a
+        /// round builds over many turns instead of ending on an early coin-flip. <paramref name="safeZoneRelief"/>
+        /// shifts the effective fill (a player bonus eases it down; a drunk-enemy penalty pushes it up).
         /// </summary>
         public static float CalculateTrueSpillChance(float totalRiskWeight, float safeZoneRelief)
         {

@@ -11,7 +11,7 @@ namespace Meniscus.Gameplay
     /// vertices — not a moving transform — so the whole amber column visibly grows with overflow
     /// risk. The dome is driven by the same spill chance the camera and HUD use, so the liquid
     /// telegraphs whether the next pour overflows. As overflow nears the whiskey also deepens from
-    /// its near-clear calm state into a hot, throbbing amber — a colour tell pushed through a
+    /// its calm amber into a warmer, gently throbbing amber — a subtle colour tell pushed through a
     /// <see cref="MaterialPropertyBlock"/> so the authored material is never mutated. On overflow it
     /// spawns a <see cref="GlassSpillEffect"/> that runs down the glass exterior.
     /// </summary>
@@ -43,21 +43,22 @@ namespace Meniscus.Gameplay
                  "is editor-tunable; left empty, a transparent material is built from Liquid Color at runtime.")]
         [SerializeField] Material liquidMaterial;
         [Tooltip("Fallback tint used when no Liquid Material is assigned, and for the run-down spill rivulets.")]
-        [SerializeField] Color liquidColor = new Color(0.55f, 0.27f, 0.05f, 0.82f);
+        [SerializeField] Color liquidColor = new Color(0.72f, 0.40f, 0.11f, 0.82f);
 
         [Header("Danger Tint")]
-        [Tooltip("Hot, saturated colour the whiskey shifts toward as overflow nears. Pushed through a " +
-                 "MaterialPropertyBlock, so the authored liquid material is never edited at runtime.")]
-        [SerializeField] Color dangerTint = new Color(0.92f, 0.30f, 0.05f, 1f);
-        [Tooltip("Surface opacity at full danger. The calm glass keeps its authored (near-clear) alpha; as " +
-                 "overflow nears the whiskey deepens toward this, so a brimming glass reads as a heavy amber.")]
-        [SerializeField, Range(0f, 1f)] float dangerAlpha = 0.82f;
-        [Tooltip("Danger fraction below which the liquid keeps its calm colour. The hot tint ramps in above this.")]
-        [SerializeField, Range(0f, 0.95f)] float dangerTintOnset = 0.2f;
-        [Tooltip("Throb speed of the hot tint when the glass is near overflow.")]
+        [Tooltip("Warm warning amber the whiskey shifts toward as overflow nears — kept close to the calm " +
+                 "colour so the tell stays subtle. Pushed through a MaterialPropertyBlock, so the authored " +
+                 "liquid material is never edited at runtime.")]
+        [SerializeField] Color dangerTint = new Color(0.82f, 0.36f, 0.10f, 1f);
+        [Tooltip("Surface opacity at full danger. The calm glass keeps its authored whiskey-amber alpha; as " +
+                 "overflow nears the whiskey deepens a touch toward this.")]
+        [SerializeField, Range(0f, 1f)] float dangerAlpha = 0.8f;
+        [Tooltip("Danger fraction below which the liquid keeps its calm colour. The warm tint ramps in above this.")]
+        [SerializeField, Range(0f, 0.95f)] float dangerTintOnset = 0.3f;
+        [Tooltip("Throb speed of the warm tint when the glass is near overflow.")]
         [SerializeField, Min(0f)] float dangerPulseSpeed = 8f;
-        [Tooltip("How hard the hot tint throbs at full danger (0 = steady glow, 1 = strong pulse).")]
-        [SerializeField, Range(0f, 1f)] float dangerPulseStrength = 0.35f;
+        [Tooltip("How hard the warm tint throbs at full danger (0 = steady, 1 = strong pulse). Kept low for a subtle glow.")]
+        [SerializeField, Range(0f, 1f)] float dangerPulseStrength = 0.15f;
 
         [Header("Meniscus")]
         [SerializeField] float meniscusRimClimb = 0.05f;
@@ -131,7 +132,7 @@ namespace Meniscus.Gameplay
 
         MeshRenderer waterRenderer;
         MaterialPropertyBlock liquidMpb;
-        Color calmBaseColor = new Color(0.55f, 0.27f, 0.05f, 0f);
+        Color calmBaseColor = new Color(0.72f, 0.40f, 0.11f, 0.65f);
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         static readonly int ColorId = Shader.PropertyToID("_Color");
 
@@ -530,9 +531,9 @@ namespace Meniscus.Gameplay
                 calmBaseColor = liquidColor;
         }
 
-        // Shift the whiskey from its authored calm colour toward the hot danger tint as overflow nears,
-        // raising opacity (the calm glass is near-clear) and throbbing near the brim. Driven entirely
-        // through a MaterialPropertyBlock so the shared authored material is never mutated.
+        // Shift the whiskey from its authored calm amber toward the warm danger tint as overflow nears,
+        // deepening opacity a touch and throbbing gently near the brim. Driven entirely through a
+        // MaterialPropertyBlock so the shared authored material is never mutated.
         void ApplyDangerTint(float danger01)
         {
             if (waterRenderer == null)

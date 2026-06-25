@@ -56,8 +56,8 @@ namespace Meniscus.Core
                 + GameConstants.BoldnessPayoutScale * Mathf.Pow(boldness, GameConstants.BoldnessExponent);
             var total = baseTotal * payoutFactor;
 
-            if (coins.Count > 1)
-                total *= GameConstants.ComboMultiplier;
+            // Combining coins adds a small bonus (gentle, capped) — never the old flat ×3.
+            total *= GameConstants.GetComboPayoutMultiplier(coins.Count);
 
             return Mathf.RoundToInt(total);
         }
@@ -78,8 +78,7 @@ namespace Meniscus.Core
             var multiplier = GameConstants.BoldnessPayoutFloor
                 + GameConstants.BoldnessPayoutScale * Mathf.Pow(boldness, GameConstants.BoldnessExponent);
 
-            if (coins.Count > 1)
-                multiplier *= GameConstants.ComboMultiplier;
+            multiplier *= GameConstants.GetComboPayoutMultiplier(coins.Count);
 
             return multiplier * roundPayoutMultiplier * nextSafeDropPayoutMultiplier;
         }

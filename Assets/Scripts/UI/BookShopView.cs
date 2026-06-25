@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Meniscus.Core;
 using Meniscus.Items;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
@@ -121,6 +122,7 @@ namespace Meniscus.UI
         Transform menuCanvasTransform;
         CanvasGroup menuGroup;
         GameObject finishButtonObject;
+        Text finishLabel;
         Text browseHint;
         ShopManager shopManager;
         float menuScaleBase = 1f;
@@ -158,8 +160,10 @@ namespace Meniscus.UI
         float rowHeightPx;
         float rowWidthPx;
 
-        // True while the book was opened by clicking it mid-round: the catalog is shown to read, but
-        // purchasing is disabled and the only action is to close it again.
+        // True while the book was opened by clicking it mid-round (rather than via the between-rounds
+        // shop phase). The catalog is fully buyable either way — mid-round purchases spend banked cash —
+        // but closing a mid-round open just sets the book back on the desk and lets the round continue,
+        // whereas closing the shop-phase book finishes the shop phase.
         bool previewMode;
 
         // Supplied by ShopManager: returns true while the player may open the book to browse
@@ -268,6 +272,14 @@ namespace Meniscus.UI
         }
 
         /// <summary>
+        /// Whether a fully-revealed menu accepts purchases for the given open mode. Buying is allowed in
+        /// BOTH the between-rounds shop phase (<paramref name="previewMode"/> false) and a mid-round open
+        /// (true) — mid-round shopping spends banked cash. Pure, so it is the unit-tested regression guard
+        /// that opening the book mid-round stays buyable rather than read-only.
+        /// </summary>
+        public static bool PurchasingAllowedInMode(bool previewMode) => true;
+
+        /// <summary>
         /// Applies a book-prop click. Closed on the desk, a click lifts it open as a read-only
         /// preview; while previewing, a click closes it again. Ignored once the shop phase has
         /// opened it for real, where closing is done via "Finish Drink".
@@ -311,9 +323,10 @@ namespace Meniscus.UI
 
             var reveal = Mathf.Clamp01((animT - 0.5f) / 0.5f);
 
-            // While previewing mid-round the catalog is readable but not purchasable: keep the menu
-            // non-interactive so buy buttons do nothing and clicks fall through to close the book.
-            var canPurchase = reveal > 0.95f && !previewMode;
+            // The catalog is buyable once it has finished revealing, in BOTH the between-rounds shop
+            // phase and a mid-round open: opening the book mid-round now lets the player spend banked
+            // cash on the fly rather than only browse.
+            var canPurchase = reveal > 0.95f && PurchasingAllowedInMode(previewMode);
 
             if (menuGroup != null)
             {
@@ -322,12 +335,14 @@ namespace Meniscus.UI
                 menuGroup.blocksRaycasts = canPurchase;
             }
 
-            // Hide the "Finish Drink" action when only previewing; show a hint to close instead.
-            if (finishButtonObject != null)
-                finishButtonObject.SetActive(!previewMode);
+            // The close action doubles as "Finish Drink" between rounds (it ends the shop phase) and
+            // "Set It Down" mid-round (it just lowers the book back to the desk and the round carries on).
+            if (finishLabel != null)
+                finishLabel.text = previewMode ? "Set It Down" : "Finish Drink";
 
+            // The old "just looking" hint is retired now that mid-round browsing can buy.
             if (browseHint != null)
-                browseHint.enabled = previewMode && reveal > 0.5f;
+                browseHint.enabled = false;
 
             if (menuCanvasTransform != null)
             {
@@ -360,6 +375,13 @@ namespace Meniscus.UI
             var mouse = Mouse.current;
 
             if (mouse == null || !mouse.leftButton.wasPressedThisFrame)
+                return;
+
+            // A click on the menu's own controls (Buy / page arrows / Set It Down) must not also fall
+            // through the physics raycast to the book collider and toggle it closed, now that the
+            // mid-round menu is interactive. Mirrors how DeskItemTray guards clicks behind the book.
+            var events = EventSystem.current;
+            if (events != null && events.IsPointerOverGameObject())
                 return;
 
             if (canBrowse != null && !canBrowse())
@@ -553,14 +575,16 @@ namespace Meniscus.UI
                 labelColor: PaperColor);
             buyLabel = buyButton.transform.Find("Label").GetComponent<Text>();
 
-            finishButtonObject = RuntimeUiFactory.CreateButton(
+            var finishButton = RuntimeUiFactory.CreateButton(
                 canvas, "Finish Drink Button", "Finish Drink",
                 new Vector2(pageTextWidth * 0.9f, 96f * v),
                 new Vector2(leftCenter, -top + 90f * v), F(36), OnFinish, boldLabel: true,
                 normalColor: StampColor,
                 highlightedColor: StampHover,
                 pressedColor: StampPressed,
-                labelColor: PaperColor).gameObject;
+                labelColor: PaperColor);
+            finishButtonObject = finishButton.gameObject;
+            finishLabel = finishButton.transform.Find("Label").GetComponent<Text>();
 
             // Shown only while previewing mid-round (purchasing disabled); hidden during the shop phase.
             browseHint = RuntimeUiFactory.CreateText(
@@ -957,6 +981,15 @@ namespace Meniscus.UI
 
         void OnFinish()
         {
+            // Mid-round the book was opened to shop on the fly: closing just sets it back on the desk
+            // and the round carries on (no game-state change). In the between-rounds shop phase, closing
+            // finishes the phase and advances the game.
+            if (previewMode)
+            {
+                Close();
+                return;
+            }
+
             if (shopManager != null)
                 shopManager.FinishOrdering();
         }
@@ -1038,6 +1071,15 @@ namespace Meniscus.UI
             rotation = Quaternion.LookRotation(-toCamera, Vector3.up);
             return true;
         }
+
+        /// <summary>
+        /// World position at which the closed book rests on the desk (its anchor, this transform, or the
+        /// resolved desk fallback). The desk item tray uses it to keep item boxes clear of the book's
+        /// footprint, so a bought item never ends up sitting underneath it. Returns false when no rest
+        /// pose can be resolved yet (no anchor and the desk has not been found).
+        /// </summary>
+        public bool TryGetDeskRestPosition(out Vector3 position)
+            => TryGetRestPose(ActiveCamera(), out position, out _);
 
         void ResolveDesk()
         {

@@ -38,6 +38,9 @@ namespace Meniscus.Core
         [SerializeField] MoneyHudWidget moneyHudWidget;
         [SerializeField] PlayerInventory playerInventory;
         [SerializeField] DeskItemTray deskItemTray;
+        [Tooltip("Plays the per-item 'use' performance (e.g. the spyglass scoping the glass). Auto-added in " +
+                 "play mode if left empty; it only animates — the effect itself is applied by TryUseItem.")]
+        [SerializeField] ItemUsePresentationController itemUsePresentation;
         [Tooltip("Per-item desk models (e.g. spyglass for Bartender's Spectacles, bandana for Step Outside). " +
                  "Populate via Tools ▸ Meniscus ▸ Wire Item Models; items with no entry use the placeholder box.")]
         [SerializeField] ItemModelLibrary itemModels = new();
@@ -88,6 +91,9 @@ namespace Meniscus.Core
         MatchOutcome lastMatchOutcome = MatchOutcome.None;
         int currentRound;
         int queuedEnemyForcedCoinCount;
+        // Held while an item's "use" performance plays (e.g. the spyglass reveal), so a pour or a second
+        // item use can't cut the beat short. Purely an input gate — it never changes the game state.
+        bool itemPresentationLock;
         // Coins left in the shared reserve both hands draw from. Refills itself when drained (see
         // RefillHand / RestockSharedPile) so neither actor is ever left empty-handed mid-round.
         int sharedPile;
@@ -97,6 +103,9 @@ namespace Meniscus.Core
         public event Action<GlassDropResult> DropResolved;
         public event Action<int> RoundStarted;
         public event Action<int, float> HandsRestocked;
+        // Raised after an item's effect has been applied (and the item consumed), so the presentation layer
+        // can play that item's "use" performance. The logical effect is already done by the time this fires.
+        public event Action<ItemDefinition> ItemUsed;
 
         public GameState CurrentState => currentState;
         public int CurrentRound => currentRound;
@@ -110,6 +119,12 @@ namespace Meniscus.Core
         public GlassManager GlassManager => glassManager;
         public EconomyManager EconomyManager => economyManager;
         public PlayerInventory Inventory => playerInventory;
+
+        /// <summary>True while an item-use performance is playing; pours and further item uses are gated.</summary>
+        public bool ItemPresentationActive => itemPresentationLock;
+
+        /// <summary>Set by <see cref="ItemUsePresentationController"/> to gate input around a use performance.</summary>
+        public void SetItemPresentationActive(bool active) => itemPresentationLock = active;
 
         void Awake()
         {
@@ -163,6 +178,7 @@ namespace Meniscus.Core
             }
 
             currentRound++;
+            itemPresentationLock = false;   // defensive: never carry a stale use-performance lock into a round
             TransitionTo(GameState.StartRound);
             cameraController?.SwitchCamera(CameraState.TableOverview);
 
@@ -213,6 +229,13 @@ namespace Meniscus.Core
                 return false;
             }
 
+            // An item-use performance owns the moment (e.g. the spyglass reveal); don't pour through it.
+            if (itemPresentationLock)
+            {
+                Debug.LogWarning("[GameManager] Ignored player drop while an item performance is playing.");
+                return false;
+            }
+
             if (!TryBuildValidDropList(selectedCoins, TurnActor.Player, out var validCoins))
                 return false;
 
@@ -259,11 +282,20 @@ namespace Meniscus.Core
                 return false;
             }
 
+            // Don't let a second item interrupt a use performance mid-play (e.g. the spyglass reveal).
+            if (itemPresentationLock)
+            {
+                Debug.LogWarning("[GameManager] Ignored item use while an item performance is playing.");
+                return false;
+            }
+
             if (item == null || playerInventory == null || !playerInventory.Has(item))
                 return false;
 
             playerInventory.TryConsume(item);
             ItemEffectApplier.Apply(item, economyManager, glassManager, this);
+            // The effect is now applied and the item consumed; let the presentation layer play its beat.
+            ItemUsed?.Invoke(item);
             return true;
         }
 
@@ -1055,6 +1087,17 @@ namespace Meniscus.Core
             {
                 deskItemTray = gameObject.AddComponent<DeskItemTray>();
                 deskItemTray.Configure(this, playerInventory);
+            }
+
+            if (itemUsePresentation == null)
+                itemUsePresentation = FindAnyObjectByType<ItemUsePresentationController>();
+
+            // Play-mode-only, like the drop conductor: it builds an overlay canvas and held props, so
+            // EditMode tests keep the null path (TryUseItem just applies the effect, no performance).
+            if (itemUsePresentation == null && Application.isPlaying)
+            {
+                itemUsePresentation = gameObject.AddComponent<ItemUsePresentationController>();
+                itemUsePresentation.Configure(this);
             }
 
             if (saloonHudController == null)

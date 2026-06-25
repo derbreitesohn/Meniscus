@@ -9,8 +9,8 @@ namespace Meniscus.Editor
     /// <summary>
     /// One-shot wiring for the desk item models. Run Tools ▸ Meniscus ▸ Wire Item Models once and it binds
     /// a model into every catalog item's row of the <see cref="GameManager"/>'s <c>ItemModelLibrary</c> as
-    /// real serialized references — the spyglass on "Spyglass", the bandana on "Bandana", the cat on
-    /// "Taro", a coin on the coin-themed items and a single clean glass on the drink items — with nothing
+    /// real serialized references — the spyglass on "Spyglass", the bandana on "Bandana", the treats
+    /// (Leckerlis) on "Taro", a coin on the coin-themed items and a single clean glass on the drink items — with nothing
     /// in Resources and nothing dragged by hand. Items that have their own object get a dedicated model;
     /// the rest reuse a coin or glass so nothing is left showing the placeholder box. Idempotent: re-running
     /// refreshes each entry in place, never duplicates rows, and leaves any baked icon untouched. Can also
@@ -22,9 +22,10 @@ namespace Meniscus.Editor
         // working even if the art is reorganised.
         const string SpyglassFbxGuid = "8d6e7694f7ea6494fa911a8842955029";
         const string BandanaFbxGuid = "1e6bd347bb7b444789c7d56712034dc3";
-        const string CatFbxGuid = "5dcc96e36a546064db6e62c16524a464";
+        const string LeckerlisFbxGuid = "d8989f0d05b09466096d3c4f6031bc53";
         const string SpyglassMatGuid = "9b91b9e9bc45041ad916b749a2867e9f";
         const string BandanaMatGuid = "f6f6cfa1dfe7e41718fe48317c7b7220";
+        const string LeckerlisMatGuid = "cd533f3aa04ff40af83f2a5c896f071e";
 
         // The three coin FBXs (also used by the in-play CoinModelLibrary) and the glass sheet the desk
         // glass-prop is extracted from.
@@ -103,13 +104,13 @@ namespace Meniscus.Editor
         }
 
         // Every catalog item paired with the art it should show. Shared FBXs are loaded once and reused
-        // across items that share a look (coins, glass). The cat and the coins/glass take no material
-        // override — they carry their own painted/glass materials and forcing one would flatten them.
+        // across items that share a look (coins, glass). The coins and glass take no material override —
+        // they carry their own painted/glass materials and forcing one would flatten them.
         static IEnumerable<Binding> Bindings()
         {
             var spyglass = Load<GameObject>(SpyglassFbxGuid, "Spyglass.fbx");
             var bandana = Load<GameObject>(BandanaFbxGuid, "Bandana.fbx");
-            var cat = Load<GameObject>(CatFbxGuid, "Critter_cat.fbx");
+            var leckerlis = Load<GameObject>(LeckerlisFbxGuid, "Leckerlis.fbx");
             var smallCoin = Load<GameObject>(SmallCoinFbxGuid, "Small_coin.fbx");
             var mediumCoin = Load<GameObject>(MediumCoinFbxGuid, "Medium_coin.fbx");
             var bigCoin = Load<GameObject>(BigCoinFbxGuid, "Big_coin.fbx");
@@ -117,13 +118,14 @@ namespace Meniscus.Editor
 
             var spyglassMat = Load<Material>(SpyglassMatGuid, "Spyglass.mat");
             var bandanaMat = Load<Material>(BandanaMatGuid, "Bandana.mat");
+            var leckerlisMat = Load<Material>(LeckerlisMatGuid, "Leckerlis.mat");
 
             return new[]
             {
                 // Object-named items get their own prop.
                 new Binding("bartenders_spectacles", spyglass, spyglassMat),  // "Spyglass"
                 new Binding("step_outside", bandana, bandanaMat),             // "Bandana"
-                new Binding("taro_laps", cat, null),                          // "Taro" (the cat)
+                new Binding("taro_laps", leckerlis, leckerlisMat),            // "Taro" (the treats / Leckerlis)
 
                 // Coin-themed items reuse a coin.
                 new Binding("marked_coin", mediumCoin, null),

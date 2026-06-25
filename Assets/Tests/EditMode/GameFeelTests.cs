@@ -166,10 +166,10 @@ namespace Meniscus.Tests.EditMode
             a.riskContribution = 10;
             b.riskContribution = 10;
 
-            // braved 50% → factor ≈ 2.2213; (20 + 20) × 2.2213 × combo 2 ≈ 178; multiplier ≈ 178/40 ≈ 4.45×
+            // braved 50% → factor ≈ 2.2213; (20 + 20) × 2.2213 × combo 1.15 ≈ 102; multiplier ≈ 102/40 ≈ 2.55×
             economy.AwardSafeDrop(new List<Coin> { a, b }, 50f);
 
-            Assert.AreEqual(4.45f, economy.LastSafeDropMultiplier, 0.05f);
+            Assert.AreEqual(2.55f, economy.LastSafeDropMultiplier, 0.05f);
             Assert.IsTrue(economy.LastSafeDropComboApplied);
 
             Object.DestroyImmediate(a.gameObject);

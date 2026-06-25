@@ -48,11 +48,14 @@ namespace Meniscus.Core
         public static float MediumCoinRisk = 6f;
         public static float LargeCoinRisk = 9f;
 
-        // Payouts skew hard by size so big coins are the high-roller play: Gold pays 5× a Copper. This is
-        // the coin's raw value; the boldness factor below multiplies it by how dangerous the pour was.
-        public static int SmallCoinBasePayout = 10;
-        public static int MediumCoinBasePayout = 25;
-        public static int LargeCoinBasePayout = 50;
+        // Payouts skew hard by size so the coin you choose to pour is the core risk/reward call: Copper is
+        // barely worth anything, Silver pays a fair bit, and Gold is the high-roller jackpot (~15× a
+        // Copper). This is the coin's raw value; the boldness factor below multiplies it by how dangerous
+        // the pour was. Big coins are also the riskiest (see *CoinRisk), so the jackpot is paid for in dome
+        // fill — daring a Gold climbs the meniscus far faster than dribbling Coppers.
+        public static int SmallCoinBasePayout = 5;     // Copper — barely any money
+        public static int MediumCoinBasePayout = 25;   // Silver — some
+        public static int LargeCoinBasePayout = 75;    // Gold — a lot
 
         // Pay for boldness, not for pouring (see EconomyManager.CalculateSafeDropPayout). A safe pour pays
         // base × (floor + scale · boldness^exponent), where boldness is the spill chance the pour actually
@@ -62,7 +65,20 @@ namespace Meniscus.Core
         public static float BoldnessPayoutFloor = 0.1f;
         public static float BoldnessPayoutScale = 6f;
         public static float BoldnessExponent = 1.5f;
-        public static float ComboMultiplier = 2f;
+        // Combining coins pays a small bonus over pouring the same coins one at a time — batching is
+        // rewarded, but only gently (the old flat ×3 made it pay far more than the coins were worth). The
+        // bonus grows a little per EXTRA coin and caps low, so a big combo is worth a touch more than a
+        // pair, never a jackpot. Combos also already claw back a little fill (ComboRiskReliefPerExtraCoin);
+        // this is just the modest payout nudge on top. See GetComboPayoutMultiplier / EconomyManager.
+        public static float ComboPayoutBonusPerExtraCoin = 0.15f;
+        public static float MaxComboPayoutMultiplier = 1.6f;
+
+        // How much dome fill a combo claws back per EXTRA coin beyond the first (a 3-coin pour relieves
+        // 2× this). Pouring a cluster at once settles the surface a touch better than dripping the same
+        // coins in one at a time. Kept BELOW the smallest coin's risk (Copper = 3) so a combo still
+        // net-climbs the glass — it just climbs gentler per coin while paying the combo bonus, rewarding
+        // bold batching without letting anyone turtle the meniscus down forever. See GlassManager.DropCoins.
+        public static float ComboRiskReliefPerExtraCoin = 2.5f;
         public const float MaxOverflowProbability = 100f;
 
         // Baseline relief (0 by default). Relief is a subtractive discount on the dome fill: shop items
@@ -73,10 +89,15 @@ namespace Meniscus.Core
         // ── The meniscus dome (the playfield) ───────────────────────────────────────────────────────
         // The glass opens full to the brim; all play happens in the thin meniscus dome above the rim.
         // CurrentOverflowProbability is "how far coins have pushed into the dome" (0..100). The spill
-        // resolution (GlassManager.CalculateTrueSpillChance) reads these knobs:
-        //   • below DomeSafeZone   → surface tension holds for sure (0% spill, readable-safe),
-        //   • across the dome      → the break chance ramps up CONVEXLY (gentle early, steep near the brim),
-        //   • at/above DomeCapacity → a CERTAIN spill (the brim — pour here and it WILL go over).
+        // resolution (GlassManager.CalculateTrueSpillChance) reads these knobs to produce a spill CHANCE,
+        // and each pour rolls against it (GlassManager.DropCoins) — overflow is a press-your-luck gamble,
+        // not a fixed kill:
+        //   • below DomeSafeZone   → surface tension holds for sure (0% chance, readable-safe),
+        //   • across the dome      → the break chance ramps up CONVEXLY (gentle early, steep near the brim)
+        //                            and the pour ROLLS against it (small early, climbing as it fills),
+        //   • at/above DomeCapacity → the chance saturates at 100% — a CERTAIN spill regardless of the roll
+        //                            (the physical brim — a visibly-overfull glass never survives, so a
+        //                            round always resolves).
         // GlassStartFill is where the glass opens each round (the "already at the edge" lever; 0 = calm
         // open). SurfaceSettlePerTurn is the tug-of-war recovery: the surface eases back this much between
         // drops, so the glass hovers at the brim over many turns instead of racing over the top in a couple.
@@ -90,7 +111,7 @@ namespace Meniscus.Core
         // Kept below the smallest coin's risk (Copper = 3) so even all-Copper play still creeps the glass
         // up — otherwise two players could turtle on Copper forever and the round never resolves.
         public static float SurfaceSettlePerTurn = 2f;
-        public static float DomeRampExponent = 2.5f;
+        public static float DomeRampExponent = 3.5f;   // 2.5→3.5: cuts the early-bust tail — mid-fill pours are far safer, so danger concentrates near the brim instead of a round "randomly" ending at a moderate fill
 
         // Kept only as the normaliser the danger visuals/HUD scale against (dome bulge, vignette, tension
         // RTPC). No longer governs the spill resolution — the dome knobs above do.
@@ -125,6 +146,16 @@ namespace Meniscus.Core
                 CoinSize.Large => LargeCoinBasePayout,
                 _ => MediumCoinBasePayout
             };
+
+        // The payout multiplier a pour of <paramref name="coinCount"/> coins earns just for combining: 1
+        // for a single coin, then +ComboPayoutBonusPerExtraCoin per extra coin, capped at
+        // MaxComboPayoutMultiplier so a big batch is only modestly better than a pair.
+        public static float GetComboPayoutMultiplier(int coinCount) =>
+            coinCount <= 1
+                ? 1f
+                : Mathf.Min(
+                    MaxComboPayoutMultiplier,
+                    1f + Mathf.Max(0f, ComboPayoutBonusPerExtraCoin) * (coinCount - 1));
 
         // Round-to-round difficulty ramp: later rounds scale every coin's risk contribution up, so the
         // shared glass climbs toward the brim faster and the danger zone arrives sooner. Round 1 is

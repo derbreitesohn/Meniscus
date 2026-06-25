@@ -154,10 +154,11 @@ namespace Meniscus.UI
                     addedRiskWeight += Mathf.Max(0f, coins[i].riskContribution);
             }
 
-            // The spill chance this pour would face (the relief-adjusted chance at the post-drop fill) feeds
-            // the boldness payout — it is never shown, only converted into the reward multiplier below.
-            var afterWeight = Mathf.Min(
-                glass.CurrentOverflowProbability + addedRiskWeight, GameConstants.MaxOverflowProbability);
+            // The spill chance this pour would face (the relief-adjusted chance at the post-drop fill,
+            // including the combo claw-back so a multi-coin selection's forecast matches what it will
+            // actually bank) feeds the boldness payout — it is never shown, only converted into the reward
+            // multiplier below.
+            var afterWeight = glass.ProjectFillAfterDrop(addedRiskWeight, count);
             var spillAfter = glass.CalculateCurrentTrueSpillChance(afterWeight);
 
             var multiplier = economy.PreviewSafeDropMultiplier(coins, spillAfter);

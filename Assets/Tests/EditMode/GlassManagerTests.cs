@@ -16,9 +16,10 @@ namespace Meniscus.Tests.EditMode
             glassObject = new GameObject("GlassManager Test Host");
             glassManager = glassObject.AddComponent<GlassManager>();
 
-            // Overflow is deterministic now (it triggers when the fill reaches the brim), so the roll no
-            // longer decides the outcome. The provider is kept only because the result still carries a
-            // roll value for the presentation layer; pin it so nothing depends on the RNG.
+            // Overflow is probabilistic: each pour rolls against the spill chance, and a spill is only
+            // CERTAIN once the fill reaches the brim (the chance saturates at 100%). Pin the roll to the
+            // max (the luckiest possible draw) so by default a pour HOLDS everywhere below the brim and the
+            // outcome never depends on the RNG; individual tests drop the roll to 0 to force a spill.
             glassManager.SpillRollProvider = () => GameConstants.MaxOverflowProbability;
         }
 
@@ -66,21 +67,37 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void DropCoins_AddsCombinedRiskToProbability()
+        public void DropCoins_AddsCombinedRiskToProbability_LessTheComboClawBack()
         {
             var small = CreateCoin("Small Coin", 5f, 10, true);
             var large = CreateCoin("Large Coin", 15f, 30, true);
 
             var result = glassManager.DropCoins(new[] { small, large }, TurnActor.Player);
 
-            Assert.AreEqual(20f, glassManager.CurrentOverflowProbability);
+            // 20 of combined risk goes in, then a 2-coin combo claws back ComboRiskReliefPerExtraCoin.
+            var expectedFill = 20f - GameConstants.ComboRiskReliefPerExtraCoin;
+            Assert.AreEqual(expectedFill, glassManager.CurrentOverflowProbability, 0.001f);
             Assert.AreEqual(0f, result.RiskBeforeDrop);
-            Assert.AreEqual(20f, result.AddedRisk);
-            Assert.AreEqual(20f, result.RiskAfterDrop);
+            Assert.AreEqual(20f, result.AddedRisk);                 // AddedRisk is the gross risk poured
+            Assert.AreEqual(expectedFill, result.RiskAfterDrop, 0.001f);
             Assert.AreEqual(2, result.CoinCount);
 
             Object.DestroyImmediate(small.gameObject);
             Object.DestroyImmediate(large.gameObject);
+        }
+
+        [Test]
+        public void DropCoins_SingleCoin_GetsNoComboClawBack()
+        {
+            var coin = CreateCoin("Solo Coin", 20f, 10, true);
+
+            var result = glassManager.DropCoins(new[] { coin }, TurnActor.Player);
+
+            // One coin is not a combo: the full 20 stays on the glass.
+            Assert.AreEqual(20f, glassManager.CurrentOverflowProbability, 0.001f);
+            Assert.AreEqual(20f, result.RiskAfterDrop, 0.001f);
+
+            Object.DestroyImmediate(coin.gameObject);
         }
 
         [Test]
@@ -130,7 +147,8 @@ namespace Meniscus.Tests.EditMode
         public void DropCoins_PastTheBrim_IsACertainSpill()
         {
             var heavy = CreateCoin("Heavy Coin", 120f, 100, false);
-            // Even the highest possible roll spills once the fill is at/over the brim — the spill is certain.
+            // Even the luckiest possible roll spills once the fill is at/over the brim — the chance has
+            // saturated at 100%, so overflow is certain regardless of the roll.
             glassManager.SpillRollProvider = () => GameConstants.MaxOverflowProbability;
 
             var result = glassManager.DropCoins(new[] { heavy }, TurnActor.Enemy);
@@ -141,6 +159,25 @@ namespace Meniscus.Tests.EditMode
             Assert.IsTrue(result.Overflowed);
 
             Object.DestroyImmediate(heavy.gameObject);
+        }
+
+        [Test]
+        public void DropCoins_BelowTheBrim_SpillsWhenTheRollUndercutsTheChance()
+        {
+            // A mid-dome fill is a genuine gamble now: the same fill that HOLDS on the luckiest roll
+            // (see DropCoins_InsideTheDome…) BREAKS on the unluckiest one.
+            var coin = CreateCoin("Dome Fill Coin", 40f, 10, true);
+
+            var chance = GlassManager.CalculateTrueSpillChance(40f);
+            Assert.Greater(chance, 0f);
+            Assert.Less(chance, GameConstants.MaxOverflowProbability);   // genuinely below the brim, not certain
+
+            glassManager.SpillRollProvider = () => 0f;                   // the unluckiest roll
+            var result = glassManager.DropCoins(new[] { coin }, TurnActor.Player);
+
+            Assert.IsTrue(result.Overflowed);   // a low roll under the chance breaks the surface below the brim
+
+            Object.DestroyImmediate(coin.gameObject);
         }
 
 

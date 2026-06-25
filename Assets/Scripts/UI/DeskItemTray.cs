@@ -39,6 +39,14 @@ namespace Meniscus.UI
                  "runtime; assign one to tune it in the editor before play.")]
         [SerializeField] DeskHandDelivery handDelivery;
 
+        [Header("Book Avoidance")]
+        [Tooltip("The desk book prop. Item boxes skip the slots its footprint covers, so a bought item is " +
+                 "never placed sitting under the book on the desk. Auto-found at runtime if left empty.")]
+        [SerializeField] BookShopView bookShop;
+        [Tooltip("Half-width (in metres, along the desk) of the band kept clear around the book's centre " +
+                 "when placing item boxes — roughly the book's half-width plus a box's half-width.")]
+        [SerializeField, Min(0f)] float bookClearance = 0.45f;
+
         const float BoxSpacing = 0.3f;
         const float DeskClearance = 0.01f;
 
@@ -58,6 +66,12 @@ namespace Meniscus.UI
         bool deskResolved;
         bool hasDeskBounds;
         bool positioned;
+
+        // The slice of the tray's local X axis covered by the book resting on the desk; slots whose box
+        // would fall inside it are skipped so an item is never placed under the book.
+        float bookLocalX;
+        bool bookBandResolved;
+        bool hasBookBand;
 
         public IReadOnlyList<DeskItemBox> Boxes => boxes;
         public DeskItemBox Selected => selected;
@@ -199,6 +213,7 @@ namespace Meniscus.UI
                 return;
 
             PositionTrayOnDesk();
+            ResolveBookBand();
             EnsureUseButton();
 
             var contents = inventory.Contents();
@@ -306,12 +321,16 @@ namespace Meniscus.UI
             return new Vector3(sign * (CenterGap * 0.5f + ring * BoxSpacing), 0f, 0f);
         }
 
-        // The lowest slot index not currently held by a box. Reusing a freed slot keeps new items as
-        // close to centre as possible, while existing boxes stay put.
+        // The lowest slot index not currently held by a box and not covered by the book. Reusing a freed
+        // slot keeps new items as close to centre as possible, while existing boxes stay put; skipping the
+        // book's slots means the leftward column flows around it instead of stacking an item underneath.
         int NextFreeSlot()
         {
             for (var slot = 0; ; slot++)
             {
+                if (SlotBlockedByBook(slot))
+                    continue;
+
                 var taken = false;
 
                 for (var i = 0; i < boxes.Count; i++)
@@ -328,10 +347,44 @@ namespace Meniscus.UI
             }
         }
 
+        // The book rests on one side of the desk; resolve the slice of the tray's local X axis its
+        // footprint covers (lazy + cached) so NextFreeSlot can skip those slots. Needs the tray positioned
+        // and the book seated first — both happen at scene load, so this resolves on the first Rebuild.
+        void ResolveBookBand()
+        {
+            if (bookBandResolved)
+                return;
+
+            if (bookShop == null)
+                bookShop = FindAnyObjectByType<BookShopView>();
+
+            // Retry next Rebuild until the book exists and the tray has taken its place on the desk
+            // (the book position is only meaningful in the tray's final local space). Only latch once
+            // the band is resolved, so a book seated a frame later is still picked up.
+            if (bookShop == null || !positioned)
+                return;
+
+            if (bookShop.TryGetDeskRestPosition(out var bookWorld))
+            {
+                bookLocalX = transform.InverseTransformPoint(bookWorld).x;
+                hasBookBand = true;
+                bookBandResolved = true;
+            }
+        }
+
+        bool SlotBlockedByBook(int slot)
+            => hasBookBand && Mathf.Abs(SlotPosition(slot).x - bookLocalX) < bookClearance;
+
         public void OnBoxClicked(DeskItemBox box)
         {
             // Ignore a box that's still being carried in — it isn't on its slot yet.
             if (box == null || box.IsBeingDelivered)
+                return;
+
+            // The Dealer's turn is theirs to act: the player can't raise/select an item during it
+            // (the shared desk USE button is hidden then too). Mirrors coins, which only lift on the
+            // player's turn. Leaving the player's turn already drops any held box in OnStateChanged.
+            if (gameManager != null && gameManager.CurrentState == GameState.EnemyTurn)
                 return;
 
             // Click a raised box again to set it back down.

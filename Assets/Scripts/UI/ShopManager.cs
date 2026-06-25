@@ -26,12 +26,14 @@ namespace Meniscus.UI
         public IReadOnlyList<ItemDefinition> Catalog => ResolveCatalog();
 
         /// <summary>
-        /// Whether the player may open the book to browse right now: any time a round is in
-        /// progress, but not while the round-won banner is up, during the post-round shop phase
-        /// (closed via "Finish Drink"), or on the game-over screen.
+        /// Whether the player may open the book to browse right now: while a round is in progress on
+        /// the player's own time, but not while the Dealer is taking their turn, while the round-won
+        /// banner is up, during the post-round shop phase (closed via "Finish Drink"), or on the
+        /// game-over screen.
         /// </summary>
         public static bool BrowsingAllowed(GameState state)
-            => state != GameState.RoundWon && state != GameState.ShopPhase && state != GameState.GameOver;
+            => state != GameState.EnemyTurn && state != GameState.RoundWon
+               && state != GameState.ShopPhase && state != GameState.GameOver;
 
         /// <summary>Banked cash the player can spend right now (0 if economy is unwired).</summary>
         public int BankedCash => economyManager != null ? economyManager.PlayerTotalBankedCash : 0;

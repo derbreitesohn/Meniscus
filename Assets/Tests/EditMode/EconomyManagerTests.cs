@@ -42,11 +42,11 @@ namespace Meniscus.Tests.EditMode
             var coinA = CreateCoin("Coin A", 5f, 10, true);
             var coinB = CreateCoin("Coin B", 5f, 10, true);
 
-            // braved 50% → factor ≈ 2.2213; (10 + 10) × 2.2213 ≈ 44.4; combo ×2 ≈ 88.9 → 89
+            // braved 50% → factor ≈ 2.2213; (10 + 10) × 2.2213 ≈ 44.4; 2-coin combo ×1.15 ≈ 51.1 → 51
             var payout = economyManager.AwardSafeDrop(new[] { coinA, coinB }, 50f);
 
-            Assert.AreEqual(89, payout);
-            Assert.AreEqual(89, economyManager.CurrentRoundEarnings);
+            Assert.AreEqual(51, payout);
+            Assert.AreEqual(51, economyManager.CurrentRoundEarnings);
 
             Object.DestroyImmediate(coinA.gameObject);
             Object.DestroyImmediate(coinB.gameObject);
@@ -146,9 +146,10 @@ namespace Meniscus.Tests.EditMode
             var coinB = CreateCoin("Combo Coin", 5f, 20, true);
 
             // braved 50% → factor = 0.1 + 6·(0.5)^1.5 ≈ 2.2213. It is a per-coin-value multiplier, so the
-            // coins' payout is irrelevant to the figure; a second coin folds in the ×2 combo.
+            // coins' payout is irrelevant to the figure; a second coin folds in the gentle ×1.15 combo
+            // (2.2213 × 1.15 ≈ 2.5545).
             Assert.AreEqual(2.2213f, economyManager.PreviewSafeDropMultiplier(new[] { coin }, 50f), 0.001f);
-            Assert.AreEqual(4.4426f, economyManager.PreviewSafeDropMultiplier(new[] { coin, coinB }, 50f), 0.001f);
+            Assert.AreEqual(2.5545f, economyManager.PreviewSafeDropMultiplier(new[] { coin, coinB }, 50f), 0.001f);
 
             Object.DestroyImmediate(coin.gameObject);
             Object.DestroyImmediate(coinB.gameObject);
