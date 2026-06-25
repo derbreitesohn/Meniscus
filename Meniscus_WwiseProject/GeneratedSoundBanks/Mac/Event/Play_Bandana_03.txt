@@ -1,0 +1,3 @@
+Event	ID	Name			Wwise Object Path	Notes
+	2362448273	Play_Bandana_03			\Default Work Unit\Play_Bandana_03	
+

@@ -1,0 +1,48 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Mac",
+  "BasePlatform": "Mac",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "2362448273",
+    "Type": "Event",
+    "GUID": "{C6688AC9-33B5-47A1-8BD1-0FD7B4B53535}",
+    "Language": "SFX",
+    "Hash": "{53FDE0F8-DA05-40DB-AADB-8F699A0288DB}",
+    "ObjectPath": "Play_Bandana_03",
+    "ShortName": "Play_Bandana_03",
+    "Path": "Event/Play_Bandana_03.bnk",
+    "Media": [
+     {
+      "Id": "753001166",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "Bandana_03.wav",
+      "Path": "Media/753001166.wem",
+      "CachePath": "F1/{F1BE52E5-DCFA-2A2B-53FB-185629994FAC}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "2362448273",
+      "Name": "Play_Bandana_03",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Bandana_03",
+      "GUID": "{C6688AC9-33B5-47A1-8BD1-0FD7B4B53535}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.9868542",
+      "DurationMax": "0.9868542",
+      "MediaRefs": [
+       {
+        "Id": "753001166"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{E55AD88D-5D80-F818-20F4-1EEC51643052}"
+ }
+}

@@ -14,6 +14,7 @@ namespace AK
     namespace EVENTS
     {
         static const AkUniqueID PLAY_24BIT_PIANO_CHORDS_MELODIE_STATE2_3_102BPM = 2739229492U;
+        static const AkUniqueID PLAY_BANDANA_03 = 2362448273U;
         static const AkUniqueID PLAY_BAR_AMBIENCE01 = 3708788113U;
         static const AkUniqueID PLAY_BUYING_01 = 1534786092U;
         static const AkUniqueID PLAY_CAT_MIAU = 2220998033U;
