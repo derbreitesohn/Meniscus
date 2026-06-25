@@ -34,6 +34,9 @@ namespace Meniscus.Core
         [SerializeField] PlayerSeatingIntro seatingIntro;
         [SerializeField] DialogueController dialogueController;
         [SerializeField] DealerMonologue dealerMonologue;
+        [Tooltip("Drives the dealer figure's MC_Animator: his coin-toss gesture and his win/lose reactions. " +
+                 "Auto-resolved in play mode (the scene's lone MC_Animator user) if left empty.")]
+        [SerializeField] DealerAnimator dealerAnimator;
         [SerializeField] ShopManager shopManager;
         [SerializeField] EndScreenManager endScreenManager;
         [SerializeField] RoundWonBanner roundWonBanner;
@@ -95,7 +98,17 @@ namespace Meniscus.Core
                  "Injected into the runtime dialogue box (which has no inspector of its own). Empty = silent text.")]
         [SerializeField] AK.Wwise.Event dialogueVoice;
 
-      
+        [Header("Dealer Close-Ups")]
+        [Tooltip("Frame a tight close-up of the dealer while the coin tumbles each round (he plays his " +
+                 "COINTOSS gesture as it flips). Disable to keep the table overview during the toss. The " +
+                 "close-up distance/aim live on the CameraController's 'Dealer Close-Up' section.")]
+        [SerializeField] bool frameDealerDuringToss = true;
+        [Tooltip("Safety cap (seconds) on the dealer's gloating WIN close-up held on a player loss. Normally " +
+                 "the beat ends when his WIN animation finishes (so it's seen in full); this just stops a " +
+                 "looping/missing clip from stalling before the death orbit takes over and hides him.")]
+        [SerializeField, Min(0.5f)] float lossGloatMaxSeconds = 5f;
+
+
 
 
         readonly List<Coin> playerCoins = new();
@@ -176,6 +189,7 @@ namespace Meniscus.Core
             roundWonBanner?.Hide();
             roundIntroCard?.Hide();
             coinTossOverlay?.Hide();
+            cameraController?.ClearDealerFocus();   // defensive: never carry a stale close-up into a restart
 
             // Open the match with the dealer's wake-up monologue (camera lifts off the table, then he talks);
             // the round only begins once it finishes. Falls back to the walk-in seating intro, then to an
@@ -237,17 +251,27 @@ namespace Meniscus.Core
             }
            
 
+            // Hold a tight close-up of the dealer (aimed at his hands) while the toss plays out — he tosses the
+            // coin as it tumbles. The coin rig parents to the camera, so it keeps spinning in the foreground
+            // over this framing; released when the toss resolves (OnCoinTossDecided).
+            if (frameDealerDuringToss && dealerAnimator != null)
+                cameraController?.FocusDealerToss(dealerAnimator.FocusTransform);
+
             // Flip the real gold coin (the large/gold model); the overlay auto-fits and stands in with a
-            // placeholder if no model is wired.
+            // placeholder if no model is wired. The dealer's COINTOSS gesture is cued the instant it tumbles.
             coinTossOverlay.Show(
                 coinModels.GetModelForSize(CoinSize.Large),
                 coinModels.ModelScale,
                 OnCoinTossDecided,
-                coinFlip);
+                coinFlip,
+                () => dealerAnimator?.PlayToss());
         }
 
         void OnCoinTossDecided(TurnActor starter)
         {
+            // Release the dealer close-up so the rig blends back to the turn's framing below.
+            cameraController?.ClearDealerFocus();
+
             roundIntroCard?.Show(currentRound, GameConstants.TotalRounds);
 
             if (starter == TurnActor.Enemy)
@@ -696,21 +720,38 @@ namespace Meniscus.Core
                 outcome,
                 economyManager == null ? 0 : economyManager.PlayerTotalBankedCash);
 
-            // A loss is its own beat: strip the scene to just the spilled glass and orbit it until the player
-            // restarts, instead of the flat end screen. EditMode tests have no LossSequence, so they fall
+            // The dealer's terminal reaction (win/lose are from his side of the table): he WINS when the player
+            // overflows, LOSES when the player banks the match. Each beat holds a close-up on him so the
+            // reaction is actually seen.
+            var dealerFocus = dealerAnimator != null ? dealerAnimator.FocusTransform : null;
+
+            // A loss is its own beat: gloat on the dealer up close (WIN), then strip the scene to the spilled
+            // glass and orbit it until the player restarts. EditMode tests have no LossSequence, so they fall
             // through to the unchanged end-screen path below.
             if (outcome == MatchOutcome.PlayerLost && lossSequence != null)
             {
-                lossSequence.Begin(this, cameraController, "YOU LOST", loseSound);
+                dealerAnimator?.PlayWin();
+
+                if (dealerFocus != null)
+                    cameraController?.FocusDealerGloat(dealerFocus);
+
+                // Hold the gloat close-up until his WIN animation finishes, THEN run the death orbit.
+                StartCoroutine(BeginLossAfterGloat());
                 return;
             }
 
-            // A win is its own beat too: the dealer gives his losing monologue, then the screen dims to black
-            // and lifts to reveal the end screen. EditMode tests have no monologue, so they fall through to the
-            // unchanged end-screen path below.
+            // A win is its own beat too: a close-up of the dealer's defeated face as he gives his losing
+            // monologue, then the screen dims to black and lifts to reveal the end screen. EditMode tests have
+            // no monologue, so they fall through to the unchanged end-screen path below.
             if (outcome == MatchOutcome.PlayerWon && ShouldPlayOutroMonologue())
             {
-                cameraController?.SwitchCamera(CameraState.TableOverview);
+                dealerAnimator?.PlayLose();
+
+                if (dealerFocus != null)
+                    cameraController?.FocusDealerDefeated(dealerFocus);
+                else
+                    cameraController?.SwitchCamera(CameraState.TableOverview);
+
                 dealerMonologue.PlayOutro(
                     cameraController,
                     dialogueController,
@@ -721,10 +762,62 @@ namespace Meniscus.Core
                 return;
             }
 
-            cameraController?.SwitchCamera(CameraState.TableOverview);
+            // Plain end-screen fall-through (no loss sequence / no outro): still play and frame the reaction.
+            if (outcome == MatchOutcome.PlayerLost)
+            {
+                dealerAnimator?.PlayWin();
+                if (dealerFocus != null) cameraController?.FocusDealerGloat(dealerFocus);
+            }
+            else if (outcome == MatchOutcome.PlayerWon)
+            {
+                dealerAnimator?.PlayLose();
+                if (dealerFocus != null) cameraController?.FocusDealerDefeated(dealerFocus);
+            }
+
+            if (dealerFocus == null)
+                cameraController?.SwitchCamera(CameraState.TableOverview);
 
             // Delay the end screen so the final drop animation can finish playing.
             StartCoroutine(ShowEndScreenAfterDelay(outcome, reason));
+        }
+
+        // Hold the dealer's gloating WIN close-up until his animation has actually finished, so it's seen in
+        // full, THEN hand off to the loss sequence's death orbit (which hides him). Capped by
+        // lossGloatMaxSeconds so a looping or missing clip can't stall the beat.
+        IEnumerator BeginLossAfterGloat()
+        {
+            yield return HoldDealerReaction("WIN", lossGloatMaxSeconds);
+
+            cameraController?.ClearDealerFocus();
+            lossSequence.Begin(this, cameraController, "YOU LOST", loseSound);
+        }
+
+        // Waits until the dealer's named reaction state has essentially played out (entered, not transitioning,
+        // ~97% through), with a short floor so a very short clip still reads and a hard cap so it never stalls.
+        IEnumerator HoldDealerReaction(string stateName, float maxSeconds)
+        {
+            var animator = dealerAnimator != null ? dealerAnimator.Animator : null;
+            const float minHold = 0.5f;
+            var elapsed = 0f;
+            var entered = false;
+
+            while (elapsed < maxSeconds)
+            {
+                elapsed += Time.unscaledDeltaTime;
+
+                if (animator != null && animator.isActiveAndEnabled)
+                {
+                    var info = animator.GetCurrentAnimatorStateInfo(0);
+                    var inState = info.IsName(stateName);
+                    entered |= inState;
+
+                    if (entered && inState && !animator.IsInTransition(0) &&
+                        info.normalizedTime >= 0.97f && elapsed >= minHold)
+                        yield break;
+                }
+
+                yield return null;
+            }
         }
 
         IEnumerator ShowEndScreenAfterDelay(MatchOutcome outcome, string reason)
@@ -1125,6 +1218,16 @@ namespace Meniscus.Core
 
             if (dealerMonologue == null && Application.isPlaying)
                 dealerMonologue = DealerMonologue.CreateRuntimeFallback();
+
+            if (dealerAnimator == null)
+                dealerAnimator = FindAnyObjectByType<DealerAnimator>();
+
+            // Play-mode-only: ResolveOrCreate adds a DealerAnimator to the figure using the MC_Animator
+            // controller. EditMode tests keep the null path (no animator, no triggers fired).
+            if (dealerAnimator == null && Application.isPlaying)
+                dealerAnimator = DealerAnimator.ResolveOrCreate();
+            else
+                dealerAnimator?.EnsureAnimator();
 
             if (dropPresentationController == null)
                 dropPresentationController = FindAnyObjectByType<CoinDropPresentationController>();

@@ -54,6 +54,8 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0f)] float vanishSeconds = 0.22f;  // spyglass shrinks against the lens and is gone
         [SerializeField, Min(0f)] float irisSeconds = 0.45f;    // scope closes / opens around the view
         [SerializeField, Min(0f)] float readSeconds = 1.7f;     // hold on the odds so they are read
+        [Tooltip("Wwise event for the spyglass zoom, posted as the camera pushes into the glass close-up and the scope irises in. Empty = silent.")]
+        [SerializeField] AK.Wwise.Event spyglassZoomSound;
 
         [Header("Spyglass — held prop")]
         [Tooltip("Resting pose of the held spyglass in camera-local space (x right, y up, z forward into the view).")]
@@ -74,6 +76,9 @@ namespace Meniscus.Gameplay
         [Tooltip("Coin size as a fraction of the glass's surface radius (largest dimension).")]
         [SerializeField, Min(0.05f)] float coinSizeFraction = 0.6f;
         [SerializeField, Min(0.05f)] float coinSinkSeconds = 0.45f;
+        [Tooltip("Wwise event posted as the coin hits the liquid (Marked Coin / Lucky Coin / Dealer's Debt). " +
+                 "Assign the same water-drop event the normal coins use (e.g. Play_water). Empty = silent.")]
+        [SerializeField] AK.Wwise.Event coinDropWaterSound;
 
         [Header("Bottle pour — EnemySafeZonePenalty (parked, unwired)")]
         [Tooltip("How high above the surface the bottle mouth pours from (metres).")]
@@ -206,7 +211,7 @@ namespace Meniscus.Gameplay
         [SerializeField] Vector3 cigMouthLocalPos = new(0.02f, -0.13f, 0.36f);
         [Tooltip("Orientation of the cigarette at the lips (camera-local euler). Y yaw swings the burning tip " +
                  "away from camera toward the scene/enemy (90 = straight away); Z roll tilts the stick sideways.")]
-        [SerializeField] Vector3 cigMouthEuler = new(5f, 70f, 10f);
+        [SerializeField] Vector3 cigMouthEuler = new(5f, -60f, 10f);
         [SerializeField, Min(0.01f)] float cigaretteHeldSize = 0.17f;
         [Tooltip("Which end of the cigarette lights — flip if the flame sits on the lips end instead of the tip.")]
         [SerializeField] bool flipCigaretteTip = true;
@@ -361,6 +366,7 @@ namespace Meniscus.Gameplay
             // 3. Now push the camera into the glass close-up (front, straight on) and iris the scope over the
             // view, ticking the odds gauge up to the live spill chance — looking through the spyglass.
             cameraController?.FocusGlass(false);
+            spyglassZoomSound?.Post(gameObject);   // the scope zooms in
             EnsureScopeView();
             scopeView.Show();
 
@@ -589,6 +595,7 @@ namespace Meniscus.Gameplay
 
                 coin.transform.position = target;
                 Splash();
+                coinDropWaterSound?.Post(gameObject);   // coin hits the water — same drop sound as the normal coins
             }
 
             EnsureBanner();

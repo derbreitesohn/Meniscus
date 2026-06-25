@@ -157,6 +157,29 @@ namespace Meniscus.Gameplay
                  "unassigned the shot simply holds the resting framing instead of diving toward the glass.")]
         [SerializeField] Transform monologueFaceAnchor;
 
+        // Used by the coin toss (his toss gesture) and the win/lose reactions. The camera moves IN from the
+        // known-good table-overview pose, straight along the line toward the dealer's face, so the close-up
+        // keeps a natural eye-height downward look and never dives below the table or swings behind him.
+        // Closeness is a fraction of that line (0 = stay at the overview, 1 = right at his face).
+        [Header("Dealer Close-Up")]
+        [Tooltip("Win/lose: how far to move from the overview toward the dealer's face. Higher = tighter.")]
+        [SerializeField, Range(0f, 0.95f)] float dealerFaceCloseness = 0.68f;
+        [Tooltip("Win/lose aim height up the dealer. 0 = feet, 1 = top of head. ~0.9 = face.")]
+        [SerializeField, Range(0f, 1.1f)] float dealerFaceHeight = 0.9f;
+        [Tooltip("Coin toss: how far to move from the overview toward the dealer. Kept moderate so the " +
+                 "camera-mounted tumbling coin still clears him.")]
+        [SerializeField, Range(0f, 0.95f)] float dealerTossCloseness = 0.5f;
+        [Tooltip("Coin toss aim height up the dealer (his upper body / hands as he tosses).")]
+        [SerializeField, Range(0f, 1.1f)] float dealerTossHeight = 0.82f;
+        [Tooltip("Coin toss only: keep the camera at least this far (metres) from the dealer so the tumbling " +
+                 "coin in front of the lens never clips into him.")]
+        [SerializeField, Min(0f)] float dealerTossMinStandoff = 1.25f;
+        [Tooltip("Player-win shot (dealer defeated): lower the camera by this many metres (it then looks " +
+                 "slightly up at him). 'Move the win camera down a tiny bit.'")]
+        [SerializeField, Min(0f)] float dealerWinCameraDrop = 0.1f;
+        [Tooltip("Player-loss shot (dealer gloating): lower the camera by this many metres.")]
+        [SerializeField, Min(0f)] float dealerLossCameraDrop = 0f;
+
         float activeGlassYaw;   // live yaw for the glass close-up: front by default, side to bait / on overflow
         bool framingOverflow;   // the close-up uses its dramatic overflow pose (set by FocusOverflow)
         bool orbiting;          // the loss "death orbit" owns the camera until the match restarts
@@ -198,6 +221,15 @@ namespace Meniscus.Gameplay
         Vector3 monologuePosOffset;    // its position offset from the base pose (base-local axes)
         Vector3 monologueRotOffset;    // its rotation offset from the base pose (camera space, degrees)
         bool monologueUseFaceAnchor;   // the active monologue shot is the face close-up (uses monologueFaceAnchor)
+
+        bool dealerFocusing;           // a dealer close-up (coin toss / win / lose) owns the framing
+        Transform dealerFocusTarget;   // the dealer being framed
+        float dealerFocusCloseness;    // how far to move from the overview toward his face, 0..1
+        float dealerFocusHeight;       // aim height up his bounds, 0..1 (face vs upper body)
+        float dealerFocusMinStandoff;  // metres: never sit closer than this to him (toss coin clearance)
+        float dealerFocusVerticalDrop; // metres the camera is lowered (looks slightly up at him)
+        Bounds dealerFocusBounds;      // his measured bounds, captured when the focus begins
+        bool dealerFocusBoundsValid;
 
         Vector3 lastFocusPosition;
         Quaternion lastFocusRotation = Quaternion.identity;
@@ -312,6 +344,15 @@ namespace Meniscus.Gameplay
 
         bool TryGetRestingPose(out Vector3 position, out Quaternion rotation)
         {
+            // A dealer close-up (coin toss / win / lose) frames the dealer's actual position from the player's
+            // side and wins over the per-state framing while active; it blends in/out via the rig like any
+            // other shot. Released by ClearDealerFocus.
+            if (dealerFocusing && dealerFocusTarget != null)
+            {
+                ComputeDealerFocusPose(out position, out rotation);
+                return true;
+            }
+
             // The dealer's monologue can push to a custom close-up framed as an offset from the base pose; it
             // wins over the per-state framing while active and blends in/out via the rig like any other shot.
             // Released (ClearMonologueShot) when the monologue ends so normal play returns to its framing.
@@ -524,9 +565,9 @@ namespace Meniscus.Gameplay
         {
             var swayMultiplier = StateSwayMultiplier(currentState);
 
-            // A monologue close-up holds a tight frame, so calm the handheld sway right down (still alive,
-            // not jittery) regardless of the underlying state's sway.
-            if (monologueFraming)
+            // A monologue / dealer close-up holds a tight frame, so calm the handheld sway right down (still
+            // alive, not jittery) regardless of the underlying state's sway.
+            if (monologueFraming || dealerFocusing)
                 swayMultiplier *= 0.3f;
 
             if (swayMultiplier <= 0f)
@@ -951,6 +992,118 @@ namespace Meniscus.Gameplay
         {
             monologueFraming = false;
             monologueUseFaceAnchor = false;
+        }
+
+        /// <summary>
+        /// Close-up of the dealer's face when the PLAYER WINS (he's defeated — his LOSE reaction). Framed a
+        /// touch lower (<see cref="dealerWinCameraDrop"/>) so the camera looks slightly up at him.
+        /// </summary>
+        public void FocusDealerDefeated(Transform dealer) =>
+            BeginDealerFocus(dealer, dealerFaceCloseness, dealerFaceHeight, minStandoff: 0f, verticalDrop: dealerWinCameraDrop);
+
+        /// <summary>
+        /// Close-up of the dealer's face when the PLAYER LOSES (he gloats — his WIN reaction).
+        /// </summary>
+        public void FocusDealerGloat(Transform dealer) =>
+            BeginDealerFocus(dealer, dealerFaceCloseness, dealerFaceHeight, minStandoff: 0f, verticalDrop: dealerLossCameraDrop);
+
+        /// <summary>
+        /// Push to the coin-toss close-up of the dealer — a touch wider than the face shot and aimed at his
+        /// upper body / hands, with a minimum standoff so the camera-mounted tumbling coin reads in front of
+        /// him rather than clipping into his head.
+        /// </summary>
+        public void FocusDealerToss(Transform dealer) =>
+            BeginDealerFocus(dealer, dealerTossCloseness, dealerTossHeight, dealerTossMinStandoff, verticalDrop: 0f);
+
+        void BeginDealerFocus(Transform dealer, float closeness, float heightFraction, float minStandoff, float verticalDrop)
+        {
+            if (dealer == null)
+                return;
+
+            EnsureBaseCaptured(targetCamera != null ? targetCamera.transform : transform);
+
+            dealerFocusTarget = dealer;
+            dealerFocusCloseness = Mathf.Clamp01(closeness);
+            dealerFocusHeight = heightFraction;
+            dealerFocusMinStandoff = minStandoff;
+            dealerFocusVerticalDrop = verticalDrop;
+            dealerFocusBoundsValid = TryGetRendererBounds(dealer, out dealerFocusBounds);
+            dealerFocusing = true;
+        }
+
+        /// <summary>Release the dealer close-up so the camera blends back to its current state's framing.</summary>
+        public void ClearDealerFocus()
+        {
+            dealerFocusing = false;
+            dealerFocusTarget = null;
+            dealerFocusBoundsValid = false;
+        }
+
+        // Frame the dealer from the player's side: aim partway up his bounds (face vs hands), stand off at a
+        // multiple of his size, and look straight at him. Mirrors the glass close-up's bounds-based framing so
+        // it reads the same whatever scale he is authored at.
+        void ComputeDealerFocusPose(out Vector3 position, out Quaternion rotation)
+        {
+            Vector3 focusPoint;
+
+            if (dealerFocusBoundsValid)
+            {
+                focusPoint = new Vector3(
+                    dealerFocusBounds.center.x,
+                    dealerFocusBounds.min.y + dealerFocusBounds.size.y * dealerFocusHeight,
+                    dealerFocusBounds.center.z);
+            }
+            else
+            {
+                // No measurable bounds: aim a little above his pivot.
+                focusPoint = dealerFocusTarget.position + Vector3.up * (fallbackSubjectRadius * 2.6f);
+            }
+
+            // Move IN from the table-overview pose straight toward his face. Interpolating between two
+            // known-good points keeps the camera on the player's side at a natural eye-height downward look —
+            // it can never drop below the table or swing behind him (the bug the bounds-orbit framing had).
+            position = Vector3.Lerp(basePosition, focusPoint, dealerFocusCloseness);
+
+            // Coin-toss only: never sit closer than the min standoff, so the camera-mounted tumbling coin
+            // stays in front of him instead of clipping into his head.
+            if (dealerFocusMinStandoff > 0f)
+            {
+                var toCamera = position - focusPoint;
+                var distance = toCamera.magnitude;
+
+                if (distance > 1e-4f && distance < dealerFocusMinStandoff)
+                    position = focusPoint + toCamera / distance * dealerFocusMinStandoff;
+            }
+
+            // Lower the camera a touch (it then looks slightly up at him); the look is recomputed below so it
+            // still aims square at the focus point.
+            position.y -= dealerFocusVerticalDrop;
+
+            var look = focusPoint - position;
+            rotation = look.sqrMagnitude > 1e-6f
+                ? Quaternion.LookRotation(look.normalized, Vector3.up)
+                : baseRotation;
+        }
+
+        static bool TryGetRendererBounds(Transform root, out Bounds bounds)
+        {
+            bounds = default;
+
+            if (root == null)
+                return false;
+
+            var renderers = root.GetComponentsInChildren<Renderer>();
+
+            if (renderers.Length == 0)
+                return false;
+
+            var combined = renderers[0].bounds;
+
+            for (var i = 1; i < renderers.Length; i++)
+                combined.Encapsulate(renderers[i].bounds);
+
+            bounds = combined;
+            return true;
         }
 
         /// <summary>

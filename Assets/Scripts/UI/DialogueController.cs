@@ -163,13 +163,14 @@ namespace Meniscus.UI
             group.blocksRaycasts = false;   // advance uses raw input, so the box never eats clicks
 
             // A warm gold border behind a dark wood panel, parked in the lower third of the screen. Smaller
-            // and tighter than a full-width bar, with larger text so each box fills out more.
+            // and tighter than a full-width bar, with larger text so each box fills out more. Kept fairly
+            // see-through so the scene (the dealer talking) reads behind the box.
             RuntimeUiFactory.CreateImage(
                 canvas.transform, "Dialogue Border",
-                new Vector2(1180f, 250f), new Vector2(0f, -300f), new Color(0.78f, 0.62f, 0.36f, 0.92f));
+                new Vector2(1180f, 250f), new Vector2(0f, -300f), new Color(0.78f, 0.62f, 0.36f, 0.7f));
             RuntimeUiFactory.CreateImage(
                 canvas.transform, "Dialogue Panel",
-                new Vector2(1144f, 214f), new Vector2(0f, -300f), new Color(0.06f, 0.035f, 0.025f, 0.96f));
+                new Vector2(1144f, 214f), new Vector2(0f, -300f), new Color(0.06f, 0.035f, 0.025f, 0.6f));
 
             bodyText = RuntimeUiFactory.CreateText(
                 canvas.transform, "Dialogue Body", string.Empty,

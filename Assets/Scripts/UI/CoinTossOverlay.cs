@@ -28,8 +28,9 @@ namespace Meniscus.UI
         AK.Wwise.Event coinFlipEvent;
 
         [Header("3D Coin Staging")]
-        [Tooltip("Distance in front of the camera at which the coin tumbles.")]
-        [SerializeField] float coinDistance = 1.2f;
+        [Tooltip("Distance in front of the camera at which the coin tumbles. Kept short so it stays a clear " +
+                 "foreground element even when the camera dives into the dealer's toss close-up.")]
+        [SerializeField] float coinDistance = 1.0f;
         [Tooltip("World-space diameter the coin is auto-fit to, regardless of the model's authored size.")]
         [SerializeField] float coinTargetDiameter = 0.4f;
         [Tooltip("Separation between the gold and copper faces as a multiple of the coin's thickness. 1 = " +
@@ -41,6 +42,7 @@ namespace Meniscus.UI
         [SerializeField] int flipFullTurns = 5;
 
         Action<TurnActor> onDecided;
+        Action onFlipStarted;
         Coroutine routine;
 
         GameObject coinModelPrefab;
@@ -109,10 +111,18 @@ namespace Meniscus.UI
         /// Reveals the toss and waits on a GOLD/COPPER call. The two faces are built from the supplied 3D
         /// model (the gold coin), the rear one tinted copper; <paramref name="decidedCallback"/> fires with
         /// the actor who won the toss once it settles. A null model falls back to a styled cylinder.
+        /// <paramref name="flipStartedCallback"/> (optional) fires the instant the coin starts tumbling — i.e.
+        /// when the player makes the call — so the dealer's toss animation can sync to the spin.
         /// </summary>
-        public void Show(GameObject modelPrefab, Vector3 modelScale, Action<TurnActor> decidedCallback, AK.Wwise.Event flipEvent)
+        public void Show(
+            GameObject modelPrefab,
+            Vector3 modelScale,
+            Action<TurnActor> decidedCallback,
+            AK.Wwise.Event flipEvent,
+            Action flipStartedCallback = null)
         {
             onDecided = decidedCallback;
+            onFlipStarted = flipStartedCallback;
             coinFlipEvent = flipEvent;
             coinModelPrefab = modelPrefab;
             coinModelScale = modelScale == Vector3.zero ? Vector3.one : modelScale;
@@ -181,6 +191,9 @@ namespace Meniscus.UI
                 return;
 
             coinFlipEvent?.Post(gameObject);
+
+            // The coin is about to tumble: cue the dealer's toss gesture so it reads as him flipping it.
+            onFlipStarted?.Invoke();
 
             SetButtonsVisible(false);
 
