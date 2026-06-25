@@ -29,10 +29,6 @@ namespace Meniscus.Items
                     "Shrug off 10 risk next round — every pour eases.",
                     50, ItemEffectKind.SafeZoneBonus, 10f),
                 ItemDefinition.Create(
-                    "iron_grip", "Iron Grip",
-                    "Shrug off 18 risk next round — every pour eases.",
-                    90, ItemEffectKind.SafeZoneBonus, 18f),
-                ItemDefinition.Create(
                     "dealers_debt", "Dealer's Debt",
                     "The dealer must pour two coins next turn.",
                     60, ItemEffectKind.ForceEnemyCoins, 2f),
@@ -56,10 +52,6 @@ namespace Meniscus.Items
                     "happy_hour", "Happy Hour",
                     "Every safe pour pays ×1.5 for the rest of this round.",
                     55, ItemEffectKind.RoundPayoutMultiplier, 1.5f),
-                ItemDefinition.Create(
-                    "recast_coin", "Recast",
-                    "Recast your biggest coin one size up — more risk, more reward.",
-                    45, ItemEffectKind.UpgradePlayerCoin, 1f),
                 ItemDefinition.Create(
                     "taro_laps", "Taro",
                     "Taro laps the glass down — a big cut to the spill risk now.",

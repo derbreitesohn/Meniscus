@@ -13,11 +13,19 @@ namespace Meniscus.Gameplay
     /// stages the drop. The logical effect is already applied by <see cref="GameManager.TryUseItem"/> before
     /// the <see cref="GameManager.ItemUsed"/> event reaches us; this layer is purely the show.
     ///
-    /// Built so far — the Spyglass (<see cref="ItemEffectKind.RevealTrueOdds"/>): bring the spyglass up to the
-    /// eye, push the camera into a close-up of the whiskey, and iris a scope vignette over the view with the
-    /// exact spill % the next pour faces (the odds the item reveals). The scope then lifts, leaving a compact
-    /// gauge pinned by the glass for the rest of the round (see <see cref="SpyglassScopeView"/>). While the
-    /// performance plays the <see cref="GameManager"/> holds an input lock so a pour can't cut it short.
+    /// Built so far:
+    ///  • Spyglass (<see cref="ItemEffectKind.RevealTrueOdds"/>) — raise it to the eye, it vanishes, the camera
+    ///    pushes into the glass and a scope vignette irises over the view with the exact spill % the next pour
+    ///    faces (see <see cref="SpyglassScopeView"/>).
+    ///  • Coin items (<see cref="ItemEffectKind.PayoutMultiplier"/> = Marked / Lucky Coin,
+    ///    <see cref="ItemEffectKind.ForceEnemyCoins"/> = Dealer's Debt) — a coin arcs into the glass and
+    ///    splashes, with a line of text naming the effect (see <see cref="ItemEffectBanner"/>).
+    ///  • Round for the Dealer (<see cref="ItemEffectKind.EnemySafeZonePenalty"/>) — a bottle tips over the cup
+    ///    and pours a stream in (built, currently UNWIRED — no bottle model yet).
+    ///  • Taro (item id "taro_laps", a ReduceCurrentRisk) — shake the held Leckerlis treats to call Taro the
+    ///    cat over; he laps the glass (<see cref="CatController.SummonToDrink"/> + the Cat_Drink clip) and the
+    ///    whiskey settles. Keyed by id, since Buy a Round shares the ReduceCurrentRisk effect.
+    /// While a performance plays the <see cref="GameManager"/> holds an input lock so a pour can't cut it short.
     /// </summary>
     [DisallowMultipleComponent]
     public class ItemUsePresentationController : MonoBehaviour
@@ -25,6 +33,8 @@ namespace Meniscus.Gameplay
         [SerializeField] GameManager gameManager;
         [SerializeField] CameraController cameraController;
         [SerializeField] GlassManager glassManager;
+        [SerializeField] GlassVisualController glassVisual;
+        Transform glassTransform;
 
         [Header("Spyglass — timing")]
         [SerializeField, Min(0f)] float pickupSeconds = 0.6f;   // raise the spyglass up to the eye
@@ -42,7 +52,56 @@ namespace Meniscus.Gameplay
         [Tooltip("How far below the held pose the spyglass starts — it rises up into view from here.")]
         [SerializeField, Min(0f)] float propStowDrop = 0.5f;
 
+        [Header("Coin drop — Marked Coin / Lucky Coin / Dealer's Debt")]
+        [Tooltip("How high above the liquid surface the coin starts its drop (metres).")]
+        [SerializeField, Min(0f)] float coinDropHeight = 0.42f;
+        [SerializeField, Min(0.05f)] float coinDropSeconds = 0.55f;
+        [Tooltip("Lift of the coin's drop arc (metres). 0 = straight down.")]
+        [SerializeField, Min(0f)] float coinDropArc = 0.05f;
+        [Tooltip("Coin size as a fraction of the glass's surface radius (largest dimension).")]
+        [SerializeField, Min(0.05f)] float coinSizeFraction = 0.6f;
+        [SerializeField, Min(0.05f)] float coinSinkSeconds = 0.45f;
+
+        [Header("Bottle pour — Round for the Dealer")]
+        [Tooltip("How high above the surface the bottle mouth pours from (metres).")]
+        [SerializeField, Min(0f)] float pourHeight = 0.42f;
+        [Tooltip("Bottle size as a multiple of the glass's surface radius (largest dimension).")]
+        [SerializeField, Min(0.1f)] float bottleSizeFactor = 2.4f;
+        [SerializeField, Range(0f, 160f)] float bottlePourAngle = 108f;
+        [SerializeField, Min(0.05f)] float bottleTiltSeconds = 0.5f;
+        [SerializeField, Min(0f)] float pourHoldSeconds = 1.2f;
+        [SerializeField, Min(0.001f)] float streamWidth = 0.018f;
+        [Tooltip("Colour of the poured liquid stream (matched to the whiskey by default).")]
+        [SerializeField] Color pourLiquidColor = new(0.72f, 0.40f, 0.11f, 0.85f);
+
+        [Header("Taro — shake the treats, summon the cat to drink")]
+        [Tooltip("Resting pose of the held Leckerlis (treats) in camera-local space before they're shaken.")]
+        [SerializeField] Vector3 treatsHeldLocalPos = new(0.16f, -0.15f, 0.5f);
+        [SerializeField] Vector3 treatsHeldEuler = Vector3.zero;
+        [SerializeField, Min(0.01f)] float treatsHeldSize = 0.22f;
+        [Tooltip("How fast / hard / wide the treats are shaken in the air to call Taro over.")]
+        [SerializeField, Min(0f)] float treatsShakeFreq = 22f;
+        [SerializeField, Min(0f)] float treatsShakeAmp = 0.02f;
+        [SerializeField, Range(0f, 45f)] float treatsShakeAngle = 16f;
+        [Tooltip("How far back from the glass Taro stands to drink (metres).")]
+        [SerializeField, Min(0f)] float catStandoff = 0.6f;
+        [Tooltip("How long Taro holds the drink pose.")]
+        [SerializeField, Min(0f)] float catDrinkHoldSeconds = 1.8f;
+        [Tooltip("Safety cap on how long we shake the treats waiting for Taro to arrive.")]
+        [SerializeField, Min(0f)] float maxSummonWait = 3.5f;
+
+        [Header("Effect banner (floating text)")]
+        [SerializeField, Min(0f)] float bannerFadeSeconds = 0.25f;
+        [SerializeField, Min(0f)] float bannerHoldSeconds = 1.1f;
+        [Tooltip("How far above the glass the effect text floats (metres in world space).")]
+        [SerializeField] float bannerWorldLift = 0.35f;
+
+        // Taro is keyed by item id (the cat-summon beat), since Buy a Round shares the ReduceCurrentRisk effect.
+        const string TaroItemId = "taro_laps";
+
         SpyglassScopeView scopeView;
+        ItemEffectBanner banner;
+        CatController cat;
         bool playing;
 
         void OnEnable()
@@ -81,11 +140,29 @@ namespace Meniscus.Gameplay
             if (item == null || !Application.isPlaying || playing)
                 return;
 
+            // Taro is keyed by id, not effect: it summons the cat, and Buy a Round shares ReduceCurrentRisk.
+            if (item.Id == TaroItemId)
+            {
+                StartCoroutine(PlayTaroDrink(item));
+                return;
+            }
+
             switch (item.Effect)
             {
                 case ItemEffectKind.RevealTrueOdds:
                     StartCoroutine(PlaySpyglassReveal(item));
                     break;
+
+                // Coin-themed items (Marked Coin / Lucky Coin pay-multipliers, Dealer's Debt) drop a coin
+                // into the glass with a line of text naming what just happened.
+                case ItemEffectKind.PayoutMultiplier:
+                case ItemEffectKind.ForceEnemyCoins:
+                    StartCoroutine(PlayCoinDropReveal(item));
+                    break;
+
+                // Round for the Dealer (EnemySafeZonePenalty) → PlayBottlePourReveal is built and parked, but
+                // left UNWIRED for now: there is no bottle model, so it would tip the generic glass prop and
+                // read as a glass pouring into a glass. Re-add the case once a bottle model is wired.
 
                 // Other items get their own bespoke beat here as they are built. Until then they simply
                 // apply their effect with no performance (the previous behaviour), so nothing regresses.
@@ -220,15 +297,23 @@ namespace Meniscus.Gameplay
             Destroy(prop);
         }
 
-        // Instantiates the item's own wired model (the spyglass FBX) as a prop held to the camera, fitted to a
-        // sensible held size and centred on its measured bounds. Null when there's no camera or no wired model
-        // — the reveal still plays (camera + scope), just without a prop in hand.
+        // Held to the camera (rises to the eye for the spyglass). Null if there's no camera, so the reveal
+        // still plays (camera + scope) without a prop in hand.
         GameObject CreateHeldProp(ItemDefinition item)
         {
             var camTransform = Camera.main != null ? Camera.main.transform : null;
+            return camTransform == null ? null : CreateProp(item, camTransform, propHeldSize);
+        }
+
+        // Instantiates the item's own wired model, strips colliders, applies its material, and wraps it in a
+        // pivot centred on its measured bounds (FBX pivots are often off-centre). A null <paramref name="parent"/>
+        // makes a free world prop (the caller then positions the pivot); a camera parent makes a held prop in
+        // camera-local space. Null when there's no wired model — the beat still plays without the prop.
+        GameObject CreateProp(ItemDefinition item, Transform parent, float targetSize)
+        {
             var library = gameManager != null ? gameManager.ItemModels : null;
 
-            if (camTransform == null || library == null || item == null)
+            if (library == null || item == null)
                 return null;
 
             if (!library.TryGetEntry(item.Id, out var entry) || entry.model == null)
@@ -242,11 +327,11 @@ namespace Meniscus.Gameplay
             }
             catch (System.Exception exception)
             {
-                Debug.LogWarning($"[ItemUsePresentation] Could not instantiate held model for '{item.Id}': {exception.Message}");
+                Debug.LogWarning($"[ItemUsePresentation] Could not instantiate model for '{item.Id}': {exception.Message}");
                 return null;
             }
 
-            // A held prop is purely visual; strip any colliders the model brought along.
+            // A prop is purely visual; strip any colliders the model brought along.
             foreach (var modelCollider in model.GetComponentsInChildren<Collider>())
                 Destroy(modelCollider);
 
@@ -257,13 +342,14 @@ namespace Meniscus.Gameplay
                     renderers[i].sharedMaterial = entry.material;
             }
 
-            // Wrap the model in a pivot parented to the camera, so its transform pivots about its measured
-            // centre (FBX pivots are often off-centre) and we can pose it in clean camera-local space.
-            var pivot = new GameObject($"Held {item.Id}");
-            pivot.transform.SetParent(camTransform, false);
+            var pivot = new GameObject($"Item Prop {item.Id}");
+
+            if (parent != null)
+                pivot.transform.SetParent(parent, false);
+
             model.transform.SetParent(pivot.transform, true);
 
-            FitProp(model, pivot.transform, propHeldSize);
+            FitProp(model, pivot.transform, targetSize);
             return pivot;
         }
 
@@ -297,6 +383,350 @@ namespace Meniscus.Gameplay
             return bounds;
         }
 
+        // Marked Coin / Lucky Coin / Dealer's Debt: a coin arcs down into the glass, splashes, and a line of
+        // text names what just happened — then the coin sinks out of sight.
+        IEnumerator PlayCoinDropReveal(ItemDefinition item)
+        {
+            ResolveReferences();
+            playing = true;
+            gameManager?.SetItemPresentationActive(true);
+
+            cameraController?.FocusGlass(false);
+
+            var haveGlass = TryGetGlassSurface(out var surface, out var radius);
+            var target = haveGlass ? surface : FallbackPointInFront();
+            var coinSize = haveGlass ? Mathf.Max(0.05f, radius * coinSizeFraction) : 0.12f;
+            var coin = CreateProp(item, null, coinSize);
+
+            if (coin != null)
+            {
+                var start = target + Vector3.up * coinDropHeight;
+                coin.transform.position = start;
+
+                for (var t = 0f; t < coinDropSeconds; t += Time.deltaTime)
+                {
+                    var f = Mathf.Clamp01(t / coinDropSeconds);
+                    coin.transform.position = CoinDropPresentationController.CalculateArcPosition(start, target, f, coinDropArc);
+                    coin.transform.Rotate(Vector3.up, 540f * Time.deltaTime, Space.World);
+                    yield return null;
+                }
+
+                coin.transform.position = target;
+                Splash();
+            }
+
+            EnsureBanner();
+            banner.Show(DescribeEffect(item), GlassAnchorTransform(), Vector3.up * bannerWorldLift);
+            yield return FadeBanner(0f, 1f, bannerFadeSeconds);
+
+            // The coin sinks into the glass and shrinks away while the text holds.
+            yield return SinkAndHold(coin, target);
+
+            yield return FadeBanner(1f, 0f, bannerFadeSeconds);
+            banner.Hide();
+
+            if (coin != null)
+                Destroy(coin);
+
+            cameraController?.SwitchCamera(CameraState.PlayerFocus);
+            gameManager?.SetItemPresentationActive(false);
+            playing = false;
+        }
+
+        IEnumerator SinkAndHold(GameObject coin, Vector3 surface)
+        {
+            var startScale = coin != null ? coin.transform.localScale : Vector3.one;
+            var sunk = surface - Vector3.up * 0.06f;
+
+            for (var t = 0f; t < bannerHoldSeconds; t += Time.deltaTime)
+            {
+                if (coin != null)
+                {
+                    var s = coinSinkSeconds > 0f ? Mathf.Clamp01(t / coinSinkSeconds) : 1f;
+                    coin.transform.position = Vector3.Lerp(surface, sunk, s);
+                    coin.transform.localScale = Vector3.Lerp(startScale, Vector3.zero, s);
+                }
+
+                yield return null;
+            }
+        }
+
+        // Round for the Dealer: a bottle tips over the cup, pours a stream of liquid in (the glass ripples),
+        // and a line of text names the effect — then the bottle rights itself and leaves.
+        IEnumerator PlayBottlePourReveal(ItemDefinition item)
+        {
+            ResolveReferences();
+            playing = true;
+            gameManager?.SetItemPresentationActive(true);
+
+            cameraController?.FocusGlass(false);
+
+            var haveGlass = TryGetGlassSurface(out var surface, out var radius);
+            var target = haveGlass ? surface : FallbackPointInFront();
+            var bottleSize = haveGlass ? Mathf.Max(0.12f, radius * bottleSizeFactor) : 0.3f;
+            var bottle = CreateProp(item, null, bottleSize);
+
+            GameObject stream = null;
+
+            if (bottle != null)
+            {
+                // Stand the bottle to one side, above the rim, then tip its mouth toward the cup.
+                var side = Camera.main != null ? Camera.main.transform.right : Vector3.right;
+                var standPos = target + Vector3.up * pourHeight + side * (radius * 1.4f);
+                bottle.transform.position = standPos;
+
+                var upright = Quaternion.identity;
+                var tipAxis = Vector3.Cross(Vector3.up, (target - standPos)).normalized;
+                if (tipAxis.sqrMagnitude < 1e-5f) tipAxis = Vector3.right;
+                var poured = Quaternion.AngleAxis(bottlePourAngle, tipAxis) * upright;
+
+                for (var t = 0f; t < bottleTiltSeconds; t += Time.deltaTime)
+                {
+                    bottle.transform.rotation = Quaternion.Slerp(upright, poured, Mathf.SmoothStep(0f, 1f, t / bottleTiltSeconds));
+                    yield return null;
+                }
+                bottle.transform.rotation = poured;
+
+                // Liquid pours from the (tilted) mouth down into the cup.
+                var mouth = standPos + (target - standPos).normalized * (bottleSize * 0.4f);
+                stream = CreateStream(mouth, target);
+                Splash();
+
+                EnsureBanner();
+                banner.Show(DescribeEffect(item), GlassAnchorTransform(), Vector3.up * bannerWorldLift);
+                yield return FadeBanner(0f, 1f, bannerFadeSeconds);
+
+                // Hold the pour, keeping the surface agitated.
+                var nextKick = 0.25f;
+                for (var t = 0f; t < pourHoldSeconds; t += Time.deltaTime)
+                {
+                    if (t >= nextKick)
+                    {
+                        nextKick += 0.3f;
+                        glassVisual?.KickRipple(1.2f);
+                    }
+                    yield return null;
+                }
+
+                if (stream != null)
+                    Destroy(stream);
+
+                // Right the bottle and lift it away.
+                for (var t = 0f; t < bottleTiltSeconds; t += Time.deltaTime)
+                {
+                    bottle.transform.rotation = Quaternion.Slerp(poured, upright, Mathf.SmoothStep(0f, 1f, t / bottleTiltSeconds));
+                    yield return null;
+                }
+            }
+            else
+            {
+                EnsureBanner();
+                banner.Show(DescribeEffect(item), GlassAnchorTransform(), Vector3.up * bannerWorldLift);
+                yield return FadeBanner(0f, 1f, bannerFadeSeconds);
+                for (var t = 0f; t < pourHoldSeconds; t += Time.deltaTime)
+                    yield return null;
+            }
+
+            yield return FadeBanner(1f, 0f, bannerFadeSeconds);
+            banner.Hide();
+
+            if (bottle != null)
+                Destroy(bottle);
+
+            cameraController?.SwitchCamera(CameraState.PlayerFocus);
+            gameManager?.SetItemPresentationActive(false);
+            playing = false;
+        }
+
+        // A coin hitting the surface: ripple + slosh (no-op if there's no glass visual to drive).
+        void Splash()
+        {
+            glassVisual?.KickRipple(2.6f);
+            glassVisual?.KickSlosh(2f);
+        }
+
+        // A thin liquid column between two world points, built from a primitive so it needs no authored asset.
+        GameObject CreateStream(Vector3 from, Vector3 to)
+        {
+            var stream = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            stream.name = "Pour Stream";
+
+            var streamCollider = stream.GetComponent<Collider>();
+            if (streamCollider != null)
+                Destroy(streamCollider);
+
+            var dir = to - from;
+            var length = Mathf.Max(0.001f, dir.magnitude);
+            stream.transform.position = (from + to) * 0.5f;
+            stream.transform.up = dir / length;                 // a unit cylinder is 2 tall along its Y
+            stream.transform.localScale = new Vector3(streamWidth, length * 0.5f, streamWidth);
+
+            // URP-friendly transparent material (a runtime primitive's default renders magenta under URP).
+            var renderer = stream.GetComponent<Renderer>();
+            renderer.sharedMaterial = GlassVisualController.CreateTransparentLiquidMaterial("Item Pour Stream", pourLiquidColor);
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            return stream;
+        }
+
+        IEnumerator FadeBanner(float from, float to, float seconds)
+        {
+            if (banner == null)
+                yield break;
+
+            if (seconds <= 0f)
+            {
+                banner.SetAlpha(to);
+                yield break;
+            }
+
+            for (var t = 0f; t < seconds; t += Time.deltaTime)
+            {
+                banner.SetAlpha(Mathf.Lerp(from, to, t / seconds));
+                yield return null;
+            }
+
+            banner.SetAlpha(to);
+        }
+
+        // A short line naming what the item just did, shown over the glass.
+        static string DescribeEffect(ItemDefinition item)
+        {
+            switch (item.Effect)
+            {
+                case ItemEffectKind.PayoutMultiplier: return $"NEXT POUR ×{item.Magnitude:0.#}";
+                case ItemEffectKind.RoundPayoutMultiplier: return $"PAYOUTS ×{item.Magnitude:0.#} THIS ROUND";
+                case ItemEffectKind.ForceEnemyCoins: return $"DEALER POURS {Mathf.RoundToInt(item.Magnitude)}";
+                case ItemEffectKind.EnemySafeZonePenalty: return "DEALER DRINKS";
+                case ItemEffectKind.ReduceCurrentRisk: return "GLASS EASED";
+                case ItemEffectKind.SafeZoneBonus: return $"SHRUG OFF {Mathf.RoundToInt(item.Magnitude)} RISK";
+                case ItemEffectKind.SkipTurn: return "TURN PASSED";
+                case ItemEffectKind.RevealTrueOdds: return "ODDS REVEALED";
+                default: return item.DisplayName != null ? item.DisplayName.ToUpperInvariant() : string.Empty;
+            }
+        }
+
+        // World point on the liquid surface + its radius, via the glass visual's authored geometry. False when
+        // there's no glass visual to read (the beats then fall back to a point in front of the camera).
+        bool TryGetGlassSurface(out Vector3 center, out float radius)
+        {
+            center = Vector3.zero;
+            radius = 0.1f;
+
+            if (glassVisual == null)
+                return false;
+
+            var glass = glassVisual.transform;
+            center = CoinDropPresentationController.ColumnPointToWorld(glass, glassVisual.StableSurfaceLocalY);
+            radius = CoinDropPresentationController.HorizontalWorldRadius(glass, glassVisual.SurfaceLocalRadius);
+            return true;
+        }
+
+        Transform GlassAnchorTransform() => glassTransform;
+
+        Vector3 FallbackPointInFront()
+        {
+            var cam = Camera.main;
+            return cam != null ? cam.transform.position + cam.transform.forward * 1.5f : Vector3.zero;
+        }
+
+        void EnsureBanner()
+        {
+            if (banner == null)
+                banner = ItemEffectBanner.Create();
+        }
+
+        // Taro: hold up the Leckerlis (treats) and shake them in the air, which calls Taro the cat over to the
+        // glass to drink — his lapping settles the whiskey (the ReduceCurrentRisk effect, applied on use, eases
+        // the glass) — with a line of text. The cat walk + drink is owned by CatController.SummonToDrink; here
+        // we run the treats shake, the camera, and the text, timed to when Taro actually starts drinking.
+        IEnumerator PlayTaroDrink(ItemDefinition item)
+        {
+            ResolveReferences();
+            playing = true;
+            gameManager?.SetItemPresentationActive(true);
+
+            // Frame the whole table (so Taro is visible coming over), not a tight glass close-up.
+            cameraController?.SwitchCamera(CameraState.TableOverview);
+
+            // Hold the treats up to the camera, ready to shake.
+            var camTransform = Camera.main != null ? Camera.main.transform : null;
+            var treats = camTransform != null ? CreateProp(item, camTransform, treatsHeldSize) : null;
+            var treatsRot = Quaternion.Euler(treatsHeldEuler);
+
+            if (treats != null)
+                treats.transform.SetLocalPositionAndRotation(treatsHeldLocalPos, treatsRot);
+
+            // Call Taro over to drink; he handles his own walk + drink and tells us when the lapping starts.
+            var taro = ResolveCat();
+            var drinking = false;
+
+            if (taro != null && TryGetGlassSurface(out var surface, out _))
+            {
+                var glassGround = new Vector3(surface.x, taro.transform.position.y, surface.z);
+                taro.SummonToDrink(glassGround, catStandoff, catDrinkHoldSeconds, () => drinking = true);
+            }
+            else
+            {
+                drinking = true;   // no cat to wait on — still play the treats + text beat
+            }
+
+            // Shake the treats in the air until Taro starts drinking (with a safety timeout).
+            var waited = 0f;
+            while (!drinking && waited < maxSummonWait)
+            {
+                ShakeTreats(treats, treatsRot, waited);
+                waited += Time.deltaTime;
+                yield return null;
+            }
+
+            // Taro laps: a little splash + the effect text. The glass already eased (ReduceCurrentRisk applied
+            // on use), so its danger dome visibly calms here.
+            Splash();
+            EnsureBanner();
+            banner.Show(
+                $"TARO DRINKS\n<size=34>−{Mathf.RoundToInt(item.Magnitude)} RISK</size>",
+                GlassAnchorTransform(),
+                Vector3.up * bannerWorldLift);
+            yield return FadeBanner(0f, 1f, bannerFadeSeconds);
+
+            // Keep shaking gently through the drink hold.
+            for (var t = 0f; t < catDrinkHoldSeconds; t += Time.deltaTime)
+            {
+                ShakeTreats(treats, treatsRot, waited + t);
+                yield return null;
+            }
+
+            yield return FadeBanner(1f, 0f, bannerFadeSeconds);
+            banner.Hide();
+
+            if (treats != null)
+                Destroy(treats);
+
+            cameraController?.SwitchCamera(CameraState.PlayerFocus);
+            gameManager?.SetItemPresentationActive(false);
+            playing = false;
+        }
+
+        // A rapid wobble of the held treats — shaking the bag to get the cat's attention.
+        void ShakeTreats(GameObject treats, Quaternion baseRot, float time)
+        {
+            if (treats == null)
+                return;
+
+            var sx = Mathf.Sin(time * treatsShakeFreq) * treatsShakeAmp;
+            var sy = Mathf.Cos(time * treatsShakeFreq * 1.3f) * treatsShakeAmp;
+            treats.transform.localPosition = treatsHeldLocalPos + new Vector3(sx, sy, 0f);
+            treats.transform.localRotation = baseRot * Quaternion.Euler(0f, 0f, Mathf.Sin(time * treatsShakeFreq) * treatsShakeAngle);
+        }
+
+        CatController ResolveCat()
+        {
+            if (cat == null)
+                cat = FindAnyObjectByType<CatController>();
+
+            return cat;
+        }
+
         void EnsureScopeView()
         {
             if (scopeView == null)
@@ -313,6 +743,23 @@ namespace Meniscus.Gameplay
 
             if (glassManager == null)
                 glassManager = FindAnyObjectByType<GlassManager>();
+
+            if (glassVisual == null)
+            {
+                var glassObject = GameObject.FindGameObjectWithTag("Glass");
+
+                if (glassObject != null)
+                {
+                    glassTransform = glassObject.transform;
+                    glassVisual = glassObject.GetComponent<GlassVisualController>();
+                }
+
+                if (glassVisual == null)
+                    glassVisual = FindAnyObjectByType<GlassVisualController>();
+            }
+
+            if (glassVisual != null && glassTransform == null)
+                glassTransform = glassVisual.transform;
         }
     }
 }

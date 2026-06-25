@@ -939,9 +939,9 @@ namespace Meniscus.UI
             ticketCostOwn.text = $"Cost: ${item.Cost}    Own: {owned}    {(inCart ? "[in cart]" : "[tap to add]")}{cartNote}";
 
             // The Buy button purchases the whole cart, not just the focused item.
-            var bankedCash = shopManager != null ? shopManager.BankedCash : 0;
+            var spendableCash = shopManager != null ? shopManager.SpendableCash : 0;
             var deskFull = shopManager != null && shopManager.IsDeskFull;
-            var state = model.EvaluateCart(bankedCash, deskFull);
+            var state = model.EvaluateCart(spendableCash, deskFull);
 
             if (buyButton != null)
             {

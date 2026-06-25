@@ -115,6 +115,49 @@ namespace Meniscus.Gameplay
         [Tooltip("How far the camera dips below the seat and settles back as it sits (metres) — a cushion bounce.")]
         [SerializeField, Min(0f)] float seatingSitDip = 0.06f;
 
+        [Header("Wake-Up Intro")]
+        [Tooltip("Optional pixel-exact 'head resting on the table' pose the wake-up starts from. If set, the " +
+                 "drop / lean / pitch / roll below are ignored.")]
+        [SerializeField] Transform wakeStartAnchor;
+        [Tooltip("How far the head is lowered toward the table at the start of the wake-up (metres below the " +
+                 "seated eye line).")]
+        [SerializeField, Min(0f)] float wakeHeadDrop = 0.45f;
+        [Tooltip("How far the head leans forward onto the table while it rests (metres toward the table).")]
+        [SerializeField] float wakeHeadForward = 0.18f;
+        [Tooltip("Extra downward pitch while the head rests on the table (degrees added to the seated framing).")]
+        [SerializeField, Range(0f, 90f)] float wakeHeadPitch = 55f;
+        [Tooltip("Sideways tilt (roll) of the head resting on the table (degrees). 0 = face straight down.")]
+        [SerializeField, Range(-90f, 90f)] float wakeHeadRoll = 16f;
+        [Tooltip("Seconds the head-lift (waking up) takes.")]
+        [SerializeField, Min(0.1f)] float wakeRiseSeconds = 1.6f;
+
+        [Header("Camera Nod")]
+        [Tooltip("Pitch swing (degrees) of a gentle nod.")]
+        [SerializeField, Min(0f)] float nodAmplitude = 5f;
+        [Tooltip("Pitch swing (degrees) of a strong / emphatic nod.")]
+        [SerializeField, Min(0f)] float nodStrongAmplitude = 9f;
+        [Tooltip("Seconds one down-up nod swing takes.")]
+        [SerializeField, Min(0.05f)] float nodSwingSeconds = 0.55f;
+        [Tooltip("Number of down-up swings in a strong nod.")]
+        [SerializeField, Min(1)] int nodStrongSwings = 2;
+
+        [Header("Dialogue Shots")]
+        [Tooltip("The dealer's face/head to frame in close-up while he talks. If empty, the " +
+                 "'Main_character-textured' model's 'Eye' anchor is found at runtime.")]
+        [SerializeField] Transform dialogueSubject;
+        [Tooltip("Scene name of the dealer model, used to find the face when no subject is wired above.")]
+        [SerializeField] string dialogueSubjectName = "Main_character-textured";
+        [Tooltip("Extra height added to the framed face (metres). 0 if the wired / found anchor is already the face.")]
+        [SerializeField] float dialogueFaceHeight = 0f;
+        [Tooltip("How close the camera sits to the face (metres). Small = an extreme close-up.")]
+        [SerializeField, Min(0.1f)] float dialogueFaceDistance = 0.5f;
+        [Tooltip("How far to either side of the face each shot sits (degrees). It jumps left/right each line.")]
+        [SerializeField, Range(0f, 80f)] float dialogueFaceYaw = 24f;
+        [Tooltip("How high the close-up rides relative to the face (degrees). ~0 = level with his eyes.")]
+        [SerializeField, Range(-30f, 40f)] float dialogueFacePitch = 3f;
+        [Tooltip("Fallback only: distance ahead of the seated eye to aim if no dealer face can be found.")]
+        [SerializeField, Min(0.1f)] float dialogueSubjectDistance = 1.5f;
+
         [Header("Death Orbit")]
         [Tooltip("Distance the loss orbit holds from the glass, as a multiple of the glass size.")]
         [SerializeField, Min(0.5f)] float orbitRadiusMultiplier = 3.2f;
@@ -145,6 +188,25 @@ namespace Meniscus.Gameplay
         bool baseCaptured;
         float currentPush;
         float shakeTimer;
+
+        bool wakeIntroActive;      // the wake-up intro owns the camera (slumped hold → head lift)
+        bool wakeRising;           // the head lift has begun (false while slumped on the table)
+        float wakeT;               // lift progress, 0..1
+        Vector3 wakeStartPos;      // slumped pose: head dropped toward / onto the table
+        Quaternion wakeStartRot = Quaternion.identity;
+        Vector3 wakeEndPos;        // the woken (seated base) pose the lift ends at
+        Quaternion wakeEndRot = Quaternion.identity;
+        Action wakeArrived;        // fired once awake, handing control back
+
+        float nodTimer;            // counts a nod down to zero
+        float nodTotal;            // full duration of the active nod
+        float nodAmp;              // pitch amplitude of the active nod (degrees)
+        int nodSwings;             // down-up swings in the active nod
+
+        bool dialogueShotActive;   // dialogue framing owns the rig: an extreme close-up on the dealer's face
+        int dialogueShotIndex;     // increments per line; parity picks the left / right side of his face
+        float dialogueShotYaw;     // current side of the face (jumps between -dialogueFaceYaw and +dialogueFaceYaw)
+        Transform resolvedSubject; // the dealer face anchor resolved at BeginDialogueShots
 
         Vector3 lastFocusPosition;
         Quaternion lastFocusRotation = Quaternion.identity;
@@ -189,6 +251,14 @@ namespace Meniscus.Gameplay
                 return;
             }
 
+            // The wake-up intro owns the camera the same way: hold the head slumped on the table, then lift it
+            // to the seated pose before handing the rig back so the dealer's monologue can play.
+            if (wakeIntroActive)
+            {
+                ApplyWakeUp(cameraTransform);
+                return;
+            }
+
             UpdateRig(cameraTransform);
 
             var finalPosition = rigPosition;
@@ -196,6 +266,7 @@ namespace Meniscus.Gameplay
 
             ApplyFocusFraming(ref finalPosition, ref finalRotation);
             ApplyIdleSway(ref finalPosition, ref finalRotation);
+            ApplyNod(ref finalRotation);
             ApplyShake(ref finalPosition);
 
             cameraTransform.SetPositionAndRotation(finalPosition, finalRotation);
@@ -213,6 +284,14 @@ namespace Meniscus.Gameplay
         void UpdateRig(Transform cameraTransform)
         {
             EnsureBaseCaptured(cameraTransform);
+
+            if (dialogueShotActive)
+            {
+                // Snap (jump) to the current extreme close-up on the dealer's face — no blend, so each line is
+                // a hard cut between the left and right side of his face. Idle sway still adds handheld life.
+                DialogueFaceTarget(out rigPosition, out rigRotation);
+                return;
+            }
 
             if (!TryGetRestingPose(out var targetPosition, out var targetRotation))
                 return; // Hold the current rig pose (glass close-ups blend on top of wherever we are).
@@ -707,6 +786,238 @@ namespace Meniscus.Gameplay
             var callback = seatingArrived;
             seatingArrived = null;
             callback?.Invoke();
+        }
+
+        public bool IsWakeUpIntroActive => wakeIntroActive;
+
+        /// <summary>
+        /// Take over the camera for the start-of-match wake-up: capture the seated framing, then drop the
+        /// camera onto the table (head resting, pitched and tilted down) and hold there. Call
+        /// <see cref="PlayWakeUp"/> to lift the head to the seated pose. Replaces the walk-in seating intro.
+        /// </summary>
+        public void BeginWakeUp()
+        {
+            if (targetCamera == null)
+                targetCamera = Camera.main;
+
+            ResolveReferences();
+
+            var cameraTransform = targetCamera != null ? targetCamera.transform : null;
+            if (cameraTransform == null)
+                return;
+
+            EnsureBaseCaptured(cameraTransform);
+
+            wakeEndPos = basePosition;
+            wakeEndRot = baseRotation;
+
+            if (wakeStartAnchor != null)
+            {
+                wakeStartPos = wakeStartAnchor.position;
+                wakeStartRot = wakeStartAnchor.rotation;
+            }
+            else
+            {
+                // Lower the seated eye toward the table and lean forward onto it, then pitch / roll the head
+                // down so it reads as resting face-down on the desk.
+                var flatForward = baseRotation * Vector3.forward;
+                flatForward.y = 0f;
+                flatForward = flatForward.sqrMagnitude > 1e-5f ? flatForward.normalized : Vector3.forward;
+
+                wakeStartPos = basePosition - Vector3.up * wakeHeadDrop + flatForward * wakeHeadForward;
+                wakeStartRot = baseRotation * Quaternion.Euler(wakeHeadPitch, 0f, wakeHeadRoll);
+            }
+
+            wakeIntroActive = true;
+            wakeRising = false;
+            wakeT = 0f;
+
+            cameraTransform.SetPositionAndRotation(wakeStartPos, wakeStartRot);
+        }
+
+        /// <summary>
+        /// Lift the held head from the table to the seated pose, then release the camera and invoke
+        /// <paramref name="onAwake"/>. If the intro isn't active it simply fires the callback.
+        /// </summary>
+        public void PlayWakeUp(Action onAwake)
+        {
+            if (!wakeIntroActive)
+            {
+                onAwake?.Invoke();
+                return;
+            }
+
+            wakeArrived = onAwake;
+            wakeRising = true;
+            wakeT = 0f;
+        }
+
+        /// <summary>Abort the wake-up immediately, snapping to the seated pose and firing any pending callback.</summary>
+        public void CancelWakeUp()
+        {
+            if (!wakeIntroActive)
+                return;
+
+            if (targetCamera != null)
+                targetCamera.transform.SetPositionAndRotation(wakeEndPos, wakeEndRot);
+
+            FinishWake();
+        }
+
+        void ApplyWakeUp(Transform cameraTransform)
+        {
+            if (!wakeRising)
+            {
+                // Slumped on the table; keep a gentle handheld sway so it reads as a live view, not a freeze.
+                var holdPosition = wakeStartPos;
+                var holdRotation = wakeStartRot;
+                ApplyIdleSway(ref holdPosition, ref holdRotation);
+                cameraTransform.SetPositionAndRotation(holdPosition, holdRotation);
+                return;
+            }
+
+            wakeT += Time.unscaledDeltaTime / Mathf.Max(0.01f, wakeRiseSeconds);
+            var finished = wakeT >= 1f;
+            var s = Smootherstep(Mathf.Clamp01(wakeT));
+
+            var position = Vector3.Lerp(wakeStartPos, wakeEndPos, s);
+            var rotation = Quaternion.Slerp(wakeStartRot, wakeEndRot, s);
+            cameraTransform.SetPositionAndRotation(position, rotation);
+
+            if (finished)
+                FinishWake();
+        }
+
+        void FinishWake()
+        {
+            wakeIntroActive = false;
+            wakeRising = false;
+
+            // Hand the rig back where the lift ended so the resting framing doesn't jump.
+            if (targetCamera != null)
+            {
+                rigPosition = targetCamera.transform.position;
+                rigRotation = targetCamera.transform.rotation;
+            }
+
+            var callback = wakeArrived;
+            wakeArrived = null;
+            callback?.Invoke();
+        }
+
+        /// <summary>
+        /// Kick a camera nod — a brief down-up pitch swing layered on top of the current framing, as if the
+        /// player nods. <paramref name="strong"/> swings further and twice. Used by the dealer's monologue.
+        /// </summary>
+        public void NodCamera(bool strong)
+        {
+            nodAmp = strong ? nodStrongAmplitude : nodAmplitude;
+            nodSwings = strong ? Mathf.Max(1, nodStrongSwings) : 1;
+            nodTotal = Mathf.Max(0.05f, nodSwingSeconds) * nodSwings;
+            nodTimer = nodTotal;
+        }
+
+        void ApplyNod(ref Quaternion rotation)
+        {
+            if (nodTimer <= 0f)
+                return;
+
+            nodTimer = Mathf.Max(0f, nodTimer - Time.unscaledDeltaTime);
+
+            var progress = nodTotal > 0f ? 1f - (nodTimer / nodTotal) : 1f;   // 0..1 across the whole nod
+            var phase = progress * nodSwings * Mathf.PI * 2f;                 // sin starts at 0 → dips down first
+            var envelope = Mathf.Sin(progress * Mathf.PI);                    // 0 at both ends, so it settles to neutral
+            var pitch = Mathf.Sin(phase) * nodAmp * envelope;                 // +pitch tips the view down
+
+            rotation *= Quaternion.Euler(pitch, 0f, 0f);
+        }
+
+        /// <summary>
+        /// Hand the rig over to dialogue framing: an extreme close-up on the dealer's face, jumping between
+        /// the left and right side of it via <see cref="NextDialogueShot"/> on each line. Call
+        /// <see cref="EndDialogueShots"/> when the talk ends.
+        /// </summary>
+        public void BeginDialogueShots()
+        {
+            if (targetCamera == null)
+                targetCamera = Camera.main;
+
+            if (targetCamera != null)
+                EnsureBaseCaptured(targetCamera.transform);
+
+            resolvedSubject = ResolveDialogueSubject();
+            dialogueShotActive = true;
+            dialogueShotIndex = 0;
+            dialogueShotYaw = -dialogueFaceYaw;   // a default side until the first NextDialogueShot
+        }
+
+        /// <summary>Jump to the other side of his face. Called when the player clicks to continue.</summary>
+        public void NextDialogueShot()
+        {
+            if (!dialogueShotActive)
+                return;
+
+            dialogueShotIndex++;
+            dialogueShotYaw = (dialogueShotIndex % 2 == 0 ? -1f : 1f) * dialogueFaceYaw;
+        }
+
+        /// <summary>Release the rig back to its resting framing.</summary>
+        public void EndDialogueShots()
+        {
+            dialogueShotActive = false;
+            resolvedSubject = null;
+        }
+
+        public bool IsDialogueShotActive => dialogueShotActive;
+
+        // The dealer's face: the wired subject, else the named model's 'Eye' / head anchor, else null.
+        Transform ResolveDialogueSubject()
+        {
+            if (dialogueSubject != null)
+                return dialogueSubject;
+
+            if (string.IsNullOrEmpty(dialogueSubjectName))
+                return null;
+
+            var root = GameObject.Find(dialogueSubjectName);
+            if (root == null)
+                return null;
+
+            Transform head = null;
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+            {
+                var n = t.name.ToLowerInvariant();
+                if (n.Contains("eye"))
+                    return t;                       // the dealer's eye mesh — right on the face
+                if (head == null && n.Contains("head"))
+                    head = t;
+            }
+
+            return head != null ? head : root.transform;
+        }
+
+        // An extreme close-up looking at the dealer's face from the current side (dialogueShotYaw).
+        void DialogueFaceTarget(out Vector3 position, out Quaternion rotation)
+        {
+            var flatForward = baseRotation * Vector3.forward;
+            flatForward.y = 0f;
+            flatForward = flatForward.sqrMagnitude > 1e-5f ? flatForward.normalized : Vector3.forward;
+
+            var focus = resolvedSubject != null
+                ? resolvedSubject.position + Vector3.up * dialogueFaceHeight
+                : basePosition + flatForward * dialogueSubjectDistance + Vector3.up * dialogueFaceHeight;
+
+            // Sit on the player's side of the face (back toward the seat), offset left / right by the yaw.
+            var back = -flatForward;
+            var horizontal = (Quaternion.AngleAxis(dialogueShotYaw, Vector3.up) * back).normalized;
+            var pitchRad = dialogueFacePitch * Mathf.Deg2Rad;
+            var camDir = (horizontal * Mathf.Cos(pitchRad) + Vector3.up * Mathf.Sin(pitchRad)).normalized;
+
+            position = focus + camDir * Mathf.Max(0.1f, dialogueFaceDistance);
+            var look = focus - position;
+            rotation = look.sqrMagnitude > 1e-6f
+                ? Quaternion.LookRotation(look.normalized, Vector3.up)
+                : baseRotation;
         }
 
         static float Smootherstep(float x)

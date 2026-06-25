@@ -81,6 +81,7 @@ namespace Meniscus.UI
                 economyManager.MoneyAwarded       += OnMoneyAwarded;
                 economyManager.RoundEarningsWiped += OnRoundEarningsWiped;
                 economyManager.EarningsBanked     += OnEarningsBanked;
+                economyManager.CashSpent          += OnCashSpent;
             }
 
             if (gameManager != null)
@@ -94,6 +95,7 @@ namespace Meniscus.UI
                 economyManager.MoneyAwarded       -= OnMoneyAwarded;
                 economyManager.RoundEarningsWiped -= OnRoundEarningsWiped;
                 economyManager.EarningsBanked     -= OnEarningsBanked;
+                economyManager.CashSpent          -= OnCashSpent;
             }
 
             if (gameManager != null)
@@ -123,6 +125,11 @@ namespace Meniscus.UI
         // Banking moves the (already-counted) hand into the bank, so the live total is unchanged.
         // Pulse to signal the money is now locked in.
         void OnEarningsBanked(int earned, int newBankTotal) =>
+            StartRoll(LiveTotal(), GoldBright, flashRed: false, punch: true);
+
+        // A shop purchase (possibly mid-round) drew money from the wallet, so roll the live total down to
+        // its new value with a small pulse — the dropping number is the feedback that the buy registered.
+        void OnCashSpent(int amountSpent, int newSpendable) =>
             StartRoll(LiveTotal(), GoldBright, flashRed: false, punch: true);
 
         // ─── counter animation ──────────────────────────────────────────────────────

@@ -130,7 +130,6 @@ namespace Meniscus.Editor
                 // Coin-themed items reuse a coin.
                 new Binding("marked_coin", mediumCoin, null),
                 new Binding("loaded_dice", bigCoin, null),                    // "Lucky Coin"
-                new Binding("recast_coin", bigCoin, null),
                 new Binding("dealers_debt", smallCoin, null),
 
                 // Drink / pour-easing items reuse the single clean glass.
@@ -138,7 +137,6 @@ namespace Meniscus.Editor
                 new Binding("buy_the_house_a_round", glass, null),
                 new Binding("round_for_the_dealer", glass, null),
                 new Binding("steady_hand", glass, null),
-                new Binding("iron_grip", glass, null),
             };
         }
 

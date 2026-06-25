@@ -140,6 +140,58 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
+        public void SpendableCash_IsBankedPlusRoundEarnings()
+        {
+            economyManager.GrantBankedCash(40);
+            var coin = CreateCoin("Round Coin", 5f, 100, true);
+            var payout = economyManager.AwardSafeDrop(new[] { coin }, 50f);
+
+            // Banked savings plus this round's at-risk earnings — the single total the wallet HUD shows.
+            Assert.AreEqual(40 + payout, economyManager.SpendableCash);
+
+            Object.DestroyImmediate(coin.gameObject);
+        }
+
+        [Test]
+        public void TrySpend_DrawsFromBankFirstThenRoundEarnings()
+        {
+            economyManager.GrantBankedCash(30);
+            var coin = CreateCoin("Round Coin", 5f, 100, true);
+            economyManager.AwardSafeDrop(new[] { coin }, 50f);   // fills round earnings well above the cost
+            var roundBefore = economyManager.CurrentRoundEarnings;
+
+            Assert.IsTrue(economyManager.TrySpend(50));
+
+            Assert.AreEqual(0, economyManager.PlayerTotalBankedCash);                 // the $30 bank drained first…
+            Assert.AreEqual(roundBefore - 20, economyManager.CurrentRoundEarnings);   // …then $20 from round earnings
+
+            Object.DestroyImmediate(coin.gameObject);
+        }
+
+        [Test]
+        public void TrySpend_BeyondSpendable_FailsAndChangesNothing()
+        {
+            economyManager.GrantBankedCash(10);
+
+            Assert.IsFalse(economyManager.TrySpend(11));
+            Assert.AreEqual(10, economyManager.PlayerTotalBankedCash);
+            Assert.AreEqual(0, economyManager.CurrentRoundEarnings);
+        }
+
+        [Test]
+        public void TrySpend_RaisesCashSpentWithNewSpendableTotal()
+        {
+            economyManager.GrantBankedCash(100);
+            var raisedAmount = 0;
+            var reportedTotal = -1;
+            economyManager.CashSpent += (amount, newTotal) => { raisedAmount = amount; reportedTotal = newTotal; };
+
+            Assert.IsTrue(economyManager.TrySpend(35));
+            Assert.AreEqual(35, raisedAmount);
+            Assert.AreEqual(65, reportedTotal);
+        }
+
+        [Test]
         public void PreviewSafeDropMultiplier_FoldsBoldnessAndCombo()
         {
             var coin = CreateCoin("Solo Coin", 5f, 20, true);

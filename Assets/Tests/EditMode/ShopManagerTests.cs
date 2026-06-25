@@ -46,6 +46,15 @@ namespace Meniscus.Tests.EditMode
         static ItemDefinition Item(string id, int cost) =>
             ItemDefinition.Create(id, id, "", cost, ItemEffectKind.PayoutMultiplier, 2f);
 
+        // A player coin used to fill currentRoundEarnings via AwardSafeDrop in the mid-round buy test.
+        static Coin CreateCoin(string name, int payout)
+        {
+            var coinObject = new GameObject(name);
+            var coin = coinObject.AddComponent<Coin>();
+            coin.Configure(CoinSize.Medium, 0f, payout, belongsToPlayer: true);
+            return coin;
+        }
+
         [Test]
         public void TryBuyItem_GrantsToInventoryAndChargesCash()
         {
@@ -85,10 +94,33 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void BankedCash_MirrorsEconomyManager()
+        public void SpendableCash_MirrorsEconomyManager()
         {
             BankCash(120);
-            Assert.AreEqual(120, shop.BankedCash);
+            Assert.AreEqual(120, shop.SpendableCash);
+        }
+
+        [Test]
+        public void TryBuyItem_PaysFromRoundEarnings_WhenBankIsEmpty()
+        {
+            // No banked savings yet — but this round has earned money. A mid-round purchase should still
+            // go through, drawing on the at-risk round earnings, so what the wallet HUD shows and what the
+            // shop lets you spend stay in step (the bug where every item was greyed out mid-round).
+            var coin = CreateCoin("round earner", 200);
+            economy.AwardSafeDrop(new[] { coin }, 100f);   // banks nothing; fills currentRoundEarnings
+
+            Assert.AreEqual(0, economy.PlayerTotalBankedCash);
+            Assert.Greater(economy.CurrentRoundEarnings, 35);
+
+            var spendableBefore = economy.SpendableCash;
+            var item = Item("marked_coin", 35);
+
+            Assert.IsTrue(shop.TryBuyItem(item));
+            Assert.IsTrue(inventory.Has(item));
+            Assert.AreEqual(0, economy.PlayerTotalBankedCash);              // bank stays empty
+            Assert.AreEqual(spendableBefore - 35, economy.SpendableCash);  // paid from round earnings
+
+            Object.DestroyImmediate(coin.gameObject);
         }
 
         [Test]

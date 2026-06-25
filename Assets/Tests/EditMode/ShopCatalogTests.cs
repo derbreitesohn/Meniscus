@@ -64,13 +64,12 @@ namespace Meniscus.Tests.EditMode
         }
 
         [Test]
-        public void DefaultCatalog_ContainsRecast()
+        public void DefaultCatalog_OmitsRemovedItems()
         {
-            var item = Find(ShopCatalog.CreateDefaultCatalog(), "recast_coin");
+            var catalog = ShopCatalog.CreateDefaultCatalog();
 
-            Assert.IsNotNull(item);
-            Assert.AreEqual(ItemEffectKind.UpgradePlayerCoin, item.Effect);
-            Assert.AreEqual(45, item.Cost);
+            Assert.IsNull(Find(catalog, "recast_coin"), "Recast was removed from the catalog.");
+            Assert.IsNull(Find(catalog, "iron_grip"), "Iron Grip was removed from the catalog.");
         }
 
         [Test]

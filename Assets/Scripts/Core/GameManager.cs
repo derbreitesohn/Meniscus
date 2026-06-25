@@ -19,6 +19,11 @@ namespace Meniscus.Core
         [SerializeField] float endScreenDelay = 1.5f;
         [Tooltip("Play the camera 'walk in and take your seat' intro before the first coin toss of a match.")]
         [SerializeField] bool playSeatingIntro = true;
+        [Tooltip("Play the dealer's wake-up monologue intro before the match. Takes precedence over the " +
+                 "walk-in seating intro above.")]
+        [SerializeField] bool playIntroMonologue = true;
+        [Tooltip("Play the dealer's losing monologue and fade to black when the player wins the match.")]
+        [SerializeField] bool playOutroMonologue = true;
 
 
         [Header("Managers")]
@@ -27,6 +32,8 @@ namespace Meniscus.Core
         [SerializeField] EnemyAI enemyAI;
         [SerializeField] CameraController cameraController;
         [SerializeField] PlayerSeatingIntro seatingIntro;
+        [SerializeField] DialogueController dialogueController;
+        [SerializeField] DealerMonologue dealerMonologue;
         [SerializeField] ShopManager shopManager;
         [SerializeField] EndScreenManager endScreenManager;
         [SerializeField] RoundWonBanner roundWonBanner;
@@ -160,17 +167,26 @@ namespace Meniscus.Core
             roundIntroCard?.Hide();
             coinTossOverlay?.Hide();
 
-            // Open the match by walking the camera in to the desk and sitting down; the round (and its coin
-            // toss) only begins once the player is seated. Edit-mode / unwired scenes skip straight to the
-            // round so the old flow is preserved.
-            if (ShouldPlaySeatingIntro())
+            // Open the match with the dealer's wake-up monologue (camera lifts off the table, then he talks);
+            // the round only begins once it finishes. Falls back to the walk-in seating intro, then to an
+            // instant start. Edit-mode / unwired scenes skip straight to the round so the old flow is preserved.
+            if (ShouldPlayIntroMonologue())
+                dealerMonologue.PlayIntro(cameraController, dialogueController, StartRound);
+            else if (ShouldPlaySeatingIntro())
                 seatingIntro.Play(cameraController, StartRound);
             else
                 StartRound();
         }
 
+        bool ShouldPlayIntroMonologue() =>
+            Application.isPlaying && playIntroMonologue && dealerMonologue != null
+            && dialogueController != null && cameraController != null;
+
         bool ShouldPlaySeatingIntro() =>
             Application.isPlaying && playSeatingIntro && seatingIntro != null && cameraController != null;
+
+        bool ShouldPlayOutroMonologue() =>
+            Application.isPlaying && playOutroMonologue && dealerMonologue != null && dialogueController != null;
 
         public void StartRound()
         {
@@ -645,6 +661,22 @@ namespace Meniscus.Core
                 return;
             }
 
+            // A win is its own beat too: the dealer gives his losing monologue, then the screen dims to black
+            // and lifts to reveal the end screen. EditMode tests have no monologue, so they fall through to the
+            // unchanged end-screen path below.
+            if (outcome == MatchOutcome.PlayerWon && ShouldPlayOutroMonologue())
+            {
+                cameraController?.SwitchCamera(CameraState.TableOverview);
+                dealerMonologue.PlayOutro(
+                    cameraController,
+                    dialogueController,
+                    () => endScreenManager?.ShowOutcome(
+                        outcome,
+                        reason,
+                        economyManager == null ? 0 : economyManager.PlayerTotalBankedCash));
+                return;
+            }
+
             cameraController?.SwitchCamera(CameraState.TableOverview);
 
             // Delay the end screen so the final drop animation can finish playing.
@@ -1030,6 +1062,20 @@ namespace Meniscus.Core
             // canvas, so EditMode tests keep the null path (StartMatch → StartRound) and never spawn one.
             if (seatingIntro == null && Application.isPlaying)
                 seatingIntro = PlayerSeatingIntro.CreateRuntimeFallback();
+
+            if (dialogueController == null)
+                dialogueController = FindAnyObjectByType<DialogueController>();
+
+            // Play-mode-only, same as the other overlays: the dialogue box is pure presentation, so EditMode
+            // tests keep the null path (instant StartRound / plain end screen) and never spawn a stray canvas.
+            if (dialogueController == null && Application.isPlaying)
+                dialogueController = DialogueController.CreateRuntimeFallback();
+
+            if (dealerMonologue == null)
+                dealerMonologue = FindAnyObjectByType<DealerMonologue>();
+
+            if (dealerMonologue == null && Application.isPlaying)
+                dealerMonologue = DealerMonologue.CreateRuntimeFallback();
 
             if (dropPresentationController == null)
                 dropPresentationController = FindAnyObjectByType<CoinDropPresentationController>();

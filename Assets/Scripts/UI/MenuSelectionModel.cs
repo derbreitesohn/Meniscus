@@ -113,7 +113,7 @@ namespace Meniscus.UI
 
         public void ClearCart() => cart.Clear();
 
-        public BuyState EvaluateBuy(int bankedCash, bool deskFull)
+        public BuyState EvaluateBuy(int spendableCash, bool deskFull)
         {
             if (Selected == null)
                 return new BuyState(false, "");
@@ -121,7 +121,7 @@ namespace Meniscus.UI
             if (deskFull)
                 return new BuyState(false, "Desk full");
 
-            if (bankedCash < Selected.Cost)
+            if (spendableCash < Selected.Cost)
                 return new BuyState(false, $"Need ${Selected.Cost}");
 
             return new BuyState(true, $"Buy — ${Selected.Cost}");
@@ -129,7 +129,7 @@ namespace Meniscus.UI
 
         /// <summary>Buy-button state for the whole cart: enabled when at least one item is affordable
         /// and the desk has room; the label shows how many and the total.</summary>
-        public BuyState EvaluateCart(int bankedCash, bool deskFull)
+        public BuyState EvaluateCart(int spendableCash, bool deskFull)
         {
             if (cart.Count == 0)
                 return new BuyState(false, "Tap items to add");
@@ -141,7 +141,7 @@ namespace Meniscus.UI
             foreach (var item in cart)
                 cheapest = Mathf.Min(cheapest, item.Cost);
 
-            if (bankedCash < cheapest)
+            if (spendableCash < cheapest)
                 return new BuyState(false, $"Need ${cheapest}");
 
             return new BuyState(true, $"Buy {cart.Count} — ${CartTotalCost}");

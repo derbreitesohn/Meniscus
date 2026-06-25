@@ -17,9 +17,18 @@ namespace Meniscus.Core
         public event Action<int, int> MoneyAwarded;   // (payout, newRoundTotal)
         public event Action RoundEarningsWiped;
         public event Action<int, int> EarningsBanked; // (earned, newBankTotal)
+        public event Action<int, int> CashSpent;      // (amountSpent, newSpendableTotal)
 
         public int PlayerTotalBankedCash => playerTotalBankedCash;
         public int CurrentRoundEarnings => currentRoundEarnings;
+
+        /// <summary>
+        /// Everything the player can spend right now: banked savings plus what this round has earned so
+        /// far. The wallet HUD shows this same single total, so the shop charges against it (rather than
+        /// banked-only) — otherwise money the player can plainly see reads as unspendable mid-round.
+        /// </summary>
+        public int SpendableCash => playerTotalBankedCash + currentRoundEarnings;
+
         public float NextSafeDropPayoutMultiplier => nextSafeDropPayoutMultiplier;
         public float RoundPayoutMultiplier => roundPayoutMultiplier;
 
@@ -181,9 +190,18 @@ namespace Meniscus.Core
         }
 
         public bool CanAfford(int cost) =>
-            cost >= 0 && playerTotalBankedCash >= cost;
+            cost >= 0 && SpendableCash >= cost;
 
-        public bool TrySpendBankedCash(int cost)
+        /// <summary>
+        /// Spends <paramref name="cost"/> from the player's money, drawing banked savings first and then
+        /// dipping into this round's at-risk earnings. Returns false (changing nothing) on a negative cost
+        /// or when it cannot be afforded. This is what the shop charges: between rounds the round earnings
+        /// are already 0 (banked on the win), so it behaves exactly like spending the bank; mid-round it
+        /// lets a purchase be paid for with money earned this round — matching the single wallet total the
+        /// HUD shows. Those at-risk earnings are still wiped by a bust, so buying mid-round converts some
+        /// of them into a kept item before that can happen.
+        /// </summary>
+        public bool TrySpend(int cost)
         {
             if (cost < 0)
             {
@@ -194,11 +212,17 @@ namespace Meniscus.Core
             if (!CanAfford(cost))
             {
                 Debug.LogWarning(
-                    $"[EconomyManager] Insufficient banked cash. Cost={cost}, banked={playerTotalBankedCash}.");
+                    $"[EconomyManager] Insufficient cash. Cost={cost}, spendable={SpendableCash} " +
+                    $"(banked={playerTotalBankedCash}, round={currentRoundEarnings}).");
                 return false;
             }
 
-            playerTotalBankedCash -= cost;
+            // Drain banked savings first, then take the remainder from this round's at-risk earnings.
+            var fromBank = Mathf.Min(playerTotalBankedCash, cost);
+            playerTotalBankedCash -= fromBank;
+            currentRoundEarnings -= cost - fromBank;
+
+            CashSpent?.Invoke(cost, SpendableCash);
             return true;
         }
     }

@@ -26,13 +26,18 @@ public class CatController : MonoBehaviour
     private Animator animator;
     public Vector3 startPosition;
     private bool isWalking = false;
+    private Coroutine wanderRoutine;
+    private bool isSummoned;
+
+    /// <summary>True while Taro has been called over to drink (his free wandering is paused).</summary>
+    public bool IsSummoned => isSummoned;
 
     void Start()
     {
         animator = GetComponentInChildren<Animator>();
         if (startPosition == Vector3.zero)
             startPosition = transform.position;
-        StartCoroutine(WanderRoutine());
+        wanderRoutine = StartCoroutine(WanderRoutine());
     }
 
     IEnumerator WanderRoutine()
@@ -110,5 +115,78 @@ public class CatController : MonoBehaviour
         {
             animator.SetTrigger("drink");
         }
+    }
+
+    /// <summary>
+    /// Calls Taro over to the glass to drink: pauses his wandering, walks him to a point a little back from
+    /// <paramref name="glassWorldPos"/>, turns him to face it, plays the drink clip, holds for
+    /// <paramref name="drinkHoldSeconds"/>, then resumes his free wander. <paramref name="onDrinkStart"/>
+    /// fires the moment the drink is triggered (so the caller can time the glass settling / effect text to it).
+    /// Driven by the Taro item's use performance (see ItemUsePresentationController).
+    /// </summary>
+    public void SummonToDrink(Vector3 glassWorldPos, float standoff, float drinkHoldSeconds, System.Action onDrinkStart = null)
+    {
+        if (animator == null)
+            animator = GetComponentInChildren<Animator>();
+
+        // Halt the wander (and any in-flight walk) outright so two coroutines never fight over the transform.
+        StopAllCoroutines();
+        isWalking = false;
+        StartCoroutine(SummonRoutine(glassWorldPos, standoff, drinkHoldSeconds, onDrinkStart));
+    }
+
+    IEnumerator SummonRoutine(Vector3 glassWorldPos, float standoff, float drinkHoldSeconds, System.Action onDrinkStart)
+    {
+        isSummoned = true;
+        isWalking = true;
+
+        // Stand a little back from the glass on whichever side Taro is already on, at his own (floor) height.
+        Vector3 fromGlass = transform.position - glassWorldPos;
+        fromGlass.y = 0f;
+        if (fromGlass.sqrMagnitude < 1e-4f)
+            fromGlass = -transform.forward;
+
+        Vector3 stand = glassWorldPos + fromGlass.normalized * Mathf.Max(0.01f, standoff);
+        stand.y = transform.position.y;
+
+        // Turn toward the spot, walk there, then face the glass to drink.
+        yield return RotateTowards(stand - transform.position);
+
+        animator.SetBool("isWalkingCat", true);
+        while (Vector3.Distance(transform.position, stand) > 0.05f)
+        {
+            transform.position = Vector3.MoveTowards(transform.position, stand, walkSpeed * Time.deltaTime);
+            yield return null;
+        }
+        transform.position = stand;
+        animator.SetBool("isWalkingCat", false);
+
+        yield return RotateTowards(glassWorldPos - transform.position);
+
+        // The drink trigger only transitions from Cat_Idle, so clearing isWalkingCat above lets it fire; the
+        // trigger is sticky, so it still plays even if Walk→Idle takes a frame.
+        animator.SetTrigger("drink");
+        onDrinkStart?.Invoke();
+
+        yield return new WaitForSeconds(drinkHoldSeconds);
+
+        isWalking = false;
+        isSummoned = false;
+        wanderRoutine = StartCoroutine(WanderRoutine());
+    }
+
+    IEnumerator RotateTowards(Vector3 direction)
+    {
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 1e-5f)
+            yield break;
+
+        Quaternion target = Quaternion.LookRotation(direction.normalized);
+        while (Quaternion.Angle(transform.rotation, target) > 0.5f)
+        {
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, target, turnSpeed * Time.deltaTime);
+            yield return null;
+        }
+        transform.rotation = target;
     }
 }

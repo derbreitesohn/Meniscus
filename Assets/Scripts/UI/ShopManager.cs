@@ -35,8 +35,12 @@ namespace Meniscus.UI
             => state != GameState.EnemyTurn && state != GameState.RoundWon
                && state != GameState.ShopPhase && state != GameState.GameOver;
 
-        /// <summary>Banked cash the player can spend right now (0 if economy is unwired).</summary>
-        public int BankedCash => economyManager != null ? economyManager.PlayerTotalBankedCash : 0;
+        /// <summary>
+        /// Money the player can spend right now: banked savings plus this round's earnings so far (0 if
+        /// the economy is unwired). Mid-round purchases draw on this, so what the wallet HUD shows and
+        /// what the shop will let you spend stay in step.
+        /// </summary>
+        public int SpendableCash => economyManager != null ? economyManager.SpendableCash : 0;
 
         /// <summary>True when the desk cannot hold any more items.</summary>
         public bool IsDeskFull => playerInventory != null && playerInventory.IsFull;
@@ -259,11 +263,11 @@ namespace Meniscus.UI
                 return false;
             }
 
-            if (!economyManager.TrySpendBankedCash(cost))
+            if (!economyManager.TrySpend(cost))
             {
                 Debug.LogWarning(
                     $"[ShopManager] Purchase failed for {itemName}. " +
-                    $"Cost={cost}, banked={economyManager.PlayerTotalBankedCash}.");
+                    $"Cost={cost}, spendable={economyManager.SpendableCash}.");
                 return false;
             }
 
