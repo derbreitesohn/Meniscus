@@ -113,10 +113,12 @@ namespace Meniscus.Gameplay
         [SerializeField] string whistlePropName = "Pfeifi";
         [Tooltip("Where the whistle is held near the mouth (camera-local). Kept well past the camera near-plane " +
                  "so it doesn't clip / fill the view; a bit below centre, toward the lips.")]
-        [SerializeField] Vector3 whistleMouthLocalPos = new(0f, -0.12f, 0.42f);
-        [Tooltip("Tilt at the mouth used ONLY for the instantiated fallback model. A scene whistle keeps its " +
-                 "own authored rotation (the mouthpiece you aimed at the cam) — this is ignored for it.")]
-        [SerializeField] Vector3 whistleHeldEuler = new(35f, 0f, 0f);
+        [SerializeField] Vector3 whistleMouthLocalPos = new(0f, -0.1f, 0.52f);
+        [Tooltip("Orientation at the mouth, used ONLY for the instantiated fallback model (camera-local euler). " +
+                 "The Pfeifi.fbx barrel runs along its local Z, so identity points it end-on at the camera — " +
+                 "this swings it to a 3/4 read with the mouthpiece toward the lips and the fipple up. A scene " +
+                 "whistle keeps its own authored rotation instead, so this is ignored for it.")]
+        [SerializeField] Vector3 whistleHeldEuler = new(10f, 55f, 0f);
         [Tooltip("Extra turn applied to the SCENE whistle as it reaches the mouth, relative to its authored " +
                  "rotation. Default = turned 180° (around up). Restored to the authored rotation on the way back.")]
         [SerializeField] Vector3 whistleMouthTurnEuler = new(0f, 180f, 0f);
@@ -129,19 +131,29 @@ namespace Meniscus.Gameplay
         [Tooltip("Beat held at the mouth as the whistle is blown (audio added later).")]
         [SerializeField, Min(0f)] float whistleBlowSeconds = 0.35f;
         [Tooltip("Optional explicit floor marker where the dog stands to bark at the dealer. If set, it wins " +
-                 "outright — drop an empty on open floor beside the dealer (clear of the bar) and the dog goes " +
-                 "exactly there. If empty, the spot is computed from the bar's bounds (see below).")]
+                 "outright — drop an empty on open floor beside the dealer and the dog goes exactly there. " +
+                 "(The controller is created at runtime, so this can only be set in code.)")]
         [SerializeField] Transform dogHarassSpot;
-        [Tooltip("Name of the table/bar object used to size the bar footprint so the dog clears it. Falls back " +
-                 "to 'Table' if not found.")]
+        [Tooltip("Name of the dealer/opponent character object. The dog stands beside him (he's already past " +
+                 "the bar, on open floor), which is the reliable 'next to the dealer' spot.")]
+        [SerializeField] string dealerObjectName = "Main_character_animated";
+        [Tooltip("How far to the dealer's side the dog stands (metres). Positive = it stands beside him, not " +
+                 "on top of him.")]
+        [SerializeField, Min(0f)] float dogBesideDealer = 0.95f;
+        [Tooltip("Small pull toward the player (away from the dealer) so the dog reads as in-frame beside him " +
+                 "rather than tucked behind. Kept small so it never re-enters the bar (metres).")]
+        [SerializeField, Min(0f)] float dogFrontOfDealer = 0.25f;
+        [Tooltip("FALLBACK ONLY (dealer not found): name of the bar object, used to size the footprint so the " +
+                 "dog clears it. Falls back to 'Table'.")]
         [SerializeField] string tableObjectName = "Saloon Table";
-        [Tooltip("How far BEYOND the dealer-side edge of the bar the dog stands, so it clears the desk/rails and " +
-                 "ends up next to the dealer on open floor (metres).")]
+        [Tooltip("FALLBACK ONLY: how far beyond the dealer-side edge of the bar the dog stands (metres).")]
         [SerializeField, Min(0f)] float dogDeskClearance = 0.5f;
-        [Tooltip("Sideways offset toward whichever side the dog approached from, so it stands beside the dealer " +
-                 "rather than dead-centre in front of him (metres).")]
+        [Tooltip("FALLBACK ONLY: sideways offset so the dog stands beside, not dead-centre (metres).")]
         [SerializeField, Min(0f)] float dogLateralNudge = 0.7f;
         [SerializeField, Min(0f)] float dogHoldSeconds = 1.6f;
+        [Tooltip("Log where the dog is told to stand (and whether the dealer was found) when Pfeifi is used. " +
+                 "Leave on while dialling in the spot; the line prints to the Console.")]
+        [SerializeField] bool verboseDogPlacement = true;
 
         [Header("Bandana — pull it over the camera (SkipTurn)")]
         [Tooltip("Resting pose of the held bandana in camera-local space, just before it covers the lens.")]
@@ -217,6 +229,8 @@ namespace Meniscus.Gameplay
         CatController cat;
         DogController dog;
         Transform resolvedWhistle;
+        Transform dealerTransform;
+        bool dealerResolved;
         Bounds barBounds;
         bool barBoundsResolved;
         bool playing;
@@ -1106,10 +1120,10 @@ namespace Meniscus.Gameplay
             return new Vector3(0f, floorY, 0f);
         }
 
-        // Where the dog actually stands to bark. The dealer's coins sit on the bar, so aiming the dog straight
-        // at that point parks it on top of the desk (it clips through). Instead stand it just BEYOND the bar's
-        // dealer-side edge, on open floor next to the dealer, nudged to whichever side the dog approached from
-        // (so it's beside him, not dead-centre). An explicit dogHarassSpot marker overrides the whole thing.
+        // Where the dog actually stands to bark. The dealer's COINS sit on the bar, so aiming the dog at the
+        // coin row parks it on top of the desk (it clips through). The reliable spot is beside the DEALER
+        // himself: he stands past the bar on open floor, so "next to the dealer" is inherently clear of it.
+        // Priority: explicit marker → beside the dealer transform → beyond the bar's edge → coin row offset.
         Vector3 ResolveDogStandSpot(Vector3 dealerSpot, float floorY, Vector3 dogPos)
         {
             if (dogHarassSpot != null)
@@ -1119,11 +1133,33 @@ namespace Meniscus.Gameplay
                 return p;
             }
 
+            // Stand beside the dealer character on whichever side the dog is already on, pulled a touch toward
+            // the player so it reads in-frame beside him. He's already past the bar, so this never clips it.
+            var dealer = ResolveDealerTransform();
+            if (dealer != null)
+            {
+                var d = dealer.position;
+                var dealerSide = dogPos.x >= d.x ? 1f : -1f;
+                var towardPlayer = Camera.main != null
+                    ? Mathf.Sign(Camera.main.transform.position.z - d.z)
+                    : -1f;
+                var spot = new Vector3(d.x + dealerSide * dogBesideDealer,
+                                       floorY,
+                                       d.z + towardPlayer * dogFrontOfDealer);
+                if (verboseDogPlacement)
+                    Debug.Log($"[Meniscus] Pfeifi dog spot: beside dealer '{dealer.name}' at {d} -> stand {spot} " +
+                              $"(dog was at {dogPos}).");
+                return spot;
+            }
+
             // The side of the dealer to stand on — keep the dog on the side it's already wandering.
             var side = dogPos.x >= dealerSpot.x ? 1f : -1f;
 
             if (TryGetBarBounds(out var bar))
             {
+                if (verboseDogPlacement)
+                    Debug.Log($"[Meniscus] Pfeifi dog spot: dealer '{dealerObjectName}' NOT found; using bar " +
+                              $"bounds center={bar.center} size={bar.size}.");
                 // Dealer is across the table from the player, so the dealer side is whichever face is further
                 // from the camera. Stand just past that face. Cameras look down +Z here, so that's max.z, but
                 // pick by the dealer spot to stay correct if the layout changes.
@@ -1171,6 +1207,24 @@ namespace Meniscus.Gameplay
 
             bounds = barBounds;
             return barBounds.size != Vector3.zero;
+        }
+
+        // The dealer/opponent character, found by name (the controller is runtime-created, so it can't be wired
+        // in the Inspector). Cached after the first lookup, including a null result so we don't search every use.
+        Transform ResolveDealerTransform()
+        {
+            if (dealerResolved)
+                return dealerTransform;
+
+            dealerResolved = true;
+            if (!string.IsNullOrEmpty(dealerObjectName))
+            {
+                var go = GameObject.Find(dealerObjectName);
+                if (go != null)
+                    dealerTransform = go.transform;
+            }
+
+            return dealerTransform;
         }
 
         // Bandana (SkipTurn): pull the bandana up over the camera so the screen blacks out for a beat, then
