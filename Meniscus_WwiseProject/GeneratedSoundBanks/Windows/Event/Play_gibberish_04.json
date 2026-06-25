@@ -1,0 +1,48 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "2180380556",
+    "Type": "Event",
+    "GUID": "{3300FF2F-D564-4CF3-97D8-541DF1B75CBE}",
+    "Language": "SFX",
+    "Hash": "{737704E1-73AE-D333-CAED-A2BD16CFA335}",
+    "ObjectPath": "Play_gibberish_04",
+    "ShortName": "Play_gibberish_04",
+    "Path": "Event/Play_gibberish_04.bnk",
+    "Media": [
+     {
+      "Id": "317320729",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "gibberish_04.wav",
+      "Path": "Media/317320729.wem",
+      "CachePath": "B8/{B84D0D6D-4F06-FC67-D8EB-97A10BC9747E}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "2180380556",
+      "Name": "Play_gibberish_04",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_gibberish_04",
+      "GUID": "{3300FF2F-D564-4CF3-97D8-541DF1B75CBE}",
+      "DurationType": "OneShot",
+      "DurationMin": "13.075072",
+      "DurationMax": "13.075072",
+      "MediaRefs": [
+       {
+        "Id": "317320729"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{15781F55-D075-C118-AB25-F2B672B3C790}"
+ }
+}

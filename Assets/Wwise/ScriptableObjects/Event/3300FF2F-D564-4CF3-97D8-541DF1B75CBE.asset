@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 276578224cc7c464ea3e399cd59679e6, type: 3}
-  m_Name: 5950F187-B6A3-4700-8BDB-61B9544D6B6A
+  m_Name: 3300FF2F-D564-4CF3-97D8-541DF1B75CBE
   m_EditorClassIdentifier: AK.Wwise.Unity.API.WwiseTypes::WwiseEventReference
-  objectName: Stop_Cat_purring_yawning
-  id: 1521579580
-  guid: 5950F187-B6A3-4700-8BDB-61B9544D6B6A
+  objectName: Play_gibberish_04
+  id: 2180380556
+  guid: 3300FF2F-D564-4CF3-97D8-541DF1B75CBE
   IsInUserDefinedSoundBank: 0

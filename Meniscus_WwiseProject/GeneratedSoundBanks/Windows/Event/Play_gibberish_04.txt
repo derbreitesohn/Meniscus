@@ -1,0 +1,3 @@
+Event	ID	Name			Wwise Object Path	Notes
+	2180380556	Play_gibberish_04			\Default Work Unit\Play_gibberish_04	
+
