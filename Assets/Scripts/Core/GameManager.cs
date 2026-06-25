@@ -1052,6 +1052,7 @@ namespace Meniscus.Core
                 GameConstants.GetRiskForSize(size) * roundRiskMultiplier,
                 GameConstants.GetBasePayoutForSize(size),
                 actor == TurnActor.Player);
+            
 
             // Show the real per-size model when one is assigned; null falls back to the placeholder.
             coin.ApplyModel(coinModels.GetModelForSize(size), coinModels.ModelScale);
