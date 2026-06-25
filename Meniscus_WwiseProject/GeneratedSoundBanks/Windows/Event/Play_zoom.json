@@ -1,0 +1,48 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "165455223",
+    "Type": "Event",
+    "GUID": "{FBE9AA0B-DC7E-4BD5-B55E-71C215ED8E84}",
+    "Language": "SFX",
+    "Hash": "{898F382E-4CA0-89EA-083B-E5D8D3ED5D7D}",
+    "ObjectPath": "Play_zoom",
+    "ShortName": "Play_zoom",
+    "Path": "Event/Play_zoom.bnk",
+    "Media": [
+     {
+      "Id": "27023238",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Loose",
+      "ShortName": "zoom.wav",
+      "Path": "Media/27023238.wem",
+      "CachePath": "F9/{F9479D1E-6019-D7AC-79AC-657ADCB803D2}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "165455223",
+      "Name": "Play_zoom",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_zoom",
+      "GUID": "{FBE9AA0B-DC7E-4BD5-B55E-71C215ED8E84}",
+      "DurationType": "OneShot",
+      "DurationMin": "1.1842177",
+      "DurationMax": "1.1842177",
+      "MediaRefs": [
+       {
+        "Id": "27023238"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{565C94A6-A582-526F-3275-1F677D66E57C}"
+ }
+}

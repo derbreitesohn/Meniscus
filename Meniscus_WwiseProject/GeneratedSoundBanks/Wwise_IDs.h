@@ -1,0 +1,140 @@
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Audiokinetic Wwise generated include file. Do not edit.
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#ifndef __WWISE_IDS_H__
+#define __WWISE_IDS_H__
+
+#include <AK/SoundEngine/Common/AkTypes.h>
+
+namespace AK
+{
+    namespace EVENTS
+    {
+        static const AkUniqueID PLAY_24BIT_PIANO_CHORDS_MELODIE_STATE2_3_102BPM = 2739229492U;
+        static const AkUniqueID PLAY_BANDANA_03 = 2362448273U;
+        static const AkUniqueID PLAY_BAR_AMBIENCE01 = 3708788113U;
+        static const AkUniqueID PLAY_BUYING_01 = 1534786092U;
+        static const AkUniqueID PLAY_CAT_MIAU = 2220998033U;
+        static const AkUniqueID PLAY_CAT_PURRING_YAWNING = 687576550U;
+        static const AkUniqueID PLAY_CAT_SLURPING = 1793514961U;
+        static const AkUniqueID PLAY_CAT_SLURPING_01 = 3982411485U;
+        static const AkUniqueID PLAY_COINDROP01_INTO_WATER = 3586401116U;
+        static const AkUniqueID PLAY_COINFLIP = 4084283492U;
+        static const AkUniqueID PLAY_COINS_ON_WOOD = 4117578692U;
+        static const AkUniqueID PLAY_DOGBITE02 = 4251896040U;
+        static const AkUniqueID PLAY_EXHALE = 2733383537U;
+        static const AkUniqueID PLAY_FEE_BRUMMEN_01 = 3837257645U;
+        static const AkUniqueID PLAY_GIBBERISH_01 = 2180380553U;
+        static const AkUniqueID PLAY_GIBBERISH_04 = 2180380556U;
+        static const AkUniqueID PLAY_KLICK_02 = 716827835U;
+        static const AkUniqueID PLAY_LIGHTER = 3321748351U;
+        static const AkUniqueID PLAY_LOSE = 3796466245U;
+        static const AkUniqueID PLAY_PAGECLOSE = 895213161U;
+        static const AkUniqueID PLAY_PAGEFLIP = 1627151722U;
+        static const AkUniqueID PLAY_PIANO_CHORDS_STATE1_82BPM = 271372744U;
+        static const AkUniqueID PLAY_SOMETHING = 2308135458U;
+        static const AkUniqueID PLAY_SPILL = 1363090524U;
+        static const AkUniqueID PLAY_TSCHICKPACK = 12206320U;
+        static const AkUniqueID PLAY_WATER = 441572235U;
+        static const AkUniqueID PLAY_WHISTLE_02 = 2662538193U;
+        static const AkUniqueID PLAY_ZOOM = 165455223U;
+        static const AkUniqueID STOP_CAT_PURRING_YAWNING = 1521579580U;
+        static const AkUniqueID STOP_GIBBERISH_04 = 3471892474U;
+    } // namespace EVENTS
+
+    namespace STATES
+    {
+        namespace GAMESTATE
+        {
+            static const AkUniqueID GROUP = 4091656514U;
+
+            namespace STATE
+            {
+                static const AkUniqueID LOSE = 221232726U;
+                static const AkUniqueID MENU = 2607556080U;
+                static const AkUniqueID NONE = 748895195U;
+                static const AkUniqueID PLAYING = 1852808225U;
+                static const AkUniqueID WIN = 979765101U;
+            } // namespace STATE
+        } // namespace GAMESTATE
+
+        namespace MUSICSTATE
+        {
+            static const AkUniqueID GROUP = 1021618141U;
+
+            namespace STATE
+            {
+                static const AkUniqueID CHRITICAL = 2135990474U;
+                static const AkUniqueID IDLE = 1874288895U;
+                static const AkUniqueID NONE = 748895195U;
+                static const AkUniqueID TENSE = 391998042U;
+            } // namespace STATE
+        } // namespace MUSICSTATE
+
+    } // namespace STATES
+
+    namespace SWITCHES
+    {
+        namespace COINTYPE
+        {
+            static const AkUniqueID GROUP = 618922246U;
+
+            namespace SWITCH
+            {
+                static const AkUniqueID TYPE01 = 2909705924U;
+                static const AkUniqueID TYPE02 = 2909705927U;
+                static const AkUniqueID TYPE03 = 2909705926U;
+            } // namespace SWITCH
+        } // namespace COINTYPE
+
+        namespace GLASSTYPE
+        {
+            static const AkUniqueID GROUP = 3886256903U;
+
+            namespace SWITCH
+            {
+                static const AkUniqueID TYPE01 = 2909705924U;
+                static const AkUniqueID TYPE02 = 2909705927U;
+                static const AkUniqueID TYPE03 = 2909705926U;
+            } // namespace SWITCH
+        } // namespace GLASSTYPE
+
+    } // namespace SWITCHES
+
+    namespace GAME_PARAMETERS
+    {
+        static const AkUniqueID GLASSFILL = 3813969472U;
+    } // namespace GAME_PARAMETERS
+
+    namespace BANKS
+    {
+        static const AkUniqueID INIT = 1355168291U;
+        static const AkUniqueID MENISCUSSOUNDBANK = 1434658785U;
+    } // namespace BANKS
+
+    namespace BUSSES
+    {
+        static const AkUniqueID AMBIENCE_BUS = 174546974U;
+        static const AkUniqueID CHARACTER_BUS = 3392034617U;
+        static const AkUniqueID MAIN_AUDIO_BUS = 2246998526U;
+        static const AkUniqueID SFX_BUS = 213475909U;
+        static const AkUniqueID UI_BUS = 3247222208U;
+    } // namespace BUSSES
+
+    namespace AUX_BUSSES
+    {
+        static const AkUniqueID SALOON_REVERB = 588602472U;
+    } // namespace AUX_BUSSES
+
+    namespace AUDIO_DEVICES
+    {
+        static const AkUniqueID NO_OUTPUT = 2317455096U;
+        static const AkUniqueID SYSTEM = 3859886410U;
+    } // namespace AUDIO_DEVICES
+
+}// namespace AK
+
+#endif // __WWISE_IDS_H__
