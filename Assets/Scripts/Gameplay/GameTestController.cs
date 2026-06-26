@@ -3,14 +3,12 @@ using Meniscus.Core;
 using Meniscus.Items;
 using Meniscus.UI;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Meniscus.Gameplay
 {
     public class GameTestController : MonoBehaviour
     {
-        [Tooltip("DEBUG: top-left panel listing every catalog item; click one to use it free this turn " +
-                 "(applies the effect and plays its use performance, no cash spent, no inventory needed).")]
-        [SerializeField] bool showItemTestMenu = false;
         [SerializeField] bool showDebugOverlay;
         [SerializeField] GameManager gameManager;
         [SerializeField] GlassManager glassManager;
@@ -20,72 +18,96 @@ namespace Meniscus.Gameplay
         // Cached so OnGUI (called several times a frame) does not rebuild the default catalog each pass.
         IReadOnlyList<ItemDefinition> cachedCatalog;
 
+        bool menuOpen = false;
+
+        const string MenuSceneName = "MainMenu";
+        const int PanelWidth = 276;
+        const int RowH = 26;
+        const int HeaderH = 28;
+        const int PanelX = 8;
+        const int PanelY = 8;
+
         void Awake()
         {
             ResolveReferences();
         }
 
+        void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.F1))
+                menuOpen = !menuOpen;
+        }
+
         void OnGUI()
         {
             ResolveReferences();
-
-            if (showItemTestMenu)
-                DrawItemTestMenu();
+            DrawBugMenu();
 
             if (showDebugOverlay)
                 DrawDebugOverlay();
         }
 
-        // Top-left: one button per catalog item that uses it for free on the player's turn. Faithful to a
-        // real use (effect + use performance) via GameManager.DebugUseItemFree, just without ownership/cost.
-        void DrawItemTestMenu()
+        void DrawBugMenu()
         {
-            if (gameManager == null)
-                return;
-
             var catalog = ResolveCatalog();
+            var itemCount = catalog?.Count ?? 0;
 
-            if (catalog == null || catalog.Count == 0)
+            // Always-visible header toggle button.
+            var headerLabel = menuOpen ? "▼  Debug Menu" : "▶  Debug Menu";
+            if (GUI.Button(new Rect(PanelX, PanelY, PanelWidth, HeaderH), headerLabel))
+                menuOpen = !menuOpen;
+
+            if (!menuOpen)
                 return;
 
-            const int width = 260;
-            const int rowH = 24;
-            var x = 16;
-            var y = 16;
+            var y = PanelY + HeaderH + 2;
 
-            var boxHeight = (catalog.Count + 3) * rowH + 16;
-            GUI.Box(new Rect(x - 8, y - 8, width + 16, boxHeight), "Item Test — free use");
-            y += 4;
+            // Background box sized to content.
+            var contentRows = itemCount + 3; // items + status line + separator + main menu btn
+            var panelH = contentRows * RowH + 12;
+            GUI.Box(new Rect(PanelX, y, PanelWidth, panelH), "");
 
-            GUI.Label(new Rect(x, y, width, rowH), "Click to use this turn (free):");
-            y += rowH;
+            y += 6;
+            var x = PanelX + 8;
+            var innerW = PanelWidth - 16;
 
-            var busy = gameManager.ItemPresentationActive;
-            var canUse = gameManager.CurrentState == GameState.PlayerTurn && !busy;
+            // ── Item test section ───────────────────────────────────────────
+            GUI.Label(new Rect(x, y, innerW, RowH - 4), "Use item (free, no cost/inventory):");
+            y += RowH;
+
+            var busy = gameManager != null && gameManager.ItemPresentationActive;
+            var canUse = gameManager != null && gameManager.CurrentState == GameState.PlayerTurn && !busy;
             GUI.enabled = canUse;
 
-            for (var i = 0; i < catalog.Count; i++)
+            if (catalog != null)
             {
-                var item = catalog[i];
+                for (var i = 0; i < catalog.Count; i++)
+                {
+                    var item = catalog[i];
+                    if (item == null) continue;
 
-                if (item == null)
-                    continue;
+                    if (GUI.Button(new Rect(x, y, innerW, RowH - 2), item.DisplayName))
+                        gameManager.DebugUseItemFree(item);
 
-                if (GUI.Button(new Rect(x, y, width, rowH - 2), item.DisplayName))
-                    gameManager.DebugUseItemFree(item);
-
-                y += rowH;
+                    y += RowH;
+                }
             }
 
             GUI.enabled = true;
 
-            if (!canUse)
-                GUI.Label(new Rect(x, y, width, rowH),
-                    busy ? "(busy — performance playing)" : "(only on your turn)");
+            GUI.Label(new Rect(x, y, innerW, RowH - 4),
+                !canUse ? (busy ? "(busy — wait for animation)" : "(only usable on your turn)") : " ");
+            y += RowH;
+
+            // ── Separator ───────────────────────────────────────────────────
+            GUI.Box(new Rect(x, y, innerW, 1), "");
+            y += 8;
+
+            // ── Main menu button ─────────────────────────────────────────────
+            if (GUI.Button(new Rect(x, y, innerW, RowH), "→  Return to Main Menu"))
+                SceneManager.LoadScene(MenuSceneName);
         }
 
-        // The catalog the shop is actually using (so authored lists are honoured), falling back to the
-        // code-built default when no shop is present. ShopManager.Catalog caches its own resolution.
         IReadOnlyList<ItemDefinition> ResolveCatalog()
         {
             if (cachedCatalog != null && cachedCatalog.Count > 0)
