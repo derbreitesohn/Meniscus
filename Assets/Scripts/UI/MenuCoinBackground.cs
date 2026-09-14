@@ -42,6 +42,9 @@ namespace Meniscus.UI
             public Transform transform;
             public float fallSpeed;
             public float radius;   // world-space half-size, used to test when fully off-screen.
+            // Depth is picked once at startup and then kept. A coin only ever moves straight down, so
+            // it also holds its column and size for good instead of jumping elsewhere on recycle.
+            public float camDistance;
         }
 
         GameObject[] models;
@@ -91,7 +94,7 @@ namespace Meniscus.UI
             for (var i = 0; i < CoinCount; i++)
             {
                 var instance = CreateCoinInstance(i);
-                coins[i] = NewCoin(instance.transform, respawnAtTop: false);
+                coins[i] = NewCoin(instance.transform);
             }
         }
 
@@ -122,31 +125,24 @@ namespace Meniscus.UI
             return instance;
         }
 
-        Faller NewCoin(Transform coinTransform, bool respawnAtTop)
+        /// Picks a coin's lane, depth, size, speed and roll. Called once per coin at startup —
+        /// everything chosen here is kept for the lifetime of the menu.
+        Faller NewCoin(Transform coinTransform)
         {
             var diameter = Random.Range(DiameterMin, DiameterMax);
             FitToDiameter(coinTransform.gameObject, diameter);
             var radius = diameter * 0.5f;
 
             var camDistance = CoinDistance + Random.Range(0f, DepthSpread);
-
-            // Measure the visible rectangle at this depth straight from the camera's projection.
-            var center = cam.transform.position + cam.transform.forward * camDistance;
-            var halfHeight = 0.5f * (
-                cam.ViewportToWorldPoint(new Vector3(0.5f, 1f, camDistance)) -
-                cam.ViewportToWorldPoint(new Vector3(0.5f, 0f, camDistance))).magnitude;
-            var halfWidth = 0.5f * (
-                cam.ViewportToWorldPoint(new Vector3(1f, 0.5f, camDistance)) -
-                cam.ViewportToWorldPoint(new Vector3(0f, 0.5f, camDistance))).magnitude;
+            var halfWidth = HalfExtentsAt(camDistance, out var halfHeight);
 
             var offsetX = Random.Range(-(halfWidth - radius), halfWidth - radius);
-            // Initial coins scatter across the visible height; recycled coins drop in just above the top.
-            var offsetY = respawnAtTop
-                ? halfHeight + radius + Random.Range(0f, 0.6f)
-                : Random.Range(-(halfHeight - radius), halfHeight - radius);
+            // Scatter the starting heights so the coins are spread down the screen from the first frame.
+            var offsetY = Random.Range(-(halfHeight - radius), halfHeight - radius);
 
-            coinTransform.position = center + cam.transform.right * offsetX + cam.transform.up * offsetY;
-            // Face the camera, with a random roll so the faces aren't all oriented identically.
+            coinTransform.position = PositionAt(camDistance, offsetX, offsetY);
+            // Face the camera, with a roll so the faces aren't all oriented identically. Set once:
+            // the coin holds this pose for good, so recycling never visibly re-orients it.
             coinTransform.rotation = cam.transform.rotation
                 * Quaternion.Euler(FaceEuler)
                 * Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
@@ -156,7 +152,39 @@ namespace Meniscus.UI
                 transform = coinTransform,
                 fallSpeed = Random.Range(FallSpeedMin, FallSpeedMax),
                 radius = radius,
+                camDistance = camDistance,
             };
+        }
+
+        /// Lifts a coin that has fallen clear of the bottom back above the top edge, keeping its lane,
+        /// depth, size, speed and orientation, so the rain loops steadily instead of reshuffling.
+        ///
+        /// This translates by the full wrap span rather than snapping to a fixed line at the top: the
+        /// distance a coin overshot the bottom carries over above the top, so the coins hold the spacing
+        /// they started with. Snapping instead makes every coin re-enter on the same line, which bunches
+        /// them into a band and empties the rest of the screen after one cycle.
+        void WrapToTop(in Faller coin)
+        {
+            HalfExtentsAt(coin.camDistance, out var halfHeight);
+            var span = 2f * halfHeight + 2f * coin.radius;
+            coin.transform.position += cam.transform.up * span;
+        }
+
+        Vector3 PositionAt(float camDistance, float offsetX, float offsetY)
+        {
+            var center = cam.transform.position + cam.transform.forward * camDistance;
+            return center + cam.transform.right * offsetX + cam.transform.up * offsetY;
+        }
+
+        // Visible half-width/half-height at a given depth, measured from the camera's real projection.
+        float HalfExtentsAt(float camDistance, out float halfHeight)
+        {
+            halfHeight = 0.5f * (
+                cam.ViewportToWorldPoint(new Vector3(0.5f, 1f, camDistance)) -
+                cam.ViewportToWorldPoint(new Vector3(0.5f, 0f, camDistance))).magnitude;
+            return 0.5f * (
+                cam.ViewportToWorldPoint(new Vector3(1f, 0.5f, camDistance)) -
+                cam.ViewportToWorldPoint(new Vector3(0f, 0.5f, camDistance))).magnitude;
         }
 
         void Update()
@@ -183,7 +211,7 @@ namespace Meniscus.UI
 
                 // Recycle only once the whole coin has cleared the bottom edge.
                 if (heightAboveBottom < -coin.radius)
-                    coins[i] = NewCoin(coin.transform, respawnAtTop: true);
+                    WrapToTop(coin);
             }
         }
 

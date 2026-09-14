@@ -3,6 +3,7 @@ using Meniscus.Core;
 using Meniscus.Items;
 using Meniscus.UI;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 namespace Meniscus.Gameplay
@@ -34,7 +35,10 @@ namespace Meniscus.Gameplay
 
         void Update()
         {
-            if (Input.GetKeyDown(KeyCode.F1))
+            // The project runs on the Input System package, so the legacy Input class
+            // throws here every frame instead of reading the key.
+            var keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.f1Key.wasPressedThisFrame)
                 menuOpen = !menuOpen;
         }
 

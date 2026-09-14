@@ -177,7 +177,8 @@ namespace Meniscus.UI
 
             if (session == null || session.MatchesPlayed == 0)
             {
-                statsText.text = "First pour. Good luck.";
+                // Nothing to report before the first match: leave the line blank.
+                statsText.text = string.Empty;
                 return;
             }
 

@@ -1,0 +1,184 @@
+// Playback engine standing in for the native Wwise sound engine.
+//
+// Wwise ships no WebGL binaries in this project (Assets/Wwise/.../Plugins holds
+// Mac and Windows only) and no WebGL soundbanks were ever generated, so the
+// authored mix cannot run in a browser. This plays the original .wav sources
+// through Unity's own audio instead, keyed by the same event names the game
+// already posts, so every existing inspector assignment keeps working.
+
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace Meniscus.WwiseShim
+{
+	public sealed class WwiseAudioRuntime : MonoBehaviour
+	{
+		// Music and room tone sit under the effects, roughly where the Wwise busses had them.
+		static readonly HashSet<string> Beds = new HashSet<string>
+		{
+			"Play_Piano_Chords_State1_82BPM",
+			"Play_Piano_Auftakt",
+			"Play_24Bit_Piano_Chords_Melodie_State2_3_102BPM",
+			"Play_music",
+			"Play_bar_ambience01",
+		};
+
+		const float BedVolume = 0.45f;
+		const float VoiceVolume = 1f;
+		const int WarmVoices = 8;
+
+		sealed class Voice
+		{
+			public AudioSource Source;
+			public string EventName;
+			public GameObject Owner;
+			public uint PlayingId;
+			public bool Loop;
+		}
+
+		static WwiseAudioRuntime s_instance;
+		static bool s_quitting;
+
+		readonly Dictionary<string, AudioClip> _clips = new Dictionary<string, AudioClip>();
+		readonly List<Voice> _active = new List<Voice>();
+		readonly Stack<AudioSource> _idle = new Stack<AudioSource>();
+		readonly HashSet<string> _warned = new HashSet<string>();
+		uint _nextPlayingId = 1;
+
+		public static WwiseAudioRuntime Instance
+		{
+			get
+			{
+				if (s_instance || s_quitting)
+					return s_instance;
+
+				var go = new GameObject("~WwiseAudioRuntime") { hideFlags = HideFlags.HideAndDontSave };
+				s_instance = go.AddComponent<WwiseAudioRuntime>();
+				DontDestroyOnLoad(go);
+				return s_instance;
+			}
+		}
+
+		void Awake()
+		{
+			for (var i = 0; i < WarmVoices; i++)
+				_idle.Push(CreateSource());
+		}
+
+		void OnApplicationQuit() => s_quitting = true;
+
+		AudioSource CreateSource()
+		{
+			var source = gameObject.AddComponent<AudioSource>();
+			source.playOnAwake = false;
+			// The Wwise attenuations are gone with the engine, so everything plays flat
+			// rather than risk positioned sounds falling outside an unmapped listener.
+			source.spatialBlend = 0f;
+			return source;
+		}
+
+		public uint Post(string eventName, GameObject owner)
+		{
+			if (string.IsNullOrEmpty(eventName))
+				return 0;
+
+			if (!WwiseAudioMap.Events.TryGetValue(eventName, out var entry))
+			{
+				if (_warned.Add(eventName))
+					Debug.LogWarning($"[WwiseShim] no audio mapped for event '{eventName}'.");
+				return 0;
+			}
+
+			// Stop_* events carry no media of their own; they silence their Play_ counterpart.
+			if (!string.IsNullOrEmpty(entry.Stops))
+			{
+				Stop(entry.Stops, owner);
+				return 0;
+			}
+
+			if (entry.Clips == null || entry.Clips.Length == 0)
+				return 0;
+
+			var clip = Resolve(entry.Clips[Random.Range(0, entry.Clips.Length)]);
+			if (!clip)
+				return 0;
+
+			// A looping event restarted on the same owner should not stack voices.
+			if (entry.Loop)
+				Stop(eventName, owner);
+
+			var source = _idle.Count > 0 ? _idle.Pop() : CreateSource();
+			source.clip = clip;
+			source.loop = entry.Loop;
+			source.volume = Beds.Contains(eventName) ? BedVolume : VoiceVolume;
+			source.time = 0f;
+			source.Play();
+
+			var id = _nextPlayingId++;
+			_active.Add(new Voice
+			{
+				Source = source,
+				EventName = eventName,
+				Owner = owner,
+				PlayingId = id,
+				Loop = entry.Loop,
+			});
+			return id;
+		}
+
+		public void Stop(string eventName, GameObject owner)
+		{
+			for (var i = _active.Count - 1; i >= 0; i--)
+			{
+				var voice = _active[i];
+				if (voice.EventName != eventName)
+					continue;
+				// A null owner stops the event wherever it is playing.
+				if (owner && voice.Owner && voice.Owner != owner)
+					continue;
+				Release(i);
+			}
+		}
+
+		public void StopAll(GameObject owner)
+		{
+			for (var i = _active.Count - 1; i >= 0; i--)
+				if (_active[i].Owner == owner)
+					Release(i);
+		}
+
+		void Update()
+		{
+			// Reclaim one-shots that have finished and anything whose emitter is gone.
+			for (var i = _active.Count - 1; i >= 0; i--)
+			{
+				var voice = _active[i];
+				var ownerGone = voice.Owner == null && !ReferenceEquals(voice.Owner, null);
+				if (ownerGone || (!voice.Loop && !voice.Source.isPlaying))
+					Release(i);
+			}
+		}
+
+		void Release(int index)
+		{
+			var voice = _active[index];
+			_active.RemoveAt(index);
+			voice.Source.Stop();
+			voice.Source.clip = null;
+			_idle.Push(voice.Source);
+		}
+
+		AudioClip Resolve(string clipName)
+		{
+			if (_clips.TryGetValue(clipName, out var cached))
+				return cached;
+
+			var clip = Resources.Load<AudioClip>(WwiseAudioMap.ResourcePath + clipName);
+			if (!clip && _warned.Add(clipName))
+				Debug.LogWarning($"[WwiseShim] missing AudioClip resource '{clipName}'.");
+
+			_clips[clipName] = clip;
+			return clip;
+		}
+	}
+}
