@@ -7,7 +7,7 @@ using UnityEngine.UI;
 namespace Meniscus.UI
 {
     /// <summary>
-    /// Escape-key pause overlay for the saloon: continue, sound toggle, music level and a way
+    /// Escape-key pause overlay for the saloon: continue, sound toggle, volume level and a way
     /// back to the title. Built at runtime in the same warm gold-on-dark language as the rest
     /// of the fallback UI, so the scene needs nothing authored.
     ///
@@ -100,10 +100,10 @@ namespace Meniscus.UI
             RefreshLabels();
         }
 
-        void SetMusicVolume(float value)
+        void SetMasterVolume(float value)
         {
             if (session != null)
-                session.SetMusicVolume(value);
+                session.SetMasterVolume(value);
 
             RefreshLabels();
         }
@@ -114,7 +114,7 @@ namespace Meniscus.UI
                 soundLabel.text = session != null && session.SoundEnabled ? "SOUND: ON" : "SOUND: OFF";
 
             if (volumeLabel != null)
-                volumeLabel.text = $"MUSIC  {Mathf.RoundToInt((session != null ? session.MusicVolume : 0f) * 100f)}%";
+                volumeLabel.text = $"VOLUME  {Mathf.RoundToInt((session != null ? session.MasterVolume : 0f) * 100f)}%";
         }
 
         void SetVisible(bool visible)
@@ -192,17 +192,17 @@ namespace Meniscus.UI
 
             y -= labelHeight * 0.5f;
             volumeLabel = RuntimeUiFactory.CreateText(
-                canvas.transform, "Music Label", string.Empty,
+                canvas.transform, "Volume Label", string.Empty,
                 new Vector2(0f, y), new Vector2(width, labelHeight),
                 Mathf.RoundToInt(17 * scale), Muted);
             y -= labelHeight * 0.5f + gap;
 
             y -= sliderHeight * 0.5f;
             RuntimeUiFactory.CreateSlider(
-                canvas.transform, "Music Volume",
+                canvas.transform, "Volume",
                 new Vector2(width * 0.82f, sliderHeight), new Vector2(0f, y),
-                session != null ? session.MusicVolume : 0.7f,
-                SetMusicVolume);
+                session != null ? session.MasterVolume : 0.7f,
+                SetMasterVolume);
             y -= sliderHeight * 0.5f + gap * 2f;
 
             y -= rowHeight * 0.5f;

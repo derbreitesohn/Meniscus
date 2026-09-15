@@ -39,18 +39,20 @@ namespace Meniscus.WwiseShim
 
 		static WwiseAudioRuntime s_instance;
 		static bool s_quitting;
-		static float s_musicVolume = 1f;
+		static float s_masterVolume = 1f;
 
-		/// Level of the music and room-tone beds only, so the effects stay where they are.
+		/// Master level for everything this shim plays: the music and room-tone beds and
+		/// every effect voice alike, the cat included. The authored balance between them is
+		/// kept, the whole mix just rides up and down together.
 		/// Applies to voices already playing, not just the next one posted.
-		public static float MusicVolume
+		public static float MasterVolume
 		{
-			get { return s_musicVolume; }
+			get { return s_masterVolume; }
 			set
 			{
-				s_musicVolume = Mathf.Clamp01(value);
+				s_masterVolume = Mathf.Clamp01(value);
 				if (s_instance)
-					s_instance.ApplyMusicVolume();
+					s_instance.ApplyMasterVolume();
 			}
 		}
 
@@ -210,9 +212,9 @@ namespace Meniscus.WwiseShim
 		}
 
 		static float VolumeFor(string eventName)
-			=> Beds.Contains(eventName) ? BedVolume * s_musicVolume : VoiceVolume;
+			=> (Beds.Contains(eventName) ? BedVolume : VoiceVolume) * s_masterVolume;
 
-		void ApplyMusicVolume()
+		void ApplyMasterVolume()
 		{
 			for (var i = 0; i < _active.Count; i++)
 			{

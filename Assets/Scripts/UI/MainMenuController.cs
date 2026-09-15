@@ -40,7 +40,7 @@ namespace Meniscus.UI
         GameSession session;
         Text statsText;
         Text soundButtonLabel;
-        Text musicVolumeLabel;
+        Text volumeLabel;
 
         void Awake()
         {
@@ -118,12 +118,12 @@ namespace Meniscus.UI
                 highlightedColor: ButtonHoverTint,
                 pressedColor: ButtonPressTint).GetComponentInChildren<Text>();
 
-            // Music level sits directly under the sound toggle, the two audio controls together.
+            // Volume sits directly under the sound toggle, the two audio controls together.
             var volumeY = -(playHeight * 0.5f + gap * 2f + rowHeight * 1.5f);
 
-            musicVolumeLabel = RuntimeUiFactory.CreateText(
+            volumeLabel = RuntimeUiFactory.CreateText(
                 canvas.transform,
-                "Music Label",
+                "Volume Label",
                 string.Empty,
                 new Vector2(0f, volumeY),
                 new Vector2(width, 30f * scale),
@@ -132,11 +132,11 @@ namespace Meniscus.UI
 
             RuntimeUiFactory.CreateSlider(
                 canvas.transform,
-                "Music Volume",
+                "Volume",
                 new Vector2(width * 0.8f, 30f * scale),
                 new Vector2(0f, volumeY - 30f * scale),
-                session != null ? session.MusicVolume : 0.7f,
-                SetMusicVolume);
+                session != null ? session.MasterVolume : 0.7f,
+                SetMasterVolume);
 
             RuntimeUiFactory.CreateButton(
                 canvas.transform,
@@ -219,14 +219,14 @@ namespace Meniscus.UI
             if (soundButtonLabel != null)
                 soundButtonLabel.text = session != null && session.SoundEnabled ? "SOUND: ON" : "SOUND: OFF";
 
-            if (musicVolumeLabel != null)
-                musicVolumeLabel.text = $"MUSIC  {Mathf.RoundToInt((session != null ? session.MusicVolume : 0f) * 100f)}%";
+            if (volumeLabel != null)
+                volumeLabel.text = $"VOLUME  {Mathf.RoundToInt((session != null ? session.MasterVolume : 0f) * 100f)}%";
         }
 
-        void SetMusicVolume(float value)
+        void SetMasterVolume(float value)
         {
             if (session != null)
-                session.SetMusicVolume(value);
+                session.SetMasterVolume(value);
 
             RefreshSoundLabel();
         }

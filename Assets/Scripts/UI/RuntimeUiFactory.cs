@@ -161,8 +161,8 @@ namespace Meniscus.UI
         }
 
         /// <summary>
-        /// A slider in the same warm gold-on-dark language as the buttons: a thin recessed
-        /// track, a filled portion and a chunky handle sized for a fingertip on touch.
+        /// A slider in the same warm gold-on-dark language as the buttons: a rounded recessed
+        /// track, a rounded filled portion and a round handle sized for a fingertip on touch.
         /// </summary>
         public static Slider CreateSlider(
             Transform parent,
@@ -175,39 +175,49 @@ namespace Meniscus.UI
             var root = CreateImage(parent, name, size, position, new Color(0f, 0f, 0f, 0f));
             var slider = root.AddComponent<Slider>();
 
-            var trackHeight = Mathf.Max(6f, size.y * 0.22f);
-            CreateImage(root.transform, "Track", new Vector2(size.x, trackHeight),
+            // Thick enough that the rounded caps read as a pill rather than a hairline.
+            var trackHeight = Mathf.Max(8f, size.y * 0.32f);
+            var handleSize = Mathf.Max(size.y, trackHeight * 2.4f);
+            // Half a handle at each end, so the knob's travel stops flush with the track.
+            var inset = handleSize * 0.5f;
+            var pill = PillSprite(trackHeight);
+
+            var track = CreateImage(root.transform, "Track", Vector2.zero,
                 Vector2.zero, new Color(0.18f, 0.13f, 0.09f, 0.95f));
+            StretchAcross(track, inset, trackHeight);
+            ApplyPill(track, pill);
 
-            var fillArea = CreateImage(root.transform, "Fill Area", new Vector2(size.x, trackHeight),
+            // Slider drives the fill's and handle's anchors outright — it overwrites both to
+            // stretch on the axis it is not sliding along. So their height has to come from
+            // the container they sit in, and their own sizeDelta on that axis must be zero,
+            // or they end up a container taller than the groove they are meant to sit in.
+            var fillArea = CreateImage(root.transform, "Fill Area", Vector2.zero,
                 Vector2.zero, new Color(0f, 0f, 0f, 0f));
-            var fill = CreateImage(fillArea.transform, "Fill", new Vector2(size.x, trackHeight),
+            StretchAcross(fillArea, inset, trackHeight);
+
+            var fill = CreateImage(fillArea.transform, "Fill", Vector2.zero,
                 Vector2.zero, new Color(0.75f, 0.55f, 0.24f, 0.95f));
+            ApplyPill(fill, pill);
 
-            var handleSize = Mathf.Max(size.y, trackHeight * 2.6f);
-            var handleArea = CreateImage(root.transform, "Handle Area", new Vector2(size.x, size.y),
+            var handleArea = CreateImage(root.transform, "Handle Area", Vector2.zero,
                 Vector2.zero, new Color(0f, 0f, 0f, 0f));
-            var handle = CreateImage(handleArea.transform, "Handle", new Vector2(handleSize, handleSize),
+            StretchAcross(handleArea, inset, handleSize);
+
+            // A gold disc inside a dark rim, so the knob still reads where it sits on the fill.
+            var handle = CreateImage(handleArea.transform, "Handle", new Vector2(handleSize, 0f),
+                Vector2.zero, new Color(0.22f, 0.13f, 0.06f, 1f));
+            handle.GetComponent<Image>().sprite = CircleSprite();
+
+            var knob = CreateImage(handle.transform, "Knob",
+                new Vector2(handleSize * 0.74f, handleSize * 0.74f),
                 Vector2.zero, new Color(0.95f, 0.82f, 0.52f, 1f));
+            var knobImage = knob.GetComponent<Image>();
+            knobImage.sprite = CircleSprite();
+            knobImage.raycastTarget = false;
 
-            // Stretch the moving parts so the Slider drives them rather than fixed offsets.
-            foreach (var stretch in new[] { fillArea.GetComponent<RectTransform>(), handleArea.GetComponent<RectTransform>() })
-            {
-                stretch.anchorMin = new Vector2(0f, 0.5f);
-                stretch.anchorMax = new Vector2(1f, 0.5f);
-                stretch.offsetMin = new Vector2(handleSize * 0.5f, -size.y * 0.5f);
-                stretch.offsetMax = new Vector2(-handleSize * 0.5f, size.y * 0.5f);
-            }
-
-            var fillRect = fill.GetComponent<RectTransform>();
-            fillRect.anchorMin = new Vector2(0f, 0.5f);
-            fillRect.anchorMax = new Vector2(1f, 0.5f);
-            fillRect.offsetMin = new Vector2(0f, -trackHeight * 0.5f);
-            fillRect.offsetMax = new Vector2(0f, trackHeight * 0.5f);
-
-            slider.fillRect = fillRect;
+            slider.fillRect = fill.GetComponent<RectTransform>();
             slider.handleRect = handle.GetComponent<RectTransform>();
-            slider.targetGraphic = handle.GetComponent<Image>();
+            slider.targetGraphic = knobImage;
             slider.direction = Slider.Direction.LeftToRight;
             slider.minValue = 0f;
             slider.maxValue = 1f;
@@ -223,6 +233,118 @@ namespace Meniscus.UI
                 slider.onValueChanged.AddListener(onChanged);
 
             return slider;
+        }
+
+        /// <summary>
+        /// Lays a child across its parent's width at a fixed height, pulled in at both ends.
+        /// </summary>
+        static void StretchAcross(GameObject target, float inset, float height)
+        {
+            var rect = target.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 0.5f);
+            rect.anchorMax = new Vector2(1f, 0.5f);
+            rect.offsetMin = new Vector2(inset, -height * 0.5f);
+            rect.offsetMax = new Vector2(-inset, height * 0.5f);
+        }
+
+        // --- Rounded chrome -------------------------------------------------------------
+        //
+        // Nothing here is authored, so the rounded shapes are drawn once into a small texture
+        // and reused. Both come out of the same signed-distance pass: a pill is a rounded
+        // rectangle with a near-half corner radius, a circle is one with exactly half.
+
+        const int RoundedTextureSize = 64;
+        const float PillCornerRadius = 30f;
+
+        static Texture2D pillTexture;
+        static Sprite circleSprite;
+
+        static void ApplyPill(GameObject target, Sprite pill)
+        {
+            var image = target.GetComponent<Image>();
+            image.sprite = pill;
+            image.type = Image.Type.Sliced;   // the caps hold their shape, the middle stretches
+        }
+
+        /// <summary>
+        /// White rounded-rectangle sprite for a bar of the given height. Pixels-per-unit comes
+        /// from that height so the nine-slice caps land at roughly half of it: a pill at any
+        /// width. Unity shrinks the borders itself once the bar is narrower than they are, so a
+        /// fill near zero collapses cleanly instead of overlapping.
+        /// </summary>
+        static Sprite PillSprite(float barHeight)
+        {
+            if (pillTexture == null)
+                pillTexture = BuildRoundedTexture("Runtime UI Pill", PillCornerRadius);
+
+            var pixelsPerUnit = RoundedTextureSize / Mathf.Max(1f, barHeight);
+            var border = new Vector4(PillCornerRadius, PillCornerRadius, PillCornerRadius, PillCornerRadius);
+
+            var sprite = Sprite.Create(
+                pillTexture,
+                new Rect(0f, 0f, RoundedTextureSize, RoundedTextureSize),
+                new Vector2(0.5f, 0.5f),
+                pixelsPerUnit,
+                0,
+                SpriteMeshType.FullRect,
+                border);
+            sprite.hideFlags = HideFlags.HideAndDontSave;
+            return sprite;
+        }
+
+        /// <summary>White disc sprite, drawn unsliced at whatever size the rect asks for.</summary>
+        static Sprite CircleSprite()
+        {
+            if (circleSprite == null)
+            {
+                var texture = BuildRoundedTexture("Runtime UI Circle", RoundedTextureSize * 0.5f - 0.5f);
+                circleSprite = Sprite.Create(
+                    texture,
+                    new Rect(0f, 0f, RoundedTextureSize, RoundedTextureSize),
+                    new Vector2(0.5f, 0.5f),
+                    100f,
+                    0,
+                    SpriteMeshType.FullRect);
+                circleSprite.hideFlags = HideFlags.HideAndDontSave;
+            }
+
+            return circleSprite;
+        }
+
+        static Texture2D BuildRoundedTexture(string name, float cornerRadius)
+        {
+            var texture = new Texture2D(RoundedTextureSize, RoundedTextureSize, TextureFormat.RGBA32, false)
+            {
+                name = name,
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+                // Survives the Resources.UnloadUnusedAssets that runs on every scene load.
+                hideFlags = HideFlags.HideAndDontSave,
+            };
+
+            var pixels = new Color32[RoundedTextureSize * RoundedTextureSize];
+            var half = RoundedTextureSize * 0.5f;
+            var straight = half - cornerRadius;   // half-extent of the flat part, before the corners
+
+            for (var y = 0; y < RoundedTextureSize; y++)
+            {
+                for (var x = 0; x < RoundedTextureSize; x++)
+                {
+                    // Signed distance to a rounded rectangle centred in the texture.
+                    var dx = Mathf.Abs(x + 0.5f - half) - straight;
+                    var dy = Mathf.Abs(y + 0.5f - half) - straight;
+                    var outside = new Vector2(Mathf.Max(dx, 0f), Mathf.Max(dy, 0f)).magnitude;
+                    var distance = outside + Mathf.Min(Mathf.Max(dx, dy), 0f) - cornerRadius;
+
+                    // One pixel of coverage across the edge keeps it smooth at any drawn size.
+                    var alpha = Mathf.Clamp01(0.5f - distance);
+                    pixels[y * RoundedTextureSize + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(alpha * 255f));
+                }
+            }
+
+            texture.SetPixels32(pixels);
+            texture.Apply(false, true);
+            return texture;
         }
     }
 }
