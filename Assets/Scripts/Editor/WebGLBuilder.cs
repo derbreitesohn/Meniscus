@@ -105,6 +105,12 @@ namespace Meniscus.EditorTools
 			PlayerSettings.WebGL.decompressionFallback = true;
 			PlayerSettings.WebGL.dataCaching = true;
 			PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.ExplicitlyThrownExceptionsOnly;
+			// Native WebAssembly exceptions instead of the generated JS invoke_* trampolines.
+			// Those bounce every throwing call through the JS stack, which Firefox overflows
+			// with "too much recursion" before the game finishes loading; its JS stack is far
+			// smaller than Chromium's. The game uses try/catch, so switching exception support
+			// off entirely is not an option.
+			PlayerSettings.WebGL.wasm2023 = true;
 			PlayerSettings.WebGL.template = "APPLICATION:Default";
 			PlayerSettings.SetIl2CppCompilerConfiguration(NamedBuildTarget.WebGL, Il2CppCompilerConfiguration.Release);
 			PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.Low);
