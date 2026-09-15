@@ -40,6 +40,7 @@ namespace Meniscus.UI
         GameSession session;
         Text statsText;
         Text soundButtonLabel;
+        Text musicVolumeLabel;
 
         void Awake()
         {
@@ -84,40 +85,66 @@ namespace Meniscus.UI
                 24,
                 new Color(0.72f, 0.63f, 0.52f));
 
-            RuntimeUiFactory.CreateButton(
+            // Controls grow for a fingertip, and the rows are spaced from the resulting
+            // heights so the larger buttons cannot overlap each other.
+            var scale = UiScale.ControlScale;
+            var width = 320f * (UiScale.Touch ? 1.7f : 1f);
+            var playHeight = 76f * scale;
+            var rowHeight = 56f * scale;
+            var gap = 20f * scale;
 
+            RuntimeUiFactory.CreateButton(
                 canvas.transform,
                 "Play Button",
                 "PLAY",
-                new Vector2(320f, 76f),
+                new Vector2(width, playHeight),
                 new Vector2(0f, 0f),
-                32,
+                Mathf.RoundToInt(32 * scale),
                 PlayGame,
                 boldLabel: true,
                 normalColor: ButtonTransparent,
                 highlightedColor: ButtonHoverTint,
                 pressedColor: ButtonPressTint);
-                
 
             soundButtonLabel = RuntimeUiFactory.CreateButton(
                 canvas.transform,
                 "Sound Button",
                 string.Empty,
-                new Vector2(320f, 56f),
-                new Vector2(0f, -96f),
-                22,
+                new Vector2(width, rowHeight),
+                new Vector2(0f, -(playHeight * 0.5f + gap + rowHeight * 0.5f)),
+                Mathf.RoundToInt(22 * scale),
                 ToggleSound,
                 normalColor: ButtonTransparent,
                 highlightedColor: ButtonHoverTint,
                 pressedColor: ButtonPressTint).GetComponentInChildren<Text>();
 
+            // Music level sits directly under the sound toggle, the two audio controls together.
+            var volumeY = -(playHeight * 0.5f + gap * 2f + rowHeight * 1.5f);
+
+            musicVolumeLabel = RuntimeUiFactory.CreateText(
+                canvas.transform,
+                "Music Label",
+                string.Empty,
+                new Vector2(0f, volumeY),
+                new Vector2(width, 30f * scale),
+                Mathf.RoundToInt(16 * scale),
+                new Color(0.72f, 0.63f, 0.52f));
+
+            RuntimeUiFactory.CreateSlider(
+                canvas.transform,
+                "Music Volume",
+                new Vector2(width * 0.8f, 30f * scale),
+                new Vector2(0f, volumeY - 30f * scale),
+                session != null ? session.MusicVolume : 0.7f,
+                SetMusicVolume);
+
             RuntimeUiFactory.CreateButton(
                 canvas.transform,
                 "Quit Button",
                 "QUIT",
-                new Vector2(320f, 56f),
-                new Vector2(0f, -172f),
-                22,
+                new Vector2(width, rowHeight),
+                new Vector2(0f, volumeY - 30f * scale - gap * 2f - rowHeight * 0.5f),
+                Mathf.RoundToInt(22 * scale),
                 QuitGame,
                 normalColor: ButtonTransparent,
                 highlightedColor: ButtonHoverTint,
@@ -191,6 +218,17 @@ namespace Meniscus.UI
         {
             if (soundButtonLabel != null)
                 soundButtonLabel.text = session != null && session.SoundEnabled ? "SOUND: ON" : "SOUND: OFF";
+
+            if (musicVolumeLabel != null)
+                musicVolumeLabel.text = $"MUSIC  {Mathf.RoundToInt((session != null ? session.MusicVolume : 0f) * 100f)}%";
+        }
+
+        void SetMusicVolume(float value)
+        {
+            if (session != null)
+                session.SetMusicVolume(value);
+
+            RefreshSoundLabel();
         }
 
         static void EnsureEventSystem()

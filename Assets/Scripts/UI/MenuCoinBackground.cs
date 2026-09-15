@@ -127,9 +127,23 @@ namespace Meniscus.UI
 
         /// Picks a coin's lane, depth, size, speed and roll. Called once per coin at startup —
         /// everything chosen here is kept for the lifetime of the menu.
+        /// The coins are sized in world units and the camera's vertical field of view is
+        /// fixed, so a coin covers the same slice of screen height at any aspect. On a
+        /// portrait phone the screen is narrow, and those same coins end up spanning most
+        /// of its width and swamping the menu. Shrink them as the viewport narrows so they
+        /// stay a backdrop.
+        static float ViewportSizeScale()
+        {
+            if (Screen.height <= 0)
+                return 1f;
+
+            const float AuthoredAspect = 16f / 9f;
+            return Mathf.Clamp((float)Screen.width / Screen.height / AuthoredAspect, 0.32f, 1f);
+        }
+
         Faller NewCoin(Transform coinTransform)
         {
-            var diameter = Random.Range(DiameterMin, DiameterMax);
+            var diameter = Random.Range(DiameterMin, DiameterMax) * ViewportSizeScale();
             FitToDiameter(coinTransform.gameObject, diameter);
             var radius = diameter * 0.5f;
 

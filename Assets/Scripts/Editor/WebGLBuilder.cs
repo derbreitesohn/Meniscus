@@ -72,22 +72,38 @@ namespace Meniscus.EditorTools
 					continue;
 
 				var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
-				// Long beds stay compressed in memory; one-shots decode up front so
-				// they fire without a hitch.
-				var longClip = clip && clip.length > 10f;
+				// Beds are long enough that their memory is worth trimming; the browser
+				// decodes to PCM up front, so a 60-second stereo ambience is expensive.
+				var longClip = clip && clip.length > 20f;
 
 				var settings = importer.defaultSampleSettings;
-				settings.loadType = longClip ? AudioClipLoadType.CompressedInMemory : AudioClipLoadType.DecompressOnLoad;
+				// Everything decodes on load. WebGL hands clips to the browser to decode in
+				// full, and a clip left CompressedInMemory simply never finishes loading and
+				// plays nothing at all - which is what silenced every bed over ten seconds.
+				settings.loadType = AudioClipLoadType.DecompressOnLoad;
 				settings.compressionFormat = AudioCompressionFormat.Vorbis;
 				settings.quality = 0.5f;
-				settings.preloadAudioData = !longClip;
+				// A clip whose data is not resident yet plays silently on WebGL, so never
+				// leave the decode until first use.
+				settings.preloadAudioData = true;
+
+				// Decompressed PCM stays in memory, so trim the long atmospheric beds. Music
+				// and one-shots keep their stereo image and full rate.
+				if (longClip)
+				{
+					settings.sampleRateSetting = AudioSampleRateSetting.OverrideSampleRate;
+					settings.sampleRateOverride = 32000;
+				}
+
 				importer.defaultSampleSettings = settings;
 
+				// WebGL decodes through the browser: AAC is the one format Safari and iOS
+				// will take, so Vorbis would go silent there.
 				var webgl = settings;
 				webgl.compressionFormat = AudioCompressionFormat.AAC;
 				importer.SetOverrideSampleSettings("WebGL", webgl);
 
-				importer.forceToMono = false;
+				importer.forceToMono = longClip;
 
 				EditorUtility.SetDirty(importer);
 				importer.SaveAndReimport();

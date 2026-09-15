@@ -45,6 +45,7 @@ namespace Meniscus.Core
         [SerializeField] CoinTossOverlay coinTossOverlay;
         [SerializeField] CoinDropPresentationController dropPresentationController;
         [SerializeField] SaloonHudController saloonHudController;
+        [SerializeField] PauseMenuController pauseMenuController;
         [SerializeField] MoneyHudWidget moneyHudWidget;
         [SerializeField] PlayerInventory playerInventory;
         [SerializeField] DeskItemTray deskItemTray;
@@ -1329,6 +1330,16 @@ namespace Meniscus.Core
 
             if (moneyHudWidget == null)
                 moneyHudWidget = gameObject.AddComponent<MoneyHudWidget>();
+
+            // Play-mode only: it builds an overlay canvas, and a frozen timeScale would be a
+            // poor thing to hand an EditMode test.
+            if (pauseMenuController == null && Application.isPlaying)
+            {
+                pauseMenuController = FindAnyObjectByType<PauseMenuController>();
+
+                if (pauseMenuController == null)
+                    pauseMenuController = gameObject.AddComponent<PauseMenuController>();
+            }
 
             if (glassManager == null)
                 Debug.LogWarning("[GameManager] GlassManager reference is missing.");

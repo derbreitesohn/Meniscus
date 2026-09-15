@@ -23,6 +23,10 @@ namespace Meniscus.Core
 
         [Header("Persistent Settings (survive scene loads)")]
         [SerializeField] bool soundEnabled = true;
+        [SerializeField, Range(0f, 1f)] float musicVolume = 0.7f;
+
+        const string SoundKey = "meniscus.sound";
+        const string MusicKey = "meniscus.musicVolume";
 
         public int MatchesPlayed => matchesPlayed;
         public int MatchesWon => matchesWon;
@@ -31,6 +35,7 @@ namespace Meniscus.Core
         public int LastBankedCash => lastBankedCash;
         public MatchOutcome LastOutcome => lastOutcome;
         public bool SoundEnabled => soundEnabled;
+        public float MusicVolume => musicVolume;
 
         // Created before any scene loads so the session always exists regardless of which scene the
         // player (or a test/build) opens first.
@@ -67,12 +72,22 @@ namespace Meniscus.Core
             Instance = this;
             transform.SetParent(null); // DontDestroyOnLoad only persists root objects.
             DontDestroyOnLoad(gameObject);
+            Load();
             ApplySettings();
         }
 
         public void SetSoundEnabled(bool enabled)
         {
             soundEnabled = enabled;
+            Save();
+            ApplySettings();
+        }
+
+        /// <summary>Level of the music and room-tone beds, independent of the effects.</summary>
+        public void SetMusicVolume(float volume)
+        {
+            musicVolume = Mathf.Clamp01(volume);
+            Save();
             ApplySettings();
         }
 
@@ -82,6 +97,21 @@ namespace Meniscus.Core
         public void ApplySettings()
         {
             AudioListener.volume = soundEnabled ? 1f : 0f;
+            WwiseShim.WwiseAudioRuntime.MusicVolume = musicVolume;
+        }
+
+        // Settings are expected to survive a page reload, not just a scene load.
+        void Load()
+        {
+            soundEnabled = PlayerPrefs.GetInt(SoundKey, soundEnabled ? 1 : 0) != 0;
+            musicVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(MusicKey, musicVolume));
+        }
+
+        void Save()
+        {
+            PlayerPrefs.SetInt(SoundKey, soundEnabled ? 1 : 0);
+            PlayerPrefs.SetFloat(MusicKey, musicVolume);
+            PlayerPrefs.Save();
         }
 
         /// <summary>Folds a finished match into the running stats. Ignores in-progress (None) outcomes.</summary>

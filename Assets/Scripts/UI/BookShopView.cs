@@ -421,7 +421,7 @@ namespace Meniscus.UI
             // Scale the whole held book (prop + printed menu + pictures) up uniformly so the pages and
             // their images read larger. Done on the root so every child — including the world-space menu
             // canvas — grows together and the menu stays within the page.
-            root.localScale = Vector3.one * Mathf.Max(0.1f, bookScale);
+            root.localScale = Vector3.one * Mathf.Max(0.1f, bookScale * ViewportFitScale());
 
             // A page-sized sheet hung on the spine, swept across the spread during a flip. Prefer an
             // authored sheet under the prop (built by Tools > Meniscus > Author Book Shop, so it too can
@@ -470,6 +470,24 @@ namespace Meniscus.UI
             // The raycast identifies the book by this marker, so guarantee an authored prop has one.
             if (root.GetComponent<BookClickTarget>() == null)
                 root.gameObject.AddComponent<BookClickTarget>();
+        }
+
+        /// <summary>
+        /// How much to shrink the held book so it stays inside the frame.
+        ///
+        /// The book is a world-space object and the camera's vertical field of view is fixed, so
+        /// the visible width — not the height — is what shrinks as the window narrows. At the
+        /// 16:9 it was framed for the spread just fits; on a portrait or half-width window it
+        /// runs off both sides and only the middle of the page is readable.
+        /// </summary>
+        static float ViewportFitScale()
+        {
+            if (Screen.height <= 0)
+                return 1f;
+
+            const float FramedAspect = 16f / 9f;
+            var aspect = (float)Screen.width / Screen.height;
+            return aspect >= FramedAspect ? 1f : Mathf.Clamp(aspect / FramedAspect, 0.42f, 1f);
         }
 
         void BuildMenuCanvas(IReadOnlyList<ItemDefinition> catalog)

@@ -197,26 +197,38 @@ namespace Meniscus.UI
             // A warm gold border behind a dark wood panel, parked in the lower third of the screen. Smaller
             // and tighter than a full-width bar, with larger text so each box fills out more. Kept fairly
             // see-through so the scene (the dealer talking) reads behind the box.
-            RuntimeUiFactory.CreateImage(
+            var touch = UiScale.Touch;
+
+            var border = RuntimeUiFactory.CreateImage(
                 canvas.transform, "Dialogue Border",
                 new Vector2(1180f, 250f), new Vector2(0f, -300f), new Color(0.78f, 0.62f, 0.36f, 0.7f));
-            RuntimeUiFactory.CreateImage(
+            var panel = RuntimeUiFactory.CreateImage(
                 canvas.transform, "Dialogue Panel",
                 new Vector2(1144f, 214f), new Vector2(0f, -300f), new Color(0.06f, 0.035f, 0.025f, 0.6f));
 
             bodyText = RuntimeUiFactory.CreateText(
                 canvas.transform, "Dialogue Body", string.Empty,
-                new Vector2(0f, -296f), new Vector2(1056f, 168f), 42,
+                new Vector2(0f, -296f), new Vector2(1056f, 168f), touch ? 46 : 42,
                 new Color(0.97f, 0.93f, 0.84f), TextAnchor.UpperLeft);
             bodyText.horizontalOverflow = HorizontalWrapMode.Wrap;
             bodyText.verticalOverflow = VerticalWrapMode.Overflow;
             bodyText.lineSpacing = 1.05f;
 
             hintText = RuntimeUiFactory.CreateText(
-                canvas.transform, "Dialogue Hint", "click to continue  \u25bc",
-                new Vector2(360f, -398f), new Vector2(320f, 28f), 17,
+                canvas.transform, "Dialogue Hint",
+                touch ? "tap to continue  \u25bc" : "click to continue  \u25bc",
+                new Vector2(360f, -398f), new Vector2(320f, 28f), touch ? 24 : 17,
                 new Color(0.78f, 0.62f, 0.36f, 0.8f), TextAnchor.MiddleRight);
             hintText.enabled = false;
+
+            // The box was parked a fixed distance below the screen centre, which only lands
+            // in the lower third at the 16:9 it was authored for. Pin it to the bottom edge
+            // instead so it sits there at any aspect, and let it span the width on a phone,
+            // where a 1180-wide box would otherwise run off both sides.
+            PinToBottom(border, -300f, 250f, touch ? 24f : 370f);
+            PinToBottom(panel, -300f, 214f, touch ? 36f : 388f);
+            PinToBottom(bodyText, -296f, 168f, touch ? 60f : 432f);
+            PinToBottom(hintText, -398f, 28f, touch ? 60f : 432f);
         }
 
         IEnumerator PlayRoutine(
@@ -342,10 +354,41 @@ namespace Meniscus.UI
             group.alpha = to;
         }
 
+        /// Re-anchors an element that was authored as an offset from the screen centre so it
+        /// hangs off the bottom edge instead, stretching horizontally between side margins.
+        /// <paramref name="centreY"/> and <paramref name="height"/> are the authored values;
+        /// the gap to the bottom edge is derived from them, so 16:9 looks exactly as before.
+        static void PinToBottom(GameObject element, float centreY, float height, float sideMargin)
+            => PinToBottom(element == null ? null : element.transform, centreY, height, sideMargin);
+
+        static void PinToBottom(Component element, float centreY, float height, float sideMargin)
+        {
+            if (element == null)
+                return;
+
+            var rect = element.GetComponent<RectTransform>();
+            if (rect == null)
+                return;
+
+            var bottom = UiScale.ReferenceHalfHeight + centreY - height * 0.5f;
+
+            rect.anchorMin = new Vector2(0f, 0f);
+            rect.anchorMax = new Vector2(1f, 0f);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.offsetMin = new Vector2(sideMargin, bottom);
+            rect.offsetMax = new Vector2(-sideMargin, bottom + height);
+        }
+
         static bool AdvancePressed()
         {
             var mouse = Mouse.current;
             if (mouse != null && mouse.leftButton.wasPressedThisFrame)
+                return true;
+
+            // A tap is not reported through Mouse unless touch simulation is on, so without
+            // this the dialogue cannot be advanced at all on a phone.
+            var touch = Touchscreen.current;
+            if (touch != null && touch.primaryTouch.press.wasPressedThisFrame)
                 return true;
 
             var keyboard = Keyboard.current;

@@ -18,6 +18,7 @@ namespace Meniscus.UI
         {
             ResolveReferences();
             EnsureFallbackHud();
+            EnsureAuthoredHudVisible();
             Refresh();
         }
 
@@ -40,6 +41,7 @@ namespace Meniscus.UI
 
             gameManager = manager;
             EnsureFallbackHud();
+            EnsureAuthoredHudVisible();
             Refresh();
         }
 
@@ -64,6 +66,25 @@ namespace Meniscus.UI
                 Mathf.Max(1, gameManager.CurrentRound),
                 GameConstants.TotalRounds,
                 turnLabel);
+        }
+
+        /// <summary>
+        /// The authored readout is parented to a "HUD Table Card" object that ships deactivated
+        /// in the scene. Its Canvas and Text are both enabled, so everything looks wired up, but
+        /// an inactive ancestor means the round line never draws. Switch the chain back on.
+        /// </summary>
+        void EnsureAuthoredHudVisible()
+        {
+            if (statusText == null)
+                return;
+
+            var stop = hudCanvas != null ? hudCanvas.transform : null;
+
+            for (var t = statusText.transform; t != null && t != stop; t = t.parent)
+            {
+                if (!t.gameObject.activeSelf)
+                    t.gameObject.SetActive(true);
+            }
         }
 
         void ResolveReferences()

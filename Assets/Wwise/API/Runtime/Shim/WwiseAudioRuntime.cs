@@ -6,6 +6,7 @@
 // through Unity's own audio instead, keyed by the same event names the game
 // already posts, so every existing inspector assignment keeps working.
 
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -38,6 +39,20 @@ namespace Meniscus.WwiseShim
 
 		static WwiseAudioRuntime s_instance;
 		static bool s_quitting;
+		static float s_musicVolume = 1f;
+
+		/// Level of the music and room-tone beds only, so the effects stay where they are.
+		/// Applies to voices already playing, not just the next one posted.
+		public static float MusicVolume
+		{
+			get { return s_musicVolume; }
+			set
+			{
+				s_musicVolume = Mathf.Clamp01(value);
+				if (s_instance)
+					s_instance.ApplyMusicVolume();
+			}
+		}
 
 		readonly Dictionary<string, AudioClip> _clips = new Dictionary<string, AudioClip>();
 		readonly List<Voice> _active = new List<Voice>();
@@ -63,9 +78,27 @@ namespace Meniscus.WwiseShim
 		{
 			for (var i = 0; i < WarmVoices; i++)
 				_idle.Push(CreateSource());
+
+			EnsureListener();
+		}
+
+		/// Nothing is audible without an AudioListener somewhere in the scene. The scenes
+		/// were built around Wwise's own listener and carry no Unity one, so AkAudioListener
+		/// now adds it; this covers any scene that lacks even that.
+		void EnsureListener()
+		{
+			if (FindAnyObjectByType<AudioListener>() == null)
+				gameObject.AddComponent<AudioListener>();
 		}
 
 		void OnApplicationQuit() => s_quitting = true;
+
+		void OnEnable() => UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+
+		void OnDisable() => UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+
+		void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+			=> EnsureListener();
 
 		AudioSource CreateSource()
 		{
@@ -110,9 +143,18 @@ namespace Meniscus.WwiseShim
 			var source = _idle.Count > 0 ? _idle.Pop() : CreateSource();
 			source.clip = clip;
 			source.loop = entry.Loop;
-			source.volume = Beds.Contains(eventName) ? BedVolume : VoiceVolume;
+			source.volume = VolumeFor(eventName);
 			source.time = 0f;
-			source.Play();
+
+			// On WebGL a clip whose audio data is not resident yet plays nothing at all and
+			// fails quietly, so wait for the decode rather than dropping the sound.
+			if (clip.loadState == AudioDataLoadState.Unloaded)
+				clip.LoadAudioData();
+
+			if (clip.loadState == AudioDataLoadState.Loaded)
+				source.Play();
+			else
+				StartCoroutine(PlayWhenLoaded(source, clip));
 
 			var id = _nextPlayingId++;
 			_active.Add(new Voice
@@ -124,6 +166,60 @@ namespace Meniscus.WwiseShim
 				Loop = entry.Loop,
 			});
 			return id;
+		}
+
+		/// Waits for a clip's audio data, retrying if the decode stalls.
+		///
+		/// A browser will not decode audio until the page has had a user gesture, and a
+		/// decode requested before that never completes on its own - it sits in Loading
+		/// forever, even long after the context has been unlocked. Anything posted at scene
+		/// start (the menu music, the room tone) lands in exactly that window, so the load
+		/// is re-requested until it takes.
+		static IEnumerator PlayWhenLoaded(AudioSource source, AudioClip clip)
+		{
+			const float AttemptSeconds = 4f;
+			const float TotalSeconds = 40f;
+
+			var giveUp = Time.realtimeSinceStartup + TotalSeconds;
+
+			while (clip && Time.realtimeSinceStartup < giveUp)
+			{
+				// The voice may have been stopped and recycled onto another clip meanwhile.
+				if (!source || source.clip != clip)
+					yield break;
+
+				if (clip.loadState == AudioDataLoadState.Loaded)
+				{
+					source.Play();
+					yield break;
+				}
+
+				var attemptEnd = Time.realtimeSinceStartup + AttemptSeconds;
+				while (clip && clip.loadState == AudioDataLoadState.Loading &&
+				       Time.realtimeSinceStartup < attemptEnd)
+					yield return null;
+
+				if (!clip || clip.loadState == AudioDataLoadState.Loaded)
+					continue;
+
+				// Still not decoded: throw the request away and ask again.
+				clip.UnloadAudioData();
+				clip.LoadAudioData();
+				yield return null;
+			}
+		}
+
+		static float VolumeFor(string eventName)
+			=> Beds.Contains(eventName) ? BedVolume * s_musicVolume : VoiceVolume;
+
+		void ApplyMusicVolume()
+		{
+			for (var i = 0; i < _active.Count; i++)
+			{
+				var voice = _active[i];
+				if (voice.Source)
+					voice.Source.volume = VolumeFor(voice.EventName);
+			}
 		}
 
 		public void Stop(string eventName, GameObject owner)

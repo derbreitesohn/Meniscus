@@ -35,6 +35,11 @@ namespace Meniscus.UI
             var scaler = canvasObject.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
+            // Balance width against height. The default matches width alone, which on a
+            // portrait phone scales the whole 1920-wide layout down to the handset's width
+            // and leaves every control too small to read or hit.
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
 
             return canvas;
         }
@@ -153,6 +158,71 @@ namespace Meniscus.UI
             buttonObject.AddComponent<UiPressPunch>();
 
             return button;
+        }
+
+        /// <summary>
+        /// A slider in the same warm gold-on-dark language as the buttons: a thin recessed
+        /// track, a filled portion and a chunky handle sized for a fingertip on touch.
+        /// </summary>
+        public static Slider CreateSlider(
+            Transform parent,
+            string name,
+            Vector2 size,
+            Vector2 position,
+            float value,
+            UnityAction<float> onChanged = null)
+        {
+            var root = CreateImage(parent, name, size, position, new Color(0f, 0f, 0f, 0f));
+            var slider = root.AddComponent<Slider>();
+
+            var trackHeight = Mathf.Max(6f, size.y * 0.22f);
+            CreateImage(root.transform, "Track", new Vector2(size.x, trackHeight),
+                Vector2.zero, new Color(0.18f, 0.13f, 0.09f, 0.95f));
+
+            var fillArea = CreateImage(root.transform, "Fill Area", new Vector2(size.x, trackHeight),
+                Vector2.zero, new Color(0f, 0f, 0f, 0f));
+            var fill = CreateImage(fillArea.transform, "Fill", new Vector2(size.x, trackHeight),
+                Vector2.zero, new Color(0.75f, 0.55f, 0.24f, 0.95f));
+
+            var handleSize = Mathf.Max(size.y, trackHeight * 2.6f);
+            var handleArea = CreateImage(root.transform, "Handle Area", new Vector2(size.x, size.y),
+                Vector2.zero, new Color(0f, 0f, 0f, 0f));
+            var handle = CreateImage(handleArea.transform, "Handle", new Vector2(handleSize, handleSize),
+                Vector2.zero, new Color(0.95f, 0.82f, 0.52f, 1f));
+
+            // Stretch the moving parts so the Slider drives them rather than fixed offsets.
+            foreach (var stretch in new[] { fillArea.GetComponent<RectTransform>(), handleArea.GetComponent<RectTransform>() })
+            {
+                stretch.anchorMin = new Vector2(0f, 0.5f);
+                stretch.anchorMax = new Vector2(1f, 0.5f);
+                stretch.offsetMin = new Vector2(handleSize * 0.5f, -size.y * 0.5f);
+                stretch.offsetMax = new Vector2(-handleSize * 0.5f, size.y * 0.5f);
+            }
+
+            var fillRect = fill.GetComponent<RectTransform>();
+            fillRect.anchorMin = new Vector2(0f, 0.5f);
+            fillRect.anchorMax = new Vector2(1f, 0.5f);
+            fillRect.offsetMin = new Vector2(0f, -trackHeight * 0.5f);
+            fillRect.offsetMax = new Vector2(0f, trackHeight * 0.5f);
+
+            slider.fillRect = fillRect;
+            slider.handleRect = handle.GetComponent<RectTransform>();
+            slider.targetGraphic = handle.GetComponent<Image>();
+            slider.direction = Slider.Direction.LeftToRight;
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.SetValueWithoutNotify(Mathf.Clamp01(value));
+
+            var colors = slider.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1f, 0.95f, 0.82f);
+            colors.pressedColor = new Color(0.85f, 0.7f, 0.42f);
+            slider.colors = colors;
+
+            if (onChanged != null)
+                slider.onValueChanged.AddListener(onChanged);
+
+            return slider;
         }
     }
 }
