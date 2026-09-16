@@ -47,7 +47,11 @@ namespace Meniscus.Gameplay
         [SerializeField, Min(0.1f)] float authoredAspect = 16f / 9f;
         [Tooltip("Ceiling on how far the field of view may open up, so a tall phone widens the shot " +
                  "without bending it into a fisheye.")]
-        [SerializeField, Min(1f)] float maxAspectFovGain = 1.9f;
+        [SerializeField, Min(1f)] float maxAspectFovGain = 1.25f;
+        [Tooltip("How much of the widening needed to keep the authored width is actually applied. " +
+                 "1 = keep every bit of the table in frame, at the cost of a very wide, distant-looking " +
+                 "shot. Lower values sit nearer the framing each shot was posed at.")]
+        [SerializeField, Range(0f, 1f)] float aspectCompensation = 0.55f;
 
         float authoredFov;
         bool authoredFovCaptured;
@@ -336,9 +340,16 @@ namespace Meniscus.Gameplay
                 return;
             }
 
+            // Fully preserving the authored width sounded right and played wrong: a portrait phone
+            // needs ~131 degrees to keep it, and even capped at 1.9x that was a 114 degree lens on a
+            // game posed at 60. Every shot read as standing well back from the table - the dealer's
+            // coin drop worst of all - the book and its item card shrank with it, and the coins
+            // became fiddly to hit. Take part of the widening instead, and cap it far lower: the
+            // edges of the table give a little on a narrow screen, but each shot keeps its framing.
             var authoredHalfWidth = Mathf.Tan(authoredFov * 0.5f * Mathf.Deg2Rad) * authoredAspect;
             var widened = 2f * Mathf.Atan(authoredHalfWidth / aspect) * Mathf.Rad2Deg;
-            targetCamera.fieldOfView = Mathf.Min(widened, authoredFov * maxAspectFovGain);
+            var eased = Mathf.Lerp(authoredFov, widened, aspectCompensation);
+            targetCamera.fieldOfView = Mathf.Min(eased, authoredFov * maxAspectFovGain);
         }
 
         public void SwitchCamera(CameraState newState)

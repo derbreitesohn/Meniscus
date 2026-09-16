@@ -297,6 +297,9 @@ namespace Meniscus.UI
             shopCanvas = CreateFallbackShopCanvas();
         }
 
+        /// Rounds a reference font size up through the touch control scale.
+        static int F(float size, float scale) => Mathf.RoundToInt(size * scale);
+
         Canvas CreateFallbackShopCanvas()
         {
             var canvas = RuntimeUiFactory.CreateOverlayCanvas(transform, "Runtime Saloon Menu Canvas", enabled: false);
@@ -310,10 +313,15 @@ namespace Meniscus.UI
 
             var catalog = ResolveCatalog();
 
-            const float headerHeight = 150f;
-            const float rowHeight = 58f;
-            const float footerHeight = 96f;
-            var cardWidth = 470f;
+            // Authored against the 1920x1080 reference and never scaled for a fingertip, this card
+            // came out a few millimetres tall on a phone - the rows unreadable and FINISH DRINK too
+            // small to hit, which is what left the menu stuck on screen. The same control scale the
+            // menus and pause card already use brings it up to a tappable size.
+            var s = UiScale.ControlScale;
+            var headerHeight = 150f * s;
+            var rowHeight = 58f * s;
+            var footerHeight = 96f * s;
+            var cardWidth = 470f * s;
             var cardHeight = headerHeight + catalog.Count * rowHeight + footerHeight;
 
             var card = RuntimeUiFactory.CreateImage(
@@ -328,13 +336,13 @@ namespace Meniscus.UI
 
             RuntimeUiFactory.CreateText(
                 card.transform, "Title", "SALOON MENU",
-                new Vector2(0f, top - 48f), new Vector2(cardWidth - 60f, 44f), 32, cardTextColor);
+                new Vector2(0f, top - 48f * s), new Vector2(cardWidth - 60f * s, 44f * s), F(32, s), cardTextColor);
             RuntimeUiFactory.CreateText(
                 card.transform, "Description", "Spend banked cash between rounds.",
-                new Vector2(0f, top - 92f), new Vector2(cardWidth - 60f, 32f), 18, cardTextColor);
+                new Vector2(0f, top - 92f * s), new Vector2(cardWidth - 60f * s, 32f * s), F(18, s), cardTextColor);
 
             var rowY = top - headerHeight;
-            var buttonSize = new Vector2(cardWidth - 70f, rowHeight - 12f);
+            var buttonSize = new Vector2(cardWidth - 70f * s, rowHeight - 12f * s);
 
             for (var i = 0; i < catalog.Count; i++)
             {
@@ -347,7 +355,7 @@ namespace Meniscus.UI
                     label,
                     buttonSize,
                     new Vector2(0f, rowY),
-                    17,
+                    F(17, s),
                     () => TryBuyItem(item));
 
                 rowY -= rowHeight;
@@ -355,7 +363,7 @@ namespace Meniscus.UI
 
             RuntimeUiFactory.CreateButton(
                 card.transform, "Finish Drink Button", "FINISH DRINK",
-                new Vector2(200f, 50f), new Vector2(0f, -top + 48f), 18, FinishOrdering, boldLabel: true);
+                new Vector2(200f * s, 50f * s), new Vector2(0f, -top + 48f * s), F(18, s), FinishOrdering, boldLabel: true);
 
             return canvas;
         }
