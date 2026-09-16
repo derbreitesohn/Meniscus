@@ -66,9 +66,9 @@ namespace Meniscus.Gameplay
             if (!waitingForClick)
                 return;
 
-            var mouse = Mouse.current;
-
-            if (mouse == null || !mouse.leftButton.wasPressedThisFrame)
+            // Same reason as the coin picking: a tap never arrives through Mouse, so
+            // on a phone the player could never sit down and the game never started.
+            if (!TryGetPressPosition(out var pressPosition))
                 return;
 
             if (clickCamera == null)
@@ -77,7 +77,7 @@ namespace Meniscus.Gameplay
             if (clickCamera == null)
                 return;
 
-            var ray = clickCamera.ScreenPointToRay(mouse.position.ReadValue());
+            var ray = clickCamera.ScreenPointToRay(pressPosition);
 
             if (!Physics.Raycast(ray, out var hit, maxClickDistance, clickMask))
                 return;
@@ -86,6 +86,27 @@ namespace Meniscus.Gameplay
                 return;
 
             SitDown();
+        }
+
+        /// <summary>Screen position of a press this frame, from the mouse or a fingertip.</summary>
+        static bool TryGetPressPosition(out Vector2 position)
+        {
+            var mouse = Mouse.current;
+            if (mouse != null && mouse.leftButton.wasPressedThisFrame)
+            {
+                position = mouse.position.ReadValue();
+                return true;
+            }
+
+            var touch = Touchscreen.current;
+            if (touch != null && touch.primaryTouch.press.wasPressedThisFrame)
+            {
+                position = touch.primaryTouch.position.ReadValue();
+                return true;
+            }
+
+            position = default;
+            return false;
         }
 
         void SitDown()

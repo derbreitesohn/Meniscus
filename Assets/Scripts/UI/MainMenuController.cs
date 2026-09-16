@@ -40,7 +40,6 @@ namespace Meniscus.UI
         GameSession session;
         Text statsText;
         Text soundButtonLabel;
-        Text volumeLabel;
 
         void Awake()
         {
@@ -118,32 +117,16 @@ namespace Meniscus.UI
                 highlightedColor: ButtonHoverTint,
                 pressedColor: ButtonPressTint).GetComponentInChildren<Text>();
 
-            // Volume sits directly under the sound toggle, the two audio controls together.
-            var volumeY = -(playHeight * 0.5f + gap * 2f + rowHeight * 1.5f);
-
-            volumeLabel = RuntimeUiFactory.CreateText(
-                canvas.transform,
-                "Volume Label",
-                string.Empty,
-                new Vector2(0f, volumeY),
-                new Vector2(width, 30f * scale),
-                Mathf.RoundToInt(16 * scale),
-                new Color(0.72f, 0.63f, 0.52f));
-
-            RuntimeUiFactory.CreateSlider(
-                canvas.transform,
-                "Volume",
-                new Vector2(width * 0.8f, 30f * scale),
-                new Vector2(0f, volumeY - 30f * scale),
-                session != null ? session.MasterVolume : 0.7f,
-                SetMasterVolume);
+            // SOUND: ON / OFF is the whole audio control again - the slider that used to
+            // sit under it is gone, so QUIT moves up into the row it occupied.
+            var quitY = -(playHeight * 0.5f + gap * 2f + rowHeight * 1.5f);
 
             RuntimeUiFactory.CreateButton(
                 canvas.transform,
                 "Quit Button",
                 "QUIT",
                 new Vector2(width, rowHeight),
-                new Vector2(0f, volumeY - 30f * scale - gap * 2f - rowHeight * 0.5f),
+                new Vector2(0f, quitY),
                 Mathf.RoundToInt(22 * scale),
                 QuitGame,
                 normalColor: ButtonTransparent,
@@ -218,17 +201,6 @@ namespace Meniscus.UI
         {
             if (soundButtonLabel != null)
                 soundButtonLabel.text = session != null && session.SoundEnabled ? "SOUND: ON" : "SOUND: OFF";
-
-            if (volumeLabel != null)
-                volumeLabel.text = $"VOLUME  {Mathf.RoundToInt((session != null ? session.MasterVolume : 0f) * 100f)}%";
-        }
-
-        void SetMasterVolume(float value)
-        {
-            if (session != null)
-                session.SetMasterVolume(value);
-
-            RefreshSoundLabel();
         }
 
         static void EnsureEventSystem()

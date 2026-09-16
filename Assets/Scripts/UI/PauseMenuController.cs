@@ -7,7 +7,7 @@ using UnityEngine.UI;
 namespace Meniscus.UI
 {
     /// <summary>
-    /// Escape-key pause overlay for the saloon: continue, sound toggle, volume level and a way
+    /// Escape-key pause overlay for the saloon: continue, sound toggle and a way
     /// back to the title. Built at runtime in the same warm gold-on-dark language as the rest
     /// of the fallback UI, so the scene needs nothing authored.
     ///
@@ -23,12 +23,10 @@ namespace Meniscus.UI
         static readonly Color ButtonHoverTint = new(0.34f, 0.15f, 0.07f, 0.45f);
         static readonly Color ButtonPressTint = new(0.08f, 0.03f, 0.02f, 0.6f);
         static readonly Color Gold = new(0.95f, 0.82f, 0.52f);
-        static readonly Color Muted = new(0.78f, 0.66f, 0.5f);
 
         GameSession session;
         Canvas canvas;
         Text soundLabel;
-        Text volumeLabel;
         float resumeTimeScale = 1f;
 
         public bool IsPaused { get; private set; }
@@ -100,21 +98,10 @@ namespace Meniscus.UI
             RefreshLabels();
         }
 
-        void SetMasterVolume(float value)
-        {
-            if (session != null)
-                session.SetMasterVolume(value);
-
-            RefreshLabels();
-        }
-
         void RefreshLabels()
         {
             if (soundLabel != null)
                 soundLabel.text = session != null && session.SoundEnabled ? "SOUND: ON" : "SOUND: OFF";
-
-            if (volumeLabel != null)
-                volumeLabel.text = $"VOLUME  {Mathf.RoundToInt((session != null ? session.MasterVolume : 0f) * 100f)}%";
         }
 
         void SetVisible(bool visible)
@@ -141,16 +128,14 @@ namespace Meniscus.UI
             var scale = UiScale.ControlScale;
             var width = 400f * (UiScale.Touch ? 1.5f : 1f);
             var rowHeight = 58f * scale;
-            var sliderHeight = 30f * scale;
-            var labelHeight = 26f * scale;
             var gap = 10f * scale;
             var titleHeight = 70f * scale;
 
             // Lay the rows out from a measured total so the panel wraps them exactly and the
             // block stays centred whatever the control scale is.
             var contentHeight = titleHeight + gap * 2f
-                              + rowHeight * 2f + gap * 2f
-                              + labelHeight + gap + sliderHeight + gap * 2f
+                              + rowHeight + gap
+                              + rowHeight + gap * 2f
                               + rowHeight;
 
             var panelWidth = width + 88f;
@@ -188,22 +173,7 @@ namespace Meniscus.UI
                 Mathf.RoundToInt(22 * scale), ToggleSound,
                 normalColor: ButtonTransparent, highlightedColor: ButtonHoverTint, pressedColor: ButtonPressTint)
                 .GetComponentInChildren<Text>();
-            y -= rowHeight * 0.5f + gap;
-
-            y -= labelHeight * 0.5f;
-            volumeLabel = RuntimeUiFactory.CreateText(
-                canvas.transform, "Volume Label", string.Empty,
-                new Vector2(0f, y), new Vector2(width, labelHeight),
-                Mathf.RoundToInt(17 * scale), Muted);
-            y -= labelHeight * 0.5f + gap;
-
-            y -= sliderHeight * 0.5f;
-            RuntimeUiFactory.CreateSlider(
-                canvas.transform, "Volume",
-                new Vector2(width * 0.82f, sliderHeight), new Vector2(0f, y),
-                session != null ? session.MasterVolume : 0.7f,
-                SetMasterVolume);
-            y -= sliderHeight * 0.5f + gap * 2f;
+            y -= rowHeight * 0.5f + gap * 2f;
 
             y -= rowHeight * 0.5f;
             RuntimeUiFactory.CreateButton(

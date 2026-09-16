@@ -40,6 +40,18 @@ namespace Meniscus.Gameplay
         }
 
         [SerializeField] Camera targetCamera;
+
+        [Header("Aspect")]
+        [Tooltip("Aspect the shots were framed at. A narrower screen opens the field of view so roughly " +
+                 "the same width of the table stays in frame instead of being cropped away.")]
+        [SerializeField, Min(0.1f)] float authoredAspect = 16f / 9f;
+        [Tooltip("Ceiling on how far the field of view may open up, so a tall phone widens the shot " +
+                 "without bending it into a fisheye.")]
+        [SerializeField, Min(1f)] float maxAspectFovGain = 1.9f;
+
+        float authoredFov;
+        bool authoredFovCaptured;
+
         [Tooltip("Per-state resting framings. Add a row, pick a state, and dial in a position / rotation " +
                  "offset from the overview pose (or assign an anchor for a pixel-exact shot).")]
         [SerializeField] CameraViewpoint[] viewpoints = Array.Empty<CameraViewpoint>();
@@ -257,6 +269,9 @@ namespace Meniscus.Gameplay
             if (targetCamera == null)
                 return;
 
+            // Ahead of the early returns below, so every shot gets it.
+            ApplyAspectFieldOfView();
+
             var cameraTransform = targetCamera.transform;
 
             // The loss "death orbit" fully owns the camera (no rig / focus / sway) until the match restarts.
@@ -293,6 +308,37 @@ namespace Meniscus.Gameplay
             ApplyShake(ref finalPosition);
 
             cameraTransform.SetPositionAndRotation(finalPosition, finalRotation);
+        }
+
+        /// <summary>
+        /// Widens the field of view on a screen narrower than the one the shots were framed
+        /// for. fieldOfView is vertical, so on a portrait phone the view keeps its height and
+        /// loses width - the table gets cropped to a slot and most of the coins sit off-screen.
+        /// Solving for the vertical angle that preserves the authored horizontal extent keeps
+        /// the same shot readable, and the gain is capped so a very tall screen widens rather
+        /// than distorts.
+        /// </summary>
+        void ApplyAspectFieldOfView()
+        {
+            if (targetCamera.orthographic)
+                return;
+
+            if (!authoredFovCaptured)
+            {
+                authoredFov = targetCamera.fieldOfView;
+                authoredFovCaptured = true;
+            }
+
+            var aspect = targetCamera.aspect;
+            if (aspect <= 0f || aspect >= authoredAspect)
+            {
+                targetCamera.fieldOfView = authoredFov;
+                return;
+            }
+
+            var authoredHalfWidth = Mathf.Tan(authoredFov * 0.5f * Mathf.Deg2Rad) * authoredAspect;
+            var widened = 2f * Mathf.Atan(authoredHalfWidth / aspect) * Mathf.Rad2Deg;
+            targetCamera.fieldOfView = Mathf.Min(widened, authoredFov * maxAspectFovGain);
         }
 
         public void SwitchCamera(CameraState newState)

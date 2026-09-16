@@ -45,12 +45,10 @@ namespace Meniscus.Gameplay
 
         void Update()
         {
-            var mouse = Mouse.current;
-
-            if (mouse == null)
-                return;
-
-            if (!mouse.leftButton.wasPressedThisFrame)
+            // A tap is not reported through Mouse unless touch simulation is on, so
+            // reading only Mouse.current meant coins could not be picked up at all on
+            // a phone. Take the press from whichever device actually reported it.
+            if (!TryGetPressPosition(out var pressPosition))
                 return;
 
             ResolveReferences();
@@ -64,10 +62,31 @@ namespace Meniscus.Gameplay
             if (gameManager.CurrentState != GameState.PlayerTurn)
                 return;
 
-            HandleClick();
+            HandleClick(pressPosition);
         }
 
-        void HandleClick()
+        /// <summary>Screen position of a press this frame, from the mouse or a fingertip.</summary>
+        static bool TryGetPressPosition(out Vector2 position)
+        {
+            var mouse = Mouse.current;
+            if (mouse != null && mouse.leftButton.wasPressedThisFrame)
+            {
+                position = mouse.position.ReadValue();
+                return true;
+            }
+
+            var touch = Touchscreen.current;
+            if (touch != null && touch.primaryTouch.press.wasPressedThisFrame)
+            {
+                position = touch.primaryTouch.position.ReadValue();
+                return true;
+            }
+
+            position = default;
+            return false;
+        }
+
+        void HandleClick(Vector2 screenPosition)
         {
             var cameraToUse = raycastCamera != null ? raycastCamera : Camera.main;
 
@@ -77,7 +96,7 @@ namespace Meniscus.Gameplay
                 return;
             }
 
-            var ray = cameraToUse.ScreenPointToRay(Mouse.current.position.ReadValue());
+            var ray = cameraToUse.ScreenPointToRay(screenPosition);
 
             if (!Physics.Raycast(ray, out var hit, maxRaycastDistance, interactionMask))
                 return;
