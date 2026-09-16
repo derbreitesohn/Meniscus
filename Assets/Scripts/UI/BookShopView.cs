@@ -377,9 +377,10 @@ namespace Meniscus.UI
         /// </summary>
         void PollBrowseClick()
         {
-            var mouse = Mouse.current;
-
-            if (mouse == null || !mouse.leftButton.wasPressedThisFrame)
+            // Same fault the desk tray had: a tap never arrives through Mouse unless touch
+            // simulation is on, so on a phone the book could not be opened at all and the shop
+            // was unreachable. Read the press from the mouse or the fingertip, whichever fired.
+            if (!TryGetPressPosition(out var pressPosition))
                 return;
 
             // A click on the menu's own controls (Buy / page arrows / Set It Down) must not also fall
@@ -397,7 +398,7 @@ namespace Meniscus.UI
             if (cam == null)
                 return;
 
-            var ray = cam.ScreenPointToRay(mouse.position.ReadValue());
+            var ray = cam.ScreenPointToRay(pressPosition);
 
             if (!Physics.Raycast(ray, out var hit, clickRaycastDistance))
                 return;
@@ -409,6 +410,27 @@ namespace Meniscus.UI
                 return;
 
             OnBookClicked();
+        }
+
+        /// <summary>Screen position of a press this frame, from the mouse or a fingertip.</summary>
+        static bool TryGetPressPosition(out Vector2 position)
+        {
+            var mouse = Mouse.current;
+            if (mouse != null && mouse.leftButton.wasPressedThisFrame)
+            {
+                position = mouse.position.ReadValue();
+                return true;
+            }
+
+            var touch = Touchscreen.current;
+            if (touch != null && touch.primaryTouch.press.wasPressedThisFrame)
+            {
+                position = touch.primaryTouch.position.ReadValue();
+                return true;
+            }
+
+            position = default;
+            return false;
         }
 
         void Build(IReadOnlyList<ItemDefinition> catalog)

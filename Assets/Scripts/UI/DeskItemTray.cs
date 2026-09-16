@@ -94,9 +94,11 @@ namespace Meniscus.UI
             if (useButton != null)
                 useButton.SetReady(selected != null || (playerController != null && playerController.HasSelectedCoins));
 
-            var mouse = Mouse.current;
-
-            if (mouse == null || !mouse.leftButton.wasPressedThisFrame)
+            // A tap is not reported through Mouse unless touch simulation is on, so reading only
+            // Mouse.current left the shared USE button - and every desk tile behind it - dead on a
+            // phone, even once coins could be picked up. PlayerController already carries this fix;
+            // the tray never got it. Take the press from whichever device actually reported it.
+            if (!TryGetPressPosition(out var pressPosition))
                 return;
 
             // Don't let clicks fall through the book menu (or any uGUI) onto a box behind it.
@@ -109,7 +111,7 @@ namespace Meniscus.UI
             if (cam == null)
                 return;
 
-            var ray = cam.ScreenPointToRay(mouse.position.ReadValue());
+            var ray = cam.ScreenPointToRay(pressPosition);
 
             if (!Physics.Raycast(ray, out var hit, clickRaycastDistance))
                 return;
@@ -125,6 +127,27 @@ namespace Meniscus.UI
 
             var relay = hit.collider.GetComponentInParent<DeskItemTileRelay>();
             relay?.Trigger();
+        }
+
+        /// <summary>Screen position of a press this frame, from the mouse or a fingertip.</summary>
+        static bool TryGetPressPosition(out Vector2 position)
+        {
+            var mouse = Mouse.current;
+            if (mouse != null && mouse.leftButton.wasPressedThisFrame)
+            {
+                position = mouse.position.ReadValue();
+                return true;
+            }
+
+            var touch = Touchscreen.current;
+            if (touch != null && touch.primaryTouch.press.wasPressedThisFrame)
+            {
+                position = touch.primaryTouch.position.ReadValue();
+                return true;
+            }
+
+            position = default;
+            return false;
         }
 
         public void Configure(GameManager manager, PlayerInventory playerInventory)
