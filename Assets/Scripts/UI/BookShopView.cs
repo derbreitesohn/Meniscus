@@ -27,8 +27,16 @@ namespace Meniscus.UI
         [SerializeField, Min(0.1f)] float bookScale = 1.3f;
 
         [Header("Held Placement (relative to the camera)")]
-        [Tooltip("Metres in front of the camera the open book is held.")]
+        [Tooltip("Metres in front of the camera the open book is held. On a touch screen this is " +
+                 "solved for instead, so the spread fills the width - see heldWidthFraction.")]
         [SerializeField] float holdDistance = 0.62f;
+        [Tooltip("On a touch screen, how much of the viewport width the open spread fills. A fixed " +
+                 "hold distance cannot serve both orientations: it left the book at ~36% of the width " +
+                 "in landscape and spilling past both edges at ~127% in portrait.")]
+        [SerializeField, Range(0.3f, 1f)] float heldWidthFraction = 0.88f;
+        [Tooltip("Metres of clearance kept in front of the near clip plane when the book is pulled in " +
+                 "close, so a wide screen never slices the cover open.")]
+        [SerializeField, Min(0f)] float heldNearMargin = 0.08f;
         [Tooltip("Vertical offset of the held book from screen centre (negative = below centre).")]
         [SerializeField] float holdVerticalOffset = 0f;
         [Tooltip("Horizontal offset of the held book from screen centre.")]
@@ -1105,7 +1113,7 @@ namespace Meniscus.UI
 
             var camTransform = cam.transform;
             var basePosition = camTransform.position
-                + camTransform.forward * holdDistance
+                + camTransform.forward * HeldDistance(cam)
                 + camTransform.right * holdHorizontalOffset;
             var heldPosition = basePosition + camTransform.up * holdVerticalOffset;
             var heldRotation = Quaternion.LookRotation(camTransform.forward, camTransform.up)
@@ -1122,6 +1130,28 @@ namespace Meniscus.UI
 
             root.position = Vector3.Lerp(restPosition, heldPosition, raise);
             root.rotation = Quaternion.Slerp(restRotation, heldRotation, raise);
+        }
+
+        /// <summary>
+        /// How far in front of the camera to hold the open book. On a desk-sized screen the authored
+        /// <see cref="holdDistance"/> is right. On a phone it is not, and no single number could be:
+        /// the same 0.62m put the spread at roughly a third of the width in landscape and past both
+        /// edges in portrait. Solving the distance from the camera's own horizontal angle instead
+        /// makes the book read the same size whichever way the handset is turned.
+        /// </summary>
+        float HeldDistance(Camera cam)
+        {
+            if (cam == null || cam.orthographic || !UiScale.Touch)
+                return holdDistance;
+
+            var halfWidthPerMetre = Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * cam.aspect;
+
+            if (halfWidthPerMetre <= 0.0001f || menuWorldWidth <= 0f)
+                return holdDistance;
+
+            var fitted = menuWorldWidth / (2f * heldWidthFraction * halfWidthPerMetre);
+
+            return Mathf.Max(fitted, cam.nearClipPlane + heldNearMargin);
         }
 
         /// <summary>

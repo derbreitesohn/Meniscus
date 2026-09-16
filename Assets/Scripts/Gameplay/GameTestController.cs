@@ -21,6 +21,9 @@ namespace Meniscus.Gameplay
 
         bool menuOpen = false;
 
+        /// Hidden until Ctrl+Y asks for it, so the debug menu never shows up in a real session.
+        bool debugVisible = false;
+
         const string MenuSceneName = "MainMenu";
         const int PanelWidth = 276;
         const int RowH = 26;
@@ -38,12 +41,32 @@ namespace Meniscus.Gameplay
             // The project runs on the Input System package, so the legacy Input class
             // throws here every frame instead of reading the key.
             var keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.f1Key.wasPressedThisFrame)
+
+            if (keyboard == null)
+                return;
+
+            // Ctrl+Y reveals the menu, and nothing reveals it before that. Its header button used
+            // to be drawn unconditionally, so "▶ Debug Menu" sat in the corner of the real game -
+            // on a phone permanently, since there is no keyboard there to dismiss it with.
+            var ctrlHeld = keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed;
+
+            if (ctrlHeld && keyboard.yKey.wasPressedThisFrame)
+            {
+                debugVisible = !debugVisible;
+
+                if (!debugVisible)
+                    menuOpen = false;
+            }
+
+            if (debugVisible && keyboard.f1Key.wasPressedThisFrame)
                 menuOpen = !menuOpen;
         }
 
         void OnGUI()
         {
+            if (!debugVisible)
+                return;
+
             ResolveReferences();
             DrawBugMenu();
 
