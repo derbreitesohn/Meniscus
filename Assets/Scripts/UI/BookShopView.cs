@@ -33,7 +33,7 @@ namespace Meniscus.UI
         [Tooltip("On a touch screen, how much of the viewport width the open spread fills. A fixed " +
                  "hold distance cannot serve both orientations: it left the book at ~36% of the width " +
                  "in landscape and spilling past both edges at ~127% in portrait.")]
-        [SerializeField, Range(0.3f, 1f)] float heldWidthFraction = 0.88f;
+        [SerializeField, Range(0.3f, 1f)] float heldWidthFraction = 0.94f;
         [Tooltip("Metres of clearance kept in front of the near clip plane when the book is pulled in " +
                  "close, so a wide screen never slices the cover open.")]
         [SerializeField, Min(0f)] float heldNearMargin = 0.08f;
@@ -1149,7 +1149,17 @@ namespace Meniscus.UI
             if (halfWidthPerMetre <= 0.0001f || menuWorldWidth <= 0f)
                 return holdDistance;
 
-            var fitted = menuWorldWidth / (2f * heldWidthFraction * halfWidthPerMetre);
+            // menuWorldWidth measures the spread before the root is scaled, and the root carries
+            // bookScale times ViewportFitScale - which alone shrinks the book to 42% of its size on
+            // a portrait screen. Solving the distance from the unscaled figure therefore under-shot
+            // by exactly that factor and parked the book at 48% of the width instead of filling it.
+            // Measure what is actually on screen.
+            var spreadWidth = menuWorldWidth * Mathf.Abs(root != null ? root.lossyScale.x : 1f);
+
+            if (spreadWidth <= 0.0001f)
+                return holdDistance;
+
+            var fitted = spreadWidth / (2f * heldWidthFraction * halfWidthPerMetre);
 
             return Mathf.Max(fitted, cam.nearClipPlane + heldNearMargin);
         }
