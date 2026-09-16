@@ -21,7 +21,7 @@ namespace Meniscus.Gameplay
 
         bool menuOpen = false;
 
-        /// Hidden until Ctrl+Y asks for it, so the debug menu never shows up in a real session.
+        /// Hidden until Shift+D (or F9) asks for it, so the debug menu never shows in a real session.
         bool debugVisible = false;
 
         const string MenuSceneName = "MainMenu";
@@ -45,12 +45,21 @@ namespace Meniscus.Gameplay
             if (keyboard == null)
                 return;
 
-            // Ctrl+Y reveals the menu, and nothing reveals it before that. Its header button used
+            // Shift+D reveals the menu, and nothing reveals it before that. Its header button used
             // to be drawn unconditionally, so "▶ Debug Menu" sat in the corner of the real game -
             // on a phone permanently, since there is no keyboard there to dismiss it with.
-            var ctrlHeld = keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed;
+            //
+            // This was Ctrl+Y and did not survive the browser. Ctrl combinations are the browser's
+            // own territory - Ctrl+Y is Redo in Firefox - and a reserved chord is swallowed before
+            // the WebGL canvas is ever told a key went down. Shift is not claimed that way, and
+            // Shift+D is the same physical key on a QWERTZ keyboard as on a QWERTY one, unlike the
+            // backquote a console would normally sit on. F9 does the same thing for anyone who
+            // prefers a function key; F10 to F12 are spoken for by the browser, F9 is not.
+            var shiftHeld = keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed;
+            var toggleRequested = (shiftHeld && keyboard.dKey.wasPressedThisFrame)
+                || keyboard.f9Key.wasPressedThisFrame;
 
-            if (ctrlHeld && keyboard.yKey.wasPressedThisFrame)
+            if (toggleRequested)
             {
                 debugVisible = !debugVisible;
 
